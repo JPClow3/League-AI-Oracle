@@ -1,0 +1,6 @@
+{
+  "name": "LoL Draft Oracle",
+  "description": "A League of Legends draft assistant providing RAG-based recommendations using Gemini API and Google Search to analyze team compositions and suggest champion picks.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
