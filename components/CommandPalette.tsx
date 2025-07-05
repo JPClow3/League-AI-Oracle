@@ -1,181 +1,176 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Modal } from './Modal';
-import { Command, CommandPaletteProps, DDragonChampionInfo, DDragonItemInfo, Concept, AppView } from '../types';
-import { getChampionImageURL, getItemImageURL } from '../services/ddragonService';
-import { MagnifyingGlassIcon } from './icons/index';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { View, Champion, Item } from '../types';
+import { useDebounce } from '../hooks/useDebounce';
+import { Icon } from './common/Icon';
+import { useDraftStore } from '../store/draftStore';
 
-export const CommandPalette: React.FC<CommandPaletteProps> = ({
-  isOpen,
-  onClose,
-  commands,
-  champions,
-  items,
-  concepts,
-  ddragonVersion,
-  navigateTo,
-}) => {
-  const [query, setQuery] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const resultsRef = useRef<HTMLUListElement>(null);
+interface CommandPaletteProps {
+  isOpen: boolean;
+  onClose: () => void;
+  setView: (view: View) => void;
+  champions: Champion[];
+  items: Item[];
+  onNavigateToVault: (champion: Champion) => void;
+}
+
+interface Command {
+  type: 'navigation' | 'champion' | 'item' | 'action';
+  id: string;
+  name: string;
+  action: () => void;
+  icon: React.ReactNode;
+}
+
+const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, setView, champions, items, onNavigateToVault }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 150);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const listRef = useRef<HTMLUListElement>(null);
+  const listId = 'command-palette-list';
+
+  const commands = useMemo<Command[]>(() => {
+    const navCommands: Command[] = [
+      { type: 'navigation', id: 'home', name: 'Go to Home', action: () => setView(View.HOME), icon: <Icon name="home" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'drafting', name: 'Go to Drafting', action: () => setView(View.DRAFTING), icon: <Icon name="draft" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'lab', name: 'Go to Draft Lab', action: () => setView(View.DRAFT_LAB), icon: <Icon name="lab" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'playbook', name: 'Go to Playbook', action: () => setView(View.PLAYBOOK), icon: <Icon name="playbook" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'vault', name: 'Go to Champion Vault', action: () => setView(View.VAULT), icon: <Icon name="vault" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'lessons', name: 'Go to Knowledge Hub', action: () => setView(View.LESSONS), icon: <Icon name="lessons" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'history', name: 'Go to History', action: () => setView(View.HISTORY), icon: <Icon name="history" className="w-5 h-5"/> },
+    ];
+    
+    const actionCommands: Command[] = [
+        { 
+            type: 'action', 
+            id: 'new-draft-lab', 
+            name: 'New Draft Lab', 
+            action: () => {
+                useDraftStore.getState().actions.resetDraft();
+                setView(View.DRAFT_LAB);
+            }, 
+            icon: <Icon name="plus" className="w-5 h-5"/> 
+        },
+    ];
+
+    const championCommands: Command[] = champions.map(c => ({ 
+        type: 'champion', 
+        id: c.id, 
+        name: `Analyze: ${c.name}`, 
+        action: () => onNavigateToVault(c), 
+        icon: <Icon name="profile" className="w-5 h-5" /> 
+    }));
+
+    // For now, let's keep items out to reduce noise, can be added later.
+    // const itemCommands: Command[] = items.map(i => ({ type: 'item', id: i.name, name: `Item: ${i.name}`, action: () => { setView(View.VAULT); }, icon: <Icon name="shield" className="w-5 h-5" /> }));
+
+    return [...actionCommands, ...navCommands, ...championCommands];
+  }, [setView, champions, onNavigateToVault]);
+
+  const filteredCommands = useMemo(() => {
+    if (!debouncedSearchTerm) {
+      return commands.filter(c => c.type === 'navigation' || c.type === 'action');
+    }
+    return commands.filter(c => c.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+  }, [debouncedSearchTerm, commands]);
+  
+  const getCommandId = (cmd: Command, index: number) => `cmd-item-${cmd.type}-${cmd.id.replace(/\s/g, '-')}-${index}`;
+
 
   useEffect(() => {
     if (isOpen) {
-      setQuery('');
-      setActiveIndex(0);
-      // Delay focus to allow modal to fully render and transition
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 150); // Adjust delay as needed
-      return () => clearTimeout(timer);
+        setSearchTerm('');
     }
   }, [isOpen]);
-
-  const filteredCommands = useMemo(() => {
-    const baseCommands = commands.filter(c => c.type === 'navigation' || c.type === 'action' || c.type.endsWith('_link'));
-    if (!query.trim()) return baseCommands;
-    
-    const lowerQuery = query.toLowerCase();
-    const navAndActionCommands = baseCommands.filter(cmd => 
-        (cmd.label.toLowerCase().includes(lowerQuery) || (cmd.keywords && cmd.keywords.some(kw => kw.toLowerCase().includes(lowerQuery))))
-    );
-
-    const championResults: Command[] = champions
-        .filter(c => c.name.toLowerCase().includes(lowerQuery) || c.id.toLowerCase().includes(lowerQuery))
-        .slice(0, 5)
-        .map(c => ({
-            id: `search_champ_${c.id}`,
-            type: 'search_result_champion',
-            label: c.name,
-            action: () => { navigateTo('EXPLORER', { championId: c.id }); onClose(); },
-            data: c,
-            icon: () => <img src={getChampionImageURL(ddragonVersion, c.id)} alt={c.name} className="w-6 h-6 rounded-sm mr-2.5" /> /* Increased size */
-        }));
-
-    const itemResults: Command[] = items
-        .filter(i => i.name.toLowerCase().includes(lowerQuery))
-        .slice(0, 5)
-        .map(i => ({
-            id: `search_item_${i.id || i.name.replace(/\s+/g, '')}`,
-            type: 'search_result_item',
-            label: i.name,
-            action: () => { navigateTo('ARMORY', { itemId: i.id || i.name }); onClose(); },
-            data: i,
-            icon: () => <img src={getItemImageURL(ddragonVersion, i.image.full)} alt={i.name} className="w-6 h-6 rounded-sm mr-2.5 border border-slate-600" /> /* Increased size */
-        }));
-    
-    const conceptResults: Command[] = concepts
-        .filter(c => c.title.toLowerCase().includes(lowerQuery) || c.description.toLowerCase().includes(lowerQuery))
-        .slice(0, 3)
-        .map(c => ({
-            id: `search_concept_${c.id}`,
-            type: 'search_result_concept',
-            label: c.title,
-            action: () => { 
-                if(c.onClick) c.onClick(); // Assumes concept.onClick navigates or initiates lesson
-                else navigateTo('HOME'); // Fallback, ideally scroll to concepts on Home
-                onClose();
-            },
-            data: c,
-            icon: c.icon ? () => <c.icon className="w-6 h-6 mr-2.5" /> : undefined /* Increased size */
-        }));
-
-    // Prioritize direct command matches, then search results
-    const exactCommandMatch = navAndActionCommands.find(cmd => cmd.label.toLowerCase() === lowerQuery);
-    if (exactCommandMatch) {
-      return [exactCommandMatch, ...navAndActionCommands.filter(cmd => cmd.id !== exactCommandMatch.id), ...championResults, ...itemResults, ...conceptResults];
-    }
-    
-    return [...navAndActionCommands, ...championResults, ...itemResults, ...conceptResults];
-  }, [query, commands, champions, items, concepts, ddragonVersion, navigateTo, onClose]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        setActiveIndex(prev => Math.min(prev + 1, filteredCommands.length - 1));
-      } else if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        setActiveIndex(prev => Math.max(prev - 1, 0));
-      } else if (event.key === 'Enter') {
-        event.preventDefault();
-        if (filteredCommands[activeIndex]) {
-          filteredCommands[activeIndex].action();
-          // Action should handle onClose if it navigates
-        }
-      }
-    };
-    // Use event capturing on the document to ensure palette shortcuts work globally
-    // while preventing page scroll or other default actions.
-    document.addEventListener('keydown', handleKeyDown, true); 
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, activeIndex, filteredCommands, onClose]);
   
   useEffect(() => {
-    resultsRef.current?.children[activeIndex]?.scrollIntoView({
-        block: 'nearest',
-    });
-  }, [activeIndex]);
+    setSelectedIndex(0);
+  }, [filteredCommands]);
 
+  useEffect(() => {
+    if (listRef.current) {
+      const selectedElement = listRef.current.children[selectedIndex] as HTMLLIElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedIndex]);
+  
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev + 1) % filteredCommands.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const command = filteredCommands[selectedIndex];
+      if (command) {
+        command.action();
+        onClose();
+      }
+    } else if (e.key === 'Escape') {
+      onClose();
+    }
+  }, [filteredCommands, selectedIndex, onClose]);
 
   if (!isOpen) return null;
+  
+  const activeDescendant = filteredCommands.length > 0 ? getCommandId(filteredCommands[selectedIndex], selectedIndex) : undefined;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="lg"
-      panelClassName="!bg-slate-800/95 command-palette-panel shadow-2xl border-slate-700" // Ensure high z-index behavior via Modal itself
-      modalId="command-palette"
-      titleId="command-palette-title" // Add titleId for accessibility
-    >
-      <div className="p-0">
-        <div className="flex items-center border-b border-slate-700 p-3.5 sticky top-0 bg-slate-800/90 backdrop-blur-sm z-10"> {/* Increased padding */}
-          <MagnifyingGlassIcon className="h-6 w-6 text-slate-400 mr-2.5 flex-shrink-0" /> {/* Increased size */}
-          <input
-            id="command-palette-title" // Use for aria-labelledby
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or search..."
-            className="w-full bg-transparent text-slate-100 placeholder-slate-500 focus:outline-none text-base" /* Increased font size */
-            aria-label="Command palette input"
-            autoComplete="off"
-          />
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-24" onClick={onClose}>
+      <div
+        className="w-full max-w-xl glass-effect rounded-lg shadow-2xl overflow-hidden animate-pop-in"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="command-palette-label"
+      >
+        <div className="relative">
+             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                <Icon name="search" className="h-5 w-5 text-slate-400" aria-hidden="true" />
+            </div>
+            <input
+              id="command-palette-label"
+              type="text"
+              placeholder="Type a command or search..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              className="w-full p-4 pl-11 text-lg bg-transparent focus:outline-none border-b border-slate-300/50 dark:border-slate-700/50 text-slate-800 dark:text-slate-200"
+              role="combobox"
+              aria-expanded="true"
+              aria-controls={listId}
+              aria-activedescendant={activeDescendant}
+            />
         </div>
-        {filteredCommands.length > 0 ? (
-          <ul ref={resultsRef} className="max-h-[calc(60vh-50px)] overflow-y-auto command-palette-results py-2.5" role="listbox" aria-activedescendant={filteredCommands[activeIndex]?.id}> {/* Increased py */}
-            {filteredCommands.map((cmd, index) => (
-              <li key={cmd.id} id={cmd.id} role="option" aria-selected={index === activeIndex}>
-                <button
-                  onClick={cmd.action}
-                  className={`w-full text-left px-3.5 py-3 text-base flex items-center transition-colors duration-100 ease-in-out rounded-md mx-1.5
-                    ${index === activeIndex ? 'bg-sky-600 text-white' : 'text-slate-300 hover:bg-slate-700/70'}`} /* Increased padding, font size, and mx */
-                >
-                  {cmd.icon && <cmd.icon className={`w-6 h-6 mr-3 flex-shrink-0 ${index === activeIndex ? 'text-white' : 'text-slate-400'}`} />} {/* Increased icon size and mr */}
-                  <span className="truncate">{cmd.label}</span>
-                  {cmd.type.startsWith('search_result_') && (
-                     <span className={`ml-auto text-sm px-2 py-1 rounded 
-                        ${index === activeIndex ? 'bg-sky-700 text-sky-100' : 'bg-slate-600 text-slate-400'}`}> {/* Increased font size and padding */}
-                        {cmd.type.replace('search_result_', '').replace('_', ' ')}
-                     </span>
-                  )}
-                </button>
+        <ul ref={listRef} id={listId} role="listbox" className="max-h-96 overflow-y-auto p-2">
+          {filteredCommands.length > 0 ? (
+            filteredCommands.map((command, index) => (
+              <li
+                id={getCommandId(command, index)}
+                key={getCommandId(command, index)}
+                onClick={() => { command.action(); onClose(); }}
+                className={`flex items-center space-x-3 p-3 rounded-md cursor-pointer text-slate-700 dark:text-slate-300 ${
+                  index === selectedIndex ? 'bg-indigo-500/20' : 'hover:bg-slate-500/10'
+                }`}
+                role="option"
+                aria-selected={index === selectedIndex}
+              >
+                <span className="text-slate-500 dark:text-slate-400">{command.icon}</span>
+                <span>{command.name}</span>
               </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="p-5 text-center text-slate-400 text-base">No results found.</p> /* Increased padding and font size */
-        )}
+            ))
+          ) : (
+            <li className="p-4 text-center text-slate-500">No results found.</li>
+          )}
+        </ul>
       </div>
-    </Modal>
+    </div>
   );
 };
+
+export default CommandPalette;

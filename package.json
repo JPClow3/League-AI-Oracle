@@ -1,5 +1,5 @@
 {
-  "name": "lol-draft-oracle",
+  "name": "draftwise-ai",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,8 +11,9 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@google/genai": "^1.5.1",
-    "@": "latest"
+    "@google/genai": "^1.8.0",
+    "zustand": "^5.0.6",
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

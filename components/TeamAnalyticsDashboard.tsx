@@ -1,161 +1,111 @@
-
-import React from 'react';
-import { ChampionSlot, ChampionStaticInfo } from '../types';
-import { getChampionStaticInfoById } from '../gameData';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Champion, Team, TeamAnalytics, ScoreType } from '../types';
+import { calculateTeamAnalytics } from '../data/analyticsHelper';
+import { OracleEyeButton } from './common/OracleEyeButton';
+import { geminiService } from '../services/geminiService';
+import { useProfile } from '../contexts/ProfileContext';
 
 interface TeamAnalyticsDashboardProps {
-  teamPicks: ChampionSlot[];
-  allChampionsStaticData: ChampionStaticInfo[]; 
-  teamTitle: string;
+  teamName: Team;
+  champions: (Champion | null)[];
 }
 
-const GaugeBar: React.FC<{ value: number; maxValue: number; segments?: number; colorClass?: string }> = 
-({ value, maxValue, segments = 3, colorClass = 'bg-sky-500' }) => {
-  const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-  const activeSegments = Math.ceil((value / maxValue) * segments);
+const TeamAnalyticsDashboard: React.FC<TeamAnalyticsDashboardProps> = ({ teamName, champions }) => {
+  const { activeProfile } = useProfile();
+  const { settings } = activeProfile!;
 
-  if (segments > 1) { 
-    return (
-      <div className="flex h-3.5 rounded-full bg-slate-700 w-24">
-        {Array.from({ length: segments }).map((_, i) => (
-          <div
-            key={i}
-            className={`h-full first:rounded-l-full last:rounded-r-full 
-                        ${i < activeSegments ? colorClass : 'bg-slate-600'}
-                        ${i > 0 ? 'border-l-2 border-slate-700' : ''}
-                      `}
-            style={{ width: `${100 / segments}%` }}
-          ></div>
-        ))}
-      </div>
-    );
-  }
+  const [analytics, setAnalytics] = useState<TeamAnalytics | null>(null);
+  const [explanation, setExplanation] = useState<{type: ScoreType; text: string} | null>(null);
+  const [loadingExplanation, setLoadingExplanation] = useState<ScoreType | null>(null);
 
-  return (
-    <div className="h-3.5 rounded-full bg-slate-700 w-24 overflow-hidden">
-      <div
-        className={`h-full rounded-full ${colorClass} transition-all duration-300 ease-in-out`}
-        style={{ width: `${Math.min(100, percentage)}%` }}
-      ></div>
-    </div>
-  );
-};
+  const validChampions = useMemo(() => champions.filter((c): c is Champion => c !== null), [champions]);
 
+  useEffect(() => {
+    const calculatedAnalytics = calculateTeamAnalytics(validChampions);
+    setAnalytics(calculatedAnalytics);
+    setExplanation(null); // Reset explanation when team changes
+  }, [validChampions]);
 
-const TeamAnalyticsDashboardComponent: React.FC<TeamAnalyticsDashboardProps> = ({
-  teamPicks,
-  allChampionsStaticData, 
-  teamTitle,
-}) => {
-  if (teamPicks.length === 0) {
-    return (
-      <div className="p-3 bg-slate-800 rounded-lg border border-slate-700 shadow-inner">
-        <h4 className="text-sm font-semibold text-slate-300 mb-2 truncate">{teamTitle}</h4>
-        <p className="text-xs text-slate-500 italic">No champions picked yet.</p>
-      </div>
-    );
-  }
+  const handleGetExplanation = async (scoreType: ScoreType) => {
+    if (validChampions.length === 0) return;
 
-  let physicalDamageSources = 0;
-  let magicDamageSources = 0;
-  let ccScore = 0;
-  let engageScore = 0;
-  const archetypeCounts: Record<string, number> = {};
-
-  teamPicks.forEach(pick => {
-    const staticInfo = getChampionStaticInfoById(pick.ddragonKey || pick.champion);
-    if (staticInfo) {
-      if (staticInfo.damageType === 'Physical') physicalDamageSources += 1;
-      else if (staticInfo.damageType === 'Magic') magicDamageSources += 1;
-      else if (staticInfo.damageType === 'Mixed') {
-        physicalDamageSources += 0.7; 
-        magicDamageSources += 0.7;
-      }
-
-      (staticInfo.ccTypes || []).forEach(cc => {
-        if (['Stun', 'Knockup', 'Charm', 'Taunt', 'Suppression', 'Displacement', 'Sleep', 'Berserk'].includes(cc)) ccScore += 2;
-        else if (['Root', 'Silence', 'Polymorph', 'Grounding'].includes(cc)) ccScore += 1.5;
-        else if (['Slow', 'Blind', 'Cripple'].includes(cc)) ccScore += 1; 
-      });
-
-      if (staticInfo.engagePotential === 'High') engageScore += 3;
-      else if (staticInfo.engagePotential === 'Medium') engageScore += 2;
-      else if (staticInfo.engagePotential === 'Low') engageScore += 1;
-      
-      (staticInfo.teamArchetypes || []).forEach(type => {
-        archetypeCounts[type] = (archetypeCounts[type] || 0) + 1;
-      });
+    setLoadingExplanation(scoreType);
+    if(explanation?.type === scoreType) {
+        setExplanation(null); // Allow toggling off
+        setLoadingExplanation(null);
+        return;
     }
-  });
 
-  const totalDamageSources = physicalDamageSources + magicDamageSources;
-  const physicalPercent = totalDamageSources > 0 ? (physicalDamageSources / totalDamageSources) * 100 : 0;
-  const magicPercent = totalDamageSources > 0 ? (magicDamageSources / totalDamageSources) * 100 : 0;
+    const result = await geminiService.getScoreExplanation(validChampions, scoreType, settings);
+    if (result) {
+        setExplanation({ type: scoreType, text: result.explanation });
+    }
+    setLoadingExplanation(null);
+  }
 
-  const getQualitativeScore = (score: number, lowThreshold: number, midThreshold: number): string => {
-    if (score === 0 && teamPicks.length > 0) return 'Very Low';
-    if (score < lowThreshold) return 'Low';
-    if (score < midThreshold) return 'Medium';
-    return 'High';
-  };
+  if (!analytics) return null;
   
-  const ccQuality = getQualitativeScore(ccScore, 4, 8); 
-  const engageQuality = getQualitativeScore(engageScore, 5, 10); 
+  const teamColor = teamName === 'BLUE' ? 'blue' : 'red';
+  const totalDamage = analytics.damageProfile.ad + analytics.damageProfile.ap + analytics.damageProfile.hybrid;
+  const maxScore = validChampions.length * 3;
+  const maxDnaScore = Math.max(1, validChampions.length); // Avoid division by zero, min score of 1 per champ in a category
 
-  const topArchetypes = Object.entries(archetypeCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([type]) => type);
-
-  const metricItemClass = "flex justify-between items-center text-xs mb-1.5";
-  const metricLabelClass = "text-slate-400 mr-2";
-  const metricValueClass = "font-semibold text-slate-200";
+  const renderStat = (scoreType: ScoreType, score: {value: number; label: string}) => (
+     <div className="animate-fade-in">
+        <div className="flex justify-between items-center">
+            <span className="text-xs font-semibold">{scoreType}: {score.label}</span>
+            <OracleEyeButton onClick={() => handleGetExplanation(scoreType)} isLoading={loadingExplanation === scoreType} title={`Explain ${scoreType} score`} />
+        </div>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-1">
+            <div className="bg-indigo-600 dark:bg-indigo-500 h-1.5 rounded-full transition-all duration-200" style={{ width: `${maxScore > 0 ? (score.value / maxScore) * 100 : 0}%` }}></div>
+        </div>
+        {explanation?.type === scoreType && <p className="text-xs text-right italic text-indigo-500 dark:text-indigo-400 p-1 bg-slate-100 dark:bg-slate-900/50 rounded mt-1 animate-fade-in">"{explanation.text}"</p>}
+    </div>
+  );
+  
+  const DNABar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+    <div>
+        <span className="text-xs font-semibold">{label}</span>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-0.5">
+            <div className={`bg-${teamColor}-500 h-1.5 rounded-full transition-all duration-300`} style={{ width: `${(value / maxDnaScore) * 100}%` }}></div>
+        </div>
+    </div>
+  );
 
   return (
-    <div className="p-3 bg-slate-800/70 rounded-lg border border-slate-700 shadow-inner">
-      <h4 className="text-sm font-semibold text-slate-300 mb-2 truncate" title={teamTitle}>{teamTitle}</h4>
-      
-      <div className={metricItemClass}>
-        <span className={metricLabelClass}>Damage Profile:</span>
-        <div className="flex items-center">
-            <div className="w-16 sm:w-20 h-3.5 bg-slate-700 rounded-full flex overflow-hidden mr-1.5">
-            <div className="bg-orange-500 h-full" style={{ width: `${physicalPercent}%` }} title={`Physical: ${physicalPercent.toFixed(0)}%`}></div>
-            <div className="bg-sky-500 h-full" style={{ width: `${magicPercent}%` }} title={`Magic: ${magicPercent.toFixed(0)}%`}></div>
+    <div className={`p-3 bg-slate-100/50 dark:bg-slate-900/30 rounded-lg space-y-3 text-sm`}>
+        <h4 className={`font-display text-xl text-${teamColor}-600 dark:text-${teamColor}-400`}>{teamName} Team Analysis</h4>
+        
+        <div className="animate-fade-in">
+            <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-semibold">Damage Profile</span>
+                <OracleEyeButton onClick={() => handleGetExplanation('Damage Profile')} isLoading={loadingExplanation === 'Damage Profile'} title="Explain Damage Profile" />
             </div>
-            <span className={`${metricValueClass} text-[10px]`}>{physicalPercent.toFixed(0)}% AD / {magicPercent.toFixed(0)}% AP</span>
+            {totalDamage > 0 ? (
+                <div className="flex w-full h-3 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700" title={`AD: ${analytics.damageProfile.ad}, AP: ${analytics.damageProfile.ap}, Hybrid: ${analytics.damageProfile.hybrid}`}>
+                    <div className="bg-rose-500 hover:opacity-80 transition-all duration-200" style={{ width: `${(analytics.damageProfile.ad / totalDamage) * 100}%` }} title={`AD Damage (${analytics.damageProfile.ad})`}></div>
+                    <div className="bg-sky-500 hover:opacity-80 transition-all duration-200" style={{ width: `${(analytics.damageProfile.ap / totalDamage) * 100}%` }} title={`AP Damage (${analytics.damageProfile.ap})`}></div>
+                    <div className="bg-purple-500 hover:opacity-80 transition-all duration-200" style={{ width: `${(analytics.damageProfile.hybrid / totalDamage) * 100}%` }} title={`Hybrid Damage (${analytics.damageProfile.hybrid})`}></div>
+                </div>
+            ) : <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded-full"></div>}
+            {explanation?.type === 'Damage Profile' && <p className="text-xs text-right italic text-indigo-500 dark:text-indigo-400 p-1 bg-slate-100 dark:bg-slate-900/50 rounded mt-1 animate-fade-in">"{explanation.text}"</p>}
         </div>
-      </div>
+        
+        {renderStat('CC', analytics.ccScore)}
+        {renderStat('Engage', analytics.engageScore)}
 
-      <div className={metricItemClass}>
-        <span className={metricLabelClass}>CC Score:</span>
-        <div className="flex items-center">
-          <GaugeBar value={ccScore} maxValue={12} colorClass="bg-purple-500" />
-          <span className={`${metricValueClass} ml-1.5`}>{ccQuality}</span>
-        </div>
-      </div>
-
-      <div className={metricItemClass}>
-        <span className={metricLabelClass}>Engage:</span>
-         <div className="flex items-center">
-          <GaugeBar value={engageScore} maxValue={15} colorClass="bg-red-500" />
-          <span className={`${metricValueClass} ml-1.5`}>{engageQuality}</span>
-        </div>
-      </div>
-      
-      {topArchetypes.length > 0 && (
-        <div className="mt-2 pt-1.5 border-t border-slate-700/50">
-          <span className={`${metricLabelClass} block mb-1`}>Archetypes:</span>
-          <div className="flex flex-wrap gap-1">
-            {topArchetypes.map(type => (
-              <span key={type} className="px-1.5 py-0.5 text-[9px] bg-slate-600 text-slate-300 rounded-full">
-                {type}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+        {validChampions.length > 0 && (
+             <details className="animate-fade-in" open>
+                <summary className="text-xs font-semibold cursor-pointer select-none">Team DNA</summary>
+                <div className="pt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+                   {Object.entries(analytics.teamDNA).map(([key, value]) => (
+                      value > 0 && <DNABar key={key} label={key} value={value} />
+                   ))}
+                </div>
+            </details>
+        )}
     </div>
   );
 };
 
-export const TeamAnalyticsDashboard = React.memo(TeamAnalyticsDashboardComponent);
+export default TeamAnalyticsDashboard;

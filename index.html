@@ -1,724 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LoL Draft Oracle</title>
-  <link rel="preconnect" href="https://esm.sh" />
-  <link rel="preconnect" href="https://cdn.tailwindcss.com" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script type="importmap">
-  {
-    "imports": {
-      "react": "https://esm.sh/react@^19.1.0",
-      "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-      "react/": "https://esm.sh/react@^19.1.0/",
-      "@google/genai": "https://esm.sh/@google/genai@^1.5.1",
-      "react-dom": "https://esm.sh/react-dom@^19.1.0",
-      "@/": "./"
-    }
-  }
-  </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DraftWise AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Teko:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --font-sans: 'Inter', sans-serif;
+        --font-display: 'Teko', sans-serif;
+        --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
-    :root {
-      /* Default (Dark Mode) Text Colors */
-      --dm-text-primary: hsl(210, 17%, 95%); 
-      --dm-text-secondary: hsl(210, 15%, 85%); 
-      --dm-text-tertiary: hsl(210, 12%, 70%); 
-      --dm-text-muted: hsl(210, 10%, 55%);   
-      --dm-link: hsl(200, 90%, 75%);
-      --dm-link-hover: hsl(200, 100%, 85%);
-      --dm-heading-color: var(--dm-text-primary); 
-      --dm-prose-body: var(--dm-text-secondary);
-      --dm-prose-strong: var(--dm-text-primary);
-      --dm-prose-headings: hsl(205, 80%, 80%); 
+        /* Light Theme */
+        --bg-light: 248 250 252; /* Slate 50 */
+        --bg-surface-light: 255 255 255; /* White */
+        --bg-muted-light: 241 245 249; /* Slate 100 */
+        --border-light: 226 232 240; /* Slate 200 */
+        --text-primary-light: 15 23 42; /* Slate 900 */
+        --text-secondary-light: 100 116 139; /* Slate 500 */
+        --accent-primary-light: 79 70 229; /* Indigo 600 */
+        --accent-secondary-light: 124 58 237; /* Purple 600 */
+        --accent-primary-hover-light: 67 56 202; /* Indigo 700 */
+        
+        /* Dark Theme */
+        --bg-dark: 15 23 42; /* Slate 900 */
+        --bg-surface-dark: 30 41 59; /* Slate 800 */
+        --bg-muted-dark: 51 65 85; /* Slate 700 */
+        --border-dark: 51 65 85; /* Slate 700 */
+        --text-primary-dark: 248 250 252; /* Slate 50 */
+        --text-secondary-dark: 148 163 184; /* Slate 400 */
+        --accent-primary-dark: 99 102 241; /* Indigo 500 */
+        --accent-secondary-dark: 167 139 250; /* Violet 400 */
+        --accent-primary-hover-dark: 129 140 248; /* Indigo 400 */
+      }
+      body {
+        font-family: var(--font-sans);
+        color: rgb(var(--text-primary-light));
+        background-color: rgb(var(--bg-light));
+        transition: background-color var(--transition-base), color var(--transition-base);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .dark body {
+        color: rgb(var(--text-primary-dark));
+        background-color: rgb(var(--bg-dark));
+      }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: var(--font-display);
+        letter-spacing: 0.025em;
+        font-weight: 600;
+      }
 
+      /* Data-driven aesthetics */
+      .bg-primary-gradient {
+        background-image: linear-gradient(to right, rgb(var(--accent-primary-light)) 0%, rgb(var(--accent-secondary-light)) 100%);
+        transition: background-position 0.5s ease, transform 0.2s ease;
+        background-size: 200% auto;
+      }
+      .bg-primary-gradient:hover {
+        background-position: right center;
+      }
+      .dark .bg-primary-gradient {
+        background-image: linear-gradient(to right, rgb(var(--accent-primary-dark)) 0%, rgb(var(--accent-secondary-dark)) 100%);
+      }
 
-      /* Default (Dark Mode) Accent Colors - Darker and less saturated */
-      --accent-yellow-hsl: 45, 65%, 55%; 
-      --accent-yellow: hsl(var(--accent-yellow-hsl));
-      --accent-yellow-focus-ring: hsla(var(--accent-yellow-hsl), 0.4); 
-      --accent-yellow-hover-glow: hsla(var(--accent-yellow-hsl), 0.2);
-      --accent-yellow-active-glow: hsla(var(--accent-yellow-hsl), 0.25);
+      .text-gradient-primary {
+        background-image: linear-gradient(to right, rgb(var(--accent-primary-light)), rgb(var(--accent-secondary-light)));
+        -webkit-background-clip: text;
+        -moz-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .dark .text-gradient-primary {
+        background-image: linear-gradient(to right, rgb(var(--accent-primary-dark)), rgb(var(--accent-secondary-dark)));
+      }
+
+      .glass-effect {
+        background-color: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border: 1px solid rgba(226, 232, 240, 0.5);
+      }
+      .dark .glass-effect {
+        background-color: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(51, 65, 85, 0.5);
+      }
       
-      --accent-amber-hsl: 40, 60%, 50%;  
-      --accent-amber: hsl(var(--accent-amber-hsl));
-      --accent-amber-darker: hsl(40, 60%, 40%);
+      .prose { white-space: pre-wrap; }
 
-      --button-secondary-text-hover: hsl(45, 80%, 75%); 
-
-      /* Default (Dark Mode) Border Shimmer Colors - Significantly Darkened */
-      --border-color-1-default: hsl(200, 40%, 25%);
-      --border-color-2-default: hsl(var(--accent-yellow-hsl)); 
-      --border-color-3-default: hsl(220, 40%, 30%);
-      --border-color-4-default: hsl(var(--accent-amber-hsl)); 
-      --border-color-5-default: hsl(200, 40%, 25%);
-
-      /* Glow Opacities for pulse animation */
-      --glow-opacity-low: 0.1;
-      --glow-opacity-medium: 0.15; 
-      --glow-opacity-high: 0.2;  
-
-      /* Pulse glow color - uses themed accent yellow */
-      --pulse-glow-color: var(--accent-yellow);
-      --pulse-glow-shadow-color: hsla(var(--accent-yellow-hsl), var(--glow-opacity-medium));
-
-      /* Inner Shadow Colors */
-      --dm-inner-shadow-color: hsla(var(--accent-yellow-hsl), 0.08);
-      --dm-button-inner-shadow-color: hsla(var(--accent-yellow-hsl), 0.15);
-
-
-      /* Light mode specifics */
-      --lm-text-primary: hsl(215, 35%, 12%); 
-      --lm-text-secondary: hsl(215, 25%, 25%); 
-      --lm-text-tertiary: hsl(215, 18%, 38%); 
-      --lm-text-muted: hsl(215, 15%, 50%);   
-      --lm-link: hsl(210, 80%, 48%);
-      --lm-link-hover: hsl(210, 90%, 40%);
-      --lm-heading-color: var(--lm-text-primary);
-      --lm-prose-body: var(--lm-text-primary);
-      --lm-prose-strong: hsl(215, 40%, 8%);
-      --lm-prose-headings: hsl(215, 30%, 15%);
-
-
-      --light-bg: hsl(210, 40%, 98.5%); 
-      --light-panel-bg: hsl(210, 35%, 97.5%); 
-      --light-panel-border: hsl(210, 25%, 86%); 
-      --light-input-bg: hsl(210, 30%, 96%); 
-      --light-input-border: hsl(215, 22%, 68%); 
-      --light-input-text: var(--lm-text-primary); 
-      --light-button-secondary-bg: hsl(210, 20%, 94%); 
-      --light-button-secondary-text: var(--lm-text-secondary); 
-      --light-button-secondary-border: hsl(210, 18%, 85%); 
-      --light-button-secondary-text-hover: var(--lm-text-primary); 
-      --light-scrollbar-track: hsl(210, 25%, 95%); 
-      --light-scrollbar-thumb: hsl(215, 18%, 75%); 
-      --light-dynamic-greeting-text: hsl(35, 70%, 38%);
-      --light-concept-viewed-bg: hsla(220, 40%, 90%, 0.9);
-      --light-concept-viewed-text: hsl(35, 70%, 38%);
-
-       /* Bright Accent HSL values for light mode */
-      --lm-accent-yellow-hsl: 45, 80%, 50%; 
-      --lm-accent-amber-hsl: 40, 70%, 45%; 
-      --lm-border-shimmer-color-1-hsl: 200, 90%, 60%;
-      --lm-border-shimmer-color-3-hsl: 220, 90%, 65%;
-
-      /* Light Mode Inner Shadow Colors */
-      --lm-inner-shadow-color: hsla(0, 0%, 0%, 0.04);
-      --lm-button-inner-shadow-color: hsla(0, 0%, 0%, 0.06);
-
-      /* Oracle's Aura Variables */
-      --pleased-particle-color-dm: hsla(45, 75%, 65%, 0.045); /* Brighter, more vibrant gold */
-      --pleased-particle-slow-color-dm: hsla(45, 70%, 60%, 0.03);
-      --pleased-border-shimmer-duration: 7s;
-
-      --concerned-particle-color-dm: hsla(220, 30%, 35%, 0.02); /* Cooler, muted blue/purple */
-      --concerned-particle-slow-color-dm: hsla(220, 25%, 30%, 0.015);
-      --concerned-border-shimmer-duration: 15s;
-      --concerned-bg-pulse-color-1-dm: #0A0D1A; /* Darker, cooler */
-      --concerned-bg-pulse-color-2-dm: #0D101C; 
-      --concerned-bg-pulse-color-3-dm: #121625;
-
-      --pleased-particle-color-lm: hsla(45, 90%, 60%, 0.12);
-      --pleased-particle-slow-color-lm: hsla(45, 85%, 55%, 0.08);
-      
-      --concerned-particle-color-lm: hsla(220, 40%, 70%, 0.06); 
-      --concerned-particle-slow-color-lm: hsla(220, 35%, 65%, 0.04);
-      --concerned-bg-pulse-color-lm-1: hsl(210, 30%, 94%); /* Cooler, slightly desaturated light */
-      --concerned-bg-pulse-color-lm-2: hsl(210, 30%, 92%);
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      font-size: 17px; /* Increased base font size */
-      min-height: 100vh;
-      background: linear-gradient(135deg, #05080F 0%, #080C14 50%, #0E131E 100%);
-      color: var(--dm-text-primary); 
-      transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out, color 0.5s ease-in-out;
-      line-height: 1.7; /* Adjusted line height */
-    }
-
-    body:not(.animations-disabled) {
-        animation: backgroundPulseDark 20s infinite ease-in-out;
-    }
-
-    ::selection {
-      background-color: var(--accent-yellow); 
-      color: #0F172A; 
-    }
-    ::-moz-selection { 
-      background-color: var(--accent-yellow);
-      color: #0F172A;
-    }
-
-    .app-title { 
-      font-family: 'Playfair Display', serif;
-    }
-
-    @keyframes backgroundPulseDark {
-      0% { background-image: linear-gradient(135deg, #05080F 0%, #080C14 50%, #0E131E 100%); }
-      50% { background-image: linear-gradient(135deg, #070A12 0%, #0A0F1A 50%, #101522 100%); } 
-      100% { background-image: linear-gradient(135deg, #05080F 0%, #080C14 50%, #0E131E 100%); }
-    }
-     @keyframes backgroundPulseLight {
-      0% { background-color: var(--light-bg); }
-      50% { background-color: hsl(210, 40%, 97%); } 
-      100% { background-color: var(--light-bg); }
-    }
-
-    ::-webkit-scrollbar { width: 12px; height: 12px; } /* Increased scrollbar size */
-    ::-webkit-scrollbar-track { background: #171E2E; }
-    ::-webkit-scrollbar-thumb { background: #39425E; border-radius: 6px; border: 3px solid #171E2E; } /* Adjusted thumb */
-    ::-webkit-scrollbar-thumb:hover { background: var(--accent-yellow); }
-
-    @keyframes borderShimmerEffect {
-      0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
-    }
-
-    .lol-panel {
-      position: relative; 
-      background-color: rgba(10, 15, 30, 0.92); 
-      backdrop-filter: blur(8px); 
-      padding: 2px; 
-      box-shadow: inset 0 1px 3px 0 var(--dm-inner-shadow-color), 0 8px 20px rgba(0,0,0,0.5), 0 0 10px var(--accent-yellow-hover-glow);
-      border-radius: 1.5rem; /* Slightly increased border radius */
-      transition: opacity 0.3s ease-in-out, filter 0.3s ease-in-out, box-shadow 0.35s ease-in-out, border-color 0.35s ease-in-out, background-color 0.35s ease-in-out, transform 0.3s ease-in-out;
-    }
-    .animations-disabled .lol-panel {
-      box-shadow: inset 0 1px 3px 0 var(--dm-inner-shadow-color), 0 8px 20px rgba(0,0,0,0.5), 0 0 10px var(--accent-yellow-hover-glow);
-    }
-    .lol-panel:hover:not(.no-hover-lift):not(.animations-disabled) { 
-        transform: translateY(-4px); /* Increased lift */
-        box-shadow: inset 0 1px 3px 0 var(--dm-inner-shadow-color), 0 14px 28px rgba(0,0,0,0.45), 0 0 18px var(--accent-yellow-hover-glow); /* Increased shadow */
-    }
-    .lol-panel::before {
-      content: ''; position: absolute; inset: 0; border-radius: inherit; 
-      background: linear-gradient(60deg, var(--border-color-1, var(--border-color-1-default)), var(--border-color-2, var(--border-color-2-default)), var(--border-color-3, var(--border-color-3-default)), var(--border-color-4, var(--border-color-4-default)), var(--border-color-5, var(--border-color-5-default)));
-      background-size: 300% 300%; animation: borderShimmerEffect 10s linear infinite; z-index: -1; pointer-events: none;
-      transition: animation-duration 0.5s ease-in-out;
-    }
-    .animations-disabled .lol-panel::before { animation: none; }
-    .lol-panel-warning-border::before {
-      --border-color-1: hsl(280, 40%, 35%); --border-color-2: hsl(var(--accent-amber-hsl)); --border-color-3: hsl(270, 45%, 40%); 
-      --border-color-4: hsl(var(--accent-yellow-hsl)); --border-color-5: hsl(280, 40%, 35%); animation-duration: 7s; 
-    }
-
-    @keyframes subtlePulseGlow {
-      0%, 100% { border-color: var(--pulse-glow-color); box-shadow: 0 0 12px var(--pulse-glow-shadow-color), 0 0 18px var(--pulse-glow-shadow-color), inset 0 1px 1px var(--dm-button-inner-shadow-color); } /* Increased glow */
-      50% { border-color: hsla(var(--accent-yellow-hsl), 0.8); box-shadow: 0 0 24px var(--pulse-glow-shadow-color), 0 0 36px var(--pulse-glow-shadow-color), inset 0 1px 1px var(--dm-button-inner-shadow-color); } /* Increased glow */
-    }
-    .animate-subtle-pulse-glow { animation: subtlePulseGlow 2.5s infinite ease-in-out; border-width: 1px; border-style: solid; }
-    .animations-disabled .animate-subtle-pulse-glow { animation: none; }
-
-    .lol-button {
-      font-weight: 600; border-radius: 0.875rem; /* Slightly increased */
-      padding: 0.8rem 1.6rem; /* Increased padding */
-      font-size: 1.05rem; /* Increased font size */
-      transition: all 0.3s ease-in-out; 
-      text-transform: uppercase; letter-spacing: 0.05em;
-      border: 1px solid transparent; 
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 1px var(--dm-button-inner-shadow-color), inset 0 0 5px rgba(0,0,0, 0.1);
-    }
-    .lol-button-primary {
-      background: linear-gradient(145deg, hsl(210, 55%, 30%), hsl(220, 45%, 40%)); 
-      color: var(--dm-text-primary); 
-      border-color: hsl(210, 55%, 25%); 
-    }
-    .lol-button-primary:hover:not(:disabled) {
-      background: linear-gradient(145deg, hsl(210, 55%, 25%), hsl(220, 45%, 35%)); 
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 1px 1px var(--dm-button-inner-shadow-color), inset 0 0 8px hsla(var(--accent-yellow-hsl),0.3), 0 0 12px hsla(var(--accent-yellow-hsl),0.3); /* Increased shadow */
-      border-color: var(--accent-yellow); transform: translateY(-2px) scale(1.02); 
-    }
-    .lol-button-primary:active:not(:disabled) {
-      transform: scale(0.97); background: linear-gradient(145deg, hsl(210, 55%, 20%), hsl(220, 45%, 30%)); 
-      border-color: var(--accent-amber); 
-    }
-    .lol-button-secondary {
-      background-color: #2A3447; color: var(--dm-text-secondary); border-color: #222A38; 
-    }
-    .lol-button-secondary:hover:not(:disabled) {
-      background-color: #3E4A61; border-color: var(--accent-yellow); color: var(--button-secondary-text-hover); 
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), inset 0 1px 1px var(--dm-button-inner-shadow-color), inset 0 0 8px hsla(var(--accent-yellow-hsl),0.25); transform: translateY(-2px) scale(1.02); /* Increased shadow */
-    }
-    .lol-button-secondary:active:not(:disabled) {
-      transform: scale(0.97); background-color: #1E293B; border-color: var(--accent-amber);
-    }
-
-    .lol-input, .lol-select {
-      background-color: rgba(10, 15, 30, 0.75); border: 1px solid #283149; color: var(--dm-text-primary); 
-      border-radius: 0.875rem; padding: 0.75rem 1rem; /* Increased padding */
-      font-size: 1rem; /* Ensured base font size */
-      transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out; 
-      width: 100%;
-    }
-    .lol-input:focus, .lol-select:focus {
-      outline: none; border-color: var(--accent-yellow); box-shadow: 0 0 0 3px var(--accent-yellow-focus-ring); 
-    }
-    .lol-select {
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23E2E8F0' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); 
-      background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 3rem; /* Adjusted for larger padding */
-    }
-
-    .champion-card { transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
-    .champion-card:hover:not(.no-hover-lift):not(.animations-disabled) { 
-      transform: translateY(-5px); box-shadow: 0 14px 28px rgba(0,0,0,0.35), 0 0 20px var(--accent-yellow-hover-glow), inset 0 1px 1px var(--dm-button-inner-shadow-color); /* Increased shadow */
-    }
-    .champion-card:active:not(.no-active-scale):not(.animations-disabled) { transform: translateY(-2px) scale(0.98); }
-    
-    .banned-champion-img { 
-      filter: grayscale(60%) brightness(0.85); /* Made image clearer */
-      opacity: 0.9; /* Increased opacity */
-    }
-    .banned-champion-img-overlay { 
-      background: radial-gradient(circle, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.7) 100%); /* Less obtrusive overlay */
-    }
-    .active-pick-slot-highlight { box-shadow: 0 0 18px var(--accent-yellow), 0 0 30px var(--accent-yellow), inset 0 1px 2px var(--dm-button-inner-shadow-color) !important; border-color: var(--accent-yellow) !important; animation: subtlePulseGlow 2.5s infinite ease-in-out; } /* Increased glow */
-    .animations-disabled .active-pick-slot-highlight { animation: none; }
-    .drag-over-active { border-color: var(--accent-yellow) !important; box-shadow: 0 0 12px var(--accent-yellow-focus-ring), inset 0 0 12px var(--accent-yellow-focus-ring); } /* Increased glow */
-
-    .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
-    .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
-    .animate-popIn { animation: popIn 0.3s ease-out forwards; }
-    .animate-textFlipInX { animation: textFlipInX 0.5s ease-out forwards; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } } /* Increased translateY */
-    @keyframes popIn { 0% { opacity: 0; transform: scale(0.9); } 80% { opacity: 1; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
-    @keyframes textFlipInX { from { opacity: 0; transform: perspective(400px) rotateX(90deg); } 40% { transform: perspective(400px) rotateX(-20deg); } 70% { transform: perspective(400px) rotateX(10deg); } to { opacity: 1; transform: perspective(400px) rotateX(0deg); } }
-
-    .animations-disabled body { animation: none !important; }
-    .animations-disabled .lol-panel::before, .animations-disabled .lol-panel:hover, 
-    .animations-disabled .champion-card:hover, .animations-disabled .animate-subtle-pulse-glow,
-    .animations-disabled .active-pick-slot-highlight, .animations-disabled .animate-fadeIn,
-    .animations-disabled .animate-fadeInUp, .animations-disabled .animate-popIn,
-    .animations-disabled .animate-textFlipInX, .animations-disabled .particle { animation: none !important; }
-    .animations-disabled .lol-panel:hover, .animations-disabled .champion-card:hover { transform: none !important; } 
-    .animations-disabled .lol-button:hover, .animations-disabled .lol-button:active { transform: none !important; } 
-    .animations-disabled .animate-fadeIn, .animations-disabled .animate-fadeInUp,
-    .animations-disabled .animate-popIn, .animations-disabled .animate-textFlipInX { opacity: 1 !important; transform: none !important; }
-    .animations-disabled .particle { opacity: 0.02 !important; background-color: hsla(var(--accent-yellow-hsl), 0.05) !important; }
-
-    .particle-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 0; transition: opacity 0.3s ease-in-out; }
-    .particle { position: absolute; border-radius: 50%; background-color: hsla(var(--accent-yellow-hsl), 0.03); animation: floatParticles 20s infinite ease-in-out; transition: background-color 0.5s ease-in-out, opacity 0.5s ease-in-out, animation-duration 0.5s ease-in-out; } 
-    .particle.p1 { width: 4px; height: 4px; left: 10%; animation-duration: 18s; animation-delay: -2s; opacity: 0.06; } 
-    .particle.p2 { width: 6px; height: 6px; left: 30%; animation-duration: 22s; animation-delay: -5s; opacity: 0.025; }
-    .particle.p3 { width: 2px; height: 2px; left: 50%; animation-duration: 25s; animation-delay: -1s; opacity: 0.04; }
-    .particle.p4 { width: 5px; height: 5px; left: 70%; animation-duration: 15s; animation-delay: -8s; background-color: hsla(200, 40%, 30%, 0.02); }
-    .particle.p5 { width: 3px; height: 3px; left: 90%; animation-duration: 20s; animation-delay: -3s; opacity: 0.05; }
-    .particle.p6 { width: 5px; height: 5px; left: 40%; animation-duration: 17s; animation-delay: -6s; opacity: 0.035; background-color: hsla(210, 40%, 25%, 0.02); }
-    
-    .particle.p-slow1 { width: 8px; height: 8px; left: 5%; animation: floatParticlesSlow 35s infinite ease-in-out; animation-delay: -10s; opacity: 0.015; background-color: hsla(var(--accent-yellow-hsl), 0.02); }
-    .particle.p-slow2 { width: 4px; height: 4px; left: 45%; animation: floatParticlesSlow 40s infinite ease-in-out; animation-delay: -15s; opacity: 0.01; background-color: hsla(210, 20%, 40%, 0.015); }
-    .particle.p-slow3 { width: 10px; height: 10px; left: 85%; animation: floatParticlesSlow 45s infinite ease-in-out; animation-delay: -5s; opacity: 0.012; background-color: hsla(var(--accent-amber-hsl), 0.018); }
-
-    @keyframes floatParticles { 0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: inherit; } 25% { transform: translateY(-20px) translateX(10px) scale(1.1); opacity: calc(inherit * 0.7); } 50% { transform: translateY(0px) translateX(-15px) scale(1); opacity: inherit; } 75% { transform: translateY(15px) translateX(5px) scale(0.9); opacity: calc(inherit * 0.8); } }
-    @keyframes floatParticlesSlow { 
-        0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: inherit; } 
-        25% { transform: translateY(15px) translateX(-30px) scale(0.9); opacity: calc(inherit * 0.5); } 
-        50% { transform: translateY(-10px) translateX(5px) scale(1); opacity: inherit; } 
-        75% { transform: translateY(-20px) translateX(25px) scale(1.1); opacity: calc(inherit * 0.6); } 
-    }
-    
-    body.focus-mode-visuals-active > header, body.focus-mode-visuals-active > footer { opacity: 0.5; }
-    body.focus-mode-visuals-active .particle-container { opacity: 0.05; }
-    .lol-panel-focused { 
-        border-width: 2px; border-style: solid; border-color: var(--accent-yellow); 
-        --pulse-glow-shadow-color-focused: hsla(var(--accent-yellow-hsl), var(--glow-opacity-high)); 
-        box-shadow: inset 0 1px 3px 0 var(--dm-inner-shadow-color), 0 0 25px var(--pulse-glow-shadow-color-focused), 0 0 40px var(--pulse-glow-shadow-color-focused), 0 10px 25px rgba(0,0,0,0.5); 
-    }
-    .lol-panel-focused.animate-subtle-pulse-glow { animation: subtlePulseGlow 2s infinite ease-in-out; }
-    .animations-disabled .lol-panel-focused { 
-        animation: none; 
-        box-shadow: inset 0 1px 3px 0 var(--dm-inner-shadow-color), 0 0 18px hsla(var(--accent-yellow-hsl), var(--glow-opacity-high)), 0 10px 25px rgba(0,0,0,0.5); 
-        border-color: var(--accent-yellow); 
-    }
-
-    @keyframes modal-appear { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .animate-modal-appear { animation: modal-appear 0.2s ease-out forwards; }
-
-    .onboarding-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.7); z-index: 998; }
-    .onboarding-highlighted-element { box-shadow: 0 0 0 3px var(--accent-yellow), 0 0 20px 5px var(--accent-yellow-focus-ring), inset 0 0 10px var(--accent-yellow-hover-glow); transition: box-shadow 0.2s ease-in-out; }
-    .onboarding-popover { position: fixed; z-index: 1001; min-width: 300px; max-width: 380px; background-color: #0A0F1A; transition: opacity 0.2s ease-out, transform 0.2s ease-out; } /* Increased min/max width */
-    .onboarding-popover-arrow { position: absolute; width: 0; height: 0; border-style: solid; }
-    .onboarding-popover-arrow-top { border-width: 0 8px 8px 8px; border-left-color: transparent; border-right-color: transparent; border-bottom-color: #0A0F1A; top: -8px; left: 50%; transform: translateX(-50%); }
-    .onboarding-popover-arrow-bottom { border-width: 8px 8px 0 8px; border-left-color: transparent; border-right-color: transparent; border-top-color: #0A0F1A; bottom: -8px; left: 50%; transform: translateX(-50%); }
-    .onboarding-popover-arrow-left { border-width: 8px 8px 8px 0; border-top-color: transparent; border-bottom-color: transparent; border-right-color: #0A0F1A; left: -8px; top: 50%; transform: translateY(-50%); }
-    .onboarding-popover-arrow-right { border-width: 8px 0 8px 8px; border-top-color: transparent; border-bottom-color: transparent; border-left-color: #0A0F1A; right: -8px; top: 50%; transform: translateY(-50%); }
-
-    .toast-container { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 1050; display: flex; flex-direction: column; align-items: center; gap: 12px; } /* Increased bottom and gap */
-    .toast-notification { 
-        min-width: 300px; max-width: 420px; padding: 14px 20px; border-radius: 0.875rem; /* Increased padding and radius */
-        color: var(--dm-text-primary); font-size: 1rem; line-height: 1.5; /* Increased font size */
-        box-shadow: 0 6px 18px rgba(0,0,0,0.3), 0 0 10px var(--accent-yellow-hover-glow); /* Increased shadow */
-        display: flex; align-items: center;
-        opacity: 0; transform: translateY(20px); animation: toastSlideUp 0.3s ease-out forwards;
-        border: 1px solid;
-    }
-    .toast-notification.toast-leave { animation: toastSlideDown 0.3s ease-in forwards; }
-
-    .toast-success { background-color: hsla(145, 63%, 32%, 0.95); border-color: hsla(145, 63%, 42%, 0.9); }
-    .toast-success .toast-icon { color: hsl(145, 80%, 70%); }
-
-    .toast-error { background-color: hsla(0, 65%, 40%, 0.95); border-color: hsla(0, 65%, 50%, 0.9); }
-    .toast-error .toast-icon { color: hsl(0, 80%, 75%); }
-
-    .toast-icon { margin-right: 12px; flex-shrink: 0; } /* Increased margin */
-    
-    body.light-mode .toast-notification { color: var(--lm-text-primary); box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
-    body.light-mode .toast-success { background-color: hsla(145, 50%, 88%, 0.98); border-color: hsla(145, 45%, 78%, 1); }
-    body.light-mode .toast-success .toast-icon { color: hsl(145, 58%, 38%); }
-    body.light-mode .toast-error { background-color: hsla(0, 70%, 90%, 0.98); border-color: hsla(0, 65%, 80%, 1); }
-    body.light-mode .toast-error .toast-icon { color: hsl(0, 70%, 50%); }
-
-    @keyframes toastSlideUp {
-        from { opacity: 0; transform: translateY(20px) translateX(-50%); }
-        to { opacity: 1; transform: translateY(0) translateX(-50%); }
-    }
-    @keyframes toastSlideDown {
-        from { opacity: 1; transform: translateY(0) translateX(-50%); }
-        to { opacity: 0; transform: translateY(20px) translateX(-50%); }
-    }
-    #root ~ .toast-container {
+      body::before {
+        content: '';
         position: fixed;
-        bottom: 25px; /* Increased */
-        left: 50%;
-        transform: translateX(-50%); 
-        z-index: 1050; 
-    }
-    .toast-notification {
-        transform: translateY(20px); 
-    }
-    @keyframes toastSlideUpIndividual {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes toastSlideDownIndividual {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(20px); }
-    }
-    .toast-notification.toast-show { animation: toastSlideUpIndividual 0.3s ease-out forwards; }
-    .toast-notification.toast-hide { animation: toastSlideDownIndividual 0.3s ease-in forwards; }
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: -2; /* Pushed back */
+        background: radial-gradient(ellipse at top left, var(--aura-color, transparent) 0%, transparent 40%);
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out, background 1.5s ease-in-out;
+      }
+       body::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: -1; /* In front of main aura */
+        background: radial-gradient(ellipse at center, var(--hover-aura-color, transparent) 0%, transparent 50%);
+        opacity: 0;
+        transition: opacity 0.4s ease-out;
+      }
+      .aura-ad-focused body::before { --aura-color: rgba(225, 29, 72, 0.12); opacity: 1; } /* Rose 600 */
+      .aura-ap-focused body::before { --aura-color: rgba(79, 70, 229, 0.12); opacity: 1; } /* Indigo 600 */
+      .aura-positive body::before { --aura-color: rgba(13, 148, 136, 0.18); opacity: 1; } /* Teal 600 */
+      .aura-negative body::before { --aura-color: rgba(190, 18, 60, 0.15); opacity: 1; } /* Rose 700 */
+      .aura-thinking body::before { --aura-color: rgba(217, 119, 6, 0.18); opacity: 1; } /* Amber 600 */
 
-    .command-palette-panel {
-      background-color: rgba(10, 15, 30, 0.97) !important; 
-      backdrop-filter: blur(10px) !important;
-      border: 1px solid hsl(210, 30%, 25%) !important;
-    }
-    .command-palette-results::-webkit-scrollbar { width: 8px; }
-    .command-palette-results::-webkit-scrollbar-track { background: hsl(210, 30%, 15%); }
-    .command-palette-results::-webkit-scrollbar-thumb { background: hsl(210, 30%, 35%); border-radius: 4px; }
-    .command-palette-results::-webkit-scrollbar-thumb:hover { background: hsl(var(--accent-yellow-hsl)); }
-    
-    body.light-mode .command-palette-panel {
-      background-color: hsla(210, 35%, 96%, 0.97) !important;
-      border: 1px solid hsl(210, 25%, 80%) !important;
-    }
-    body.light-mode .command-palette-results::-webkit-scrollbar-track { background: hsl(210, 25%, 92%); }
-    body.light-mode .command-palette-results::-webkit-scrollbar-thumb { background: hsl(210, 20%, 75%); }
-    body.light-mode .command-palette-results::-webkit-scrollbar-thumb:hover { background: hsl(var(--lm-accent-yellow-hsl)); }
-    body.light-mode #command-palette-title { color: var(--lm-text-primary); }
-    body.light-mode #command-palette-title::placeholder { color: var(--lm-text-muted); }
-    body.light-mode .command-palette-results li button { color: var(--lm-text-secondary); }
-    body.light-mode .command-palette-results li button:hover { background-color: hsl(210, 30%, 90%); }
-    body.light-mode .command-palette-results li button[aria-selected="true"] { background-color: hsl(var(--lm-accent-yellow-hsl)); color: var(--lm-text-primary); }
-    body.light-mode .command-palette-results li button[aria-selected="true"] svg { color: var(--lm-text-primary) !important; } 
-    body.light-mode .command-palette-results li button svg { color: var(--lm-text-tertiary) !important; }
+      .hover-aura-engage body::after { --hover-aura-color: rgba(99, 102, 241, 0.15); opacity: 1; } /* Indigo 500 */
+      .hover-aura-positive body::after { --hover-aura-color: rgba(16, 185, 129, 0.18); opacity: 1; } /* Emerald 500 */
+      .hover-aura-negative body::after { --hover-aura-color: rgba(220, 38, 38, 0.15); opacity: 1; } /* Red 600 */
+      
+      /* --- Animations --- */
+      @keyframes slide-fade-in {
+        from { opacity: 0; transform: translateY(20px) scale(0.99); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .animate-slide-fade-in { 
+        animation: slide-fade-in 500ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      }
+      
+      @keyframes pop-in {
+        from { opacity: 0; transform: scale(0.85); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .animate-pop-in { animation: pop-in 250ms ease-out forwards; }
 
-    body.light-mode {
-      background: var(--light-bg);
-      color: var(--lm-text-primary);
-    }
-    body.light-mode:not(.animations-disabled) {
-      animation: backgroundPulseLight 20s infinite ease-in-out;
-    }
-    body.light-mode ::-webkit-scrollbar-track { background: var(--light-scrollbar-track); }
-    body.light-mode ::-webkit-scrollbar-thumb { background: var(--light-scrollbar-thumb); border-color: var(--light-scrollbar-track); }
-    body.light-mode ::-webkit-scrollbar-thumb:hover { background: hsl(var(--lm-accent-yellow-hsl)); }
-    body.light-mode .lol-panel {
-      background-color: hsla(210, 35%, 97.5%, 0.92); 
-      border-color: var(--light-panel-border);
-      box-shadow: inset 0 1px 3px 0 var(--lm-inner-shadow-color), 0 8px 20px rgba(0,0,0,0.08), 0 0 10px hsla(var(--lm-accent-yellow-hsl), 0.2);
-    }
-    body.light-mode .lol-panel:hover:not(.no-hover-lift):not(.animations-disabled) {
-      box-shadow: inset 0 1px 3px 0 var(--lm-inner-shadow-color), 0 12px 25px rgba(0,0,0,0.06), 0 0 15px hsla(var(--lm-accent-yellow-hsl), 0.25);
-    }
-    body.light-mode .lol-panel::before {
-      background: linear-gradient(60deg, hsl(var(--lm-border-shimmer-color-1-hsl)), hsl(var(--lm-accent-yellow-hsl)), hsl(var(--lm-border-shimmer-color-3-hsl)), hsl(var(--lm-accent-amber-hsl)), hsl(var(--lm-border-shimmer-color-1-hsl)));
-      background-size: 300% 300%;
-    }
-    body.light-mode .lol-panel-warning-border::before {
-      --border-color-1: hsl(300, 70%, 75%); --border-color-2: hsl(var(--lm-accent-amber-hsl)); --border-color-3: hsl(290, 75%, 80%); 
-      --border-color-4: hsl(var(--lm-accent-yellow-hsl)); --border-color-5: hsl(300, 70%, 75%);
-    }
-    body.light-mode .animate-subtle-pulse-glow { 
-      border-color: hsl(var(--lm-accent-yellow-hsl)); 
-      box-shadow: 0 0 10px hsla(var(--lm-accent-yellow-hsl), 0.3), 0 0 15px hsla(var(--lm-accent-yellow-hsl), 0.3), inset 0 1px 1px var(--lm-button-inner-shadow-color);
-    }
-    body.light-mode .lol-button {
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 1px 1px var(--lm-button-inner-shadow-color), inset 0 0 3px rgba(0,0,0, 0.05);
-    }
-    body.light-mode .lol-button-primary {
-      background: linear-gradient(145deg, hsl(var(--lm-accent-yellow-hsl)), hsl(var(--lm-accent-amber-hsl)));
-      color: var(--lm-text-primary);
-      border-color: hsl(45, 70%, 40%);
-    }
-    body.light-mode .lol-button-primary:hover:not(:disabled) {
-      background: linear-gradient(145deg, hsl(45, 80%, 45%), hsl(40, 70%, 40%));
-      border-color: hsl(45, 90%, 55%);
-      box-shadow: 0 3px 6px rgba(0,0,0,0.15), inset 0 1px 1px var(--lm-button-inner-shadow-color), inset 0 0 4px hsla(var(--lm-accent-yellow-hsl),0.3), 0 0 8px hsla(var(--lm-accent-yellow-hsl),0.3);
-    }
-    body.light-mode .lol-button-secondary {
-      background-color: var(--light-button-secondary-bg);
-      color: var(--light-button-secondary-text);
-      border-color: var(--light-button-secondary-border);
-    }
-    body.light-mode .lol-button-secondary:hover:not(:disabled) {
-      background-color: hsl(210, 25%, 92%);
-      border-color: hsl(var(--lm-accent-yellow-hsl));
-      color: var(--light-button-secondary-text-hover);
-      box-shadow: 0 3px 6px rgba(0,0,0,0.1), inset 0 1px 1px var(--lm-button-inner-shadow-color), inset 0 0 4px hsla(var(--lm-accent-yellow-hsl),0.2);
-    }
-    body.light-mode .lol-input, body.light-mode .lol-select {
-      background-color: var(--light-input-bg);
-      border-color: var(--light-input-border);
-      color: var(--light-input-text);
-    }
-    body.light-mode .lol-input:focus, body.light-mode .lol-select:focus {
-      border-color: hsl(var(--lm-accent-yellow-hsl));
-      box-shadow: 0 0 0 3px hsla(var(--lm-accent-yellow-hsl), 0.4);
-    }
-    body.light-mode .lol-select {
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23334155' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); 
-    }
-    body.light-mode .champion-card:hover:not(.no-hover-lift):not(.animations-disabled) { 
-      box-shadow: 0 12px 25px rgba(0,0,0,0.1), 0 0 18px hsla(var(--lm-accent-yellow-hsl), 0.25), inset 0 1px 1px var(--lm-button-inner-shadow-color); 
-    }
-    body.light-mode .active-pick-slot-highlight { 
-        box-shadow: 0 0 15px hsl(var(--lm-accent-yellow-hsl)), 0 0 25px hsl(var(--lm-accent-yellow-hsl)), inset 0 1px 2px var(--lm-button-inner-shadow-color) !important; 
-        border-color: hsl(var(--lm-accent-yellow-hsl)) !important; 
-    }
-    body.light-mode .particle {
-        background-color: hsla(var(--lm-accent-yellow-hsl), 0.08);
-    }
-    body.light-mode .particle.p4, body.light-mode .particle.p6 {
-        background-color: hsla(200, 70%, 60%, 0.05);
-    }
-    body.light-mode .particle.p-slow1 { background-color: hsla(var(--lm-accent-yellow-hsl), 0.05); }
-    body.light-mode .particle.p-slow2 { background-color: hsla(210, 50%, 70%, 0.04); }
-    body.light-mode .particle.p-slow3 { background-color: hsla(var(--lm-accent-amber-hsl), 0.045); }
+      @keyframes item-add {
+        from { opacity: 0; transform: scale(0.8); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .animate-item-add {
+        animation: item-add 300ms ease-out forwards;
+      }
+      
+      @keyframes shake {
+        10%, 90% { transform: translate3d(-1px, 0, 0) rotate(-1deg); }
+        20%, 80% { transform: translate3d(2px, 0, 0) rotate(2deg); }
+        30%, 50%, 70% { transform: translate3d(-2px, 0, 0) rotate(-2deg); }
+        40%, 60% { transform: translate3d(2px, 0, 0) rotate(2deg); }
+      }
 
-    body.light-mode .lol-panel-focused { 
-        border-color: hsl(var(--lm-accent-yellow-hsl)); 
-        box-shadow: inset 0 1px 3px 0 var(--lm-inner-shadow-color), 0 0 25px hsla(var(--lm-accent-yellow-hsl), 0.4), 0 0 40px hsla(var(--lm-accent-yellow-hsl), 0.4), 0 10px 25px rgba(0,0,0,0.08); 
-    }
-    body.light-mode .animations-disabled .lol-panel-focused { 
-        box-shadow: inset 0 1px 3px 0 var(--lm-inner-shadow-color), 0 0 18px hsla(var(--lm-accent-yellow-hsl), 0.4), 0 10px 25px rgba(0,0,0,0.08); 
-        border-color: hsl(var(--lm-accent-yellow-hsl)); 
-    }
-    body.light-mode .onboarding-popover { background-color: var(--light-panel-bg); }
-    body.light-mode .onboarding-popover-arrow-top { border-bottom-color: var(--light-panel-bg); }
-    body.light-mode .onboarding-popover-arrow-bottom { border-top-color: var(--light-panel-bg); }
-    body.light-mode .onboarding-popover-arrow-left { border-right-color: var(--light-panel-bg); }
-    body.light-mode .onboarding-popover-arrow-right { border-left-color: var(--light-panel-bg); }
-    body.light-mode .onboarding-highlighted-element { box-shadow: 0 0 0 3px hsl(var(--lm-accent-yellow-hsl)), 0 0 20px 5px hsla(var(--lm-accent-yellow-hsl), 0.4), inset 0 0 10px hsla(var(--lm-accent-yellow-hsl), 0.2); }
+      /* Layout Animations */
+      .collapsible {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.4s ease-in-out;
+      }
+      .collapsible > div {
+        overflow: hidden;
+      }
+      .collapsible.expanded {
+        grid-template-rows: 1fr;
+      }
+      
+      /* Mobile Nav */
+      .hamburger-line {
+        transition: transform 0.3s ease, opacity 0.3s ease;
+      }
+      .mobile-nav-open .hamburger-line-top {
+        transform: translateY(8px) rotate(45deg);
+      }
+      .mobile-nav-open .hamburger-line-middle {
+        opacity: 0;
+      }
+      .mobile-nav-open .hamburger-line-bottom {
+        transform: translateY(-8px) rotate(-45deg);
+      }
+      .mobile-menu {
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .mobile-menu.open {
+        transform: translateX(0);
+      }
 
-    .draft-health-icon {
-      transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-    }
-    @keyframes goldenGlow {
-      0%, 100% { filter: drop-shadow(0 0 2px gold) drop-shadow(0 0 4px gold) brightness(1.1); transform: scale(1); }
-      50% { filter: drop-shadow(0 0 4px gold) drop-shadow(0 0 8px gold) brightness(1.3); transform: scale(1.05); }
-    }
-    .draft-health-positive {
-      animation: goldenGlow 2.5s infinite ease-in-out;
-    }
-    body.light-mode .draft-health-positive { 
-      animation: goldenGlow 2.5s infinite ease-in-out; 
-    }
-    @keyframes purplePulse {
-      0%, 100% { filter: drop-shadow(0 0 2px #a855f7) drop-shadow(0 0 4px #a855f7) brightness(1.1); transform: scale(1); }
-      50% { filter: drop-shadow(0 0 5px #c084fc) drop-shadow(0 0 10px #c084fc) brightness(1.2); transform: scale(1.03); }
-    }
-    .draft-health-flaw {
-      animation: purplePulse 2s infinite ease-in-out;
-    }
-    body.light-mode .draft-health-flaw { 
-       filter: drop-shadow(0 0 3px #9333ea) drop-shadow(0 0 6px #9333ea);
-       animation: purplePulse 2s infinite ease-in-out;
-    }
-    .animations-disabled .draft-health-positive,
-    .animations-disabled .draft-health-flaw {
-      animation: none !important;
-      filter: none !important;
-    }
-    .draft-health-positive svg { color: gold; }
-    .draft-health-flaw svg { color: #c084fc; } 
-    body.light-mode .draft-health-flaw svg { color: #9333ea; } 
+      /* Icon Micro-animations */
+      .icon-settings, .icon-history, .icon-sun, .icon-moon, .icon-plus, .icon-logout, .icon-delete, .icon-edit, .icon-lab, .icon-brain, .icon-shield, .icon-map {
+        transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      button:hover .icon-settings { transform: rotate(90deg); }
+      button:hover .icon-history { transform: rotate(-45deg) scale(1.1); }
+      button:hover .icon-sun { transform: rotate(45deg); }
+      button:hover .icon-moon { transform: rotate(15deg) scale(1.1); }
+      button:hover .icon-plus { transform: rotate(90deg) scale(1.2); }
+      button:hover .icon-logout { transform: translateX(2px); }
+      button:hover .icon-delete { animation: shake 0.6s; }
+      button:hover .icon-edit { transform: scale(1.2) rotate(5deg); }
+      button:hover .icon-lab { transform: rotate(10deg) scale(1.1); }
+      button:hover .icon-brain { transform: scale(1.1); }
+      button:hover .icon-shield { transform: scale(1.1); }
+      button:hover .icon-map { transform: scale(1.1); }
 
-    /* Oracle's Aura Keyframes */
-    @keyframes backgroundPulseConcernedDark {
-      0% { background-image: linear-gradient(135deg, var(--concerned-bg-pulse-color-1-dm) 0%, var(--concerned-bg-pulse-color-2-dm) 50%, var(--concerned-bg-pulse-color-3-dm) 100%); }
-      50% { background-image: linear-gradient(135deg, var(--concerned-bg-pulse-color-2-dm) 0%, var(--concerned-bg-pulse-color-3-dm) 50%, var(--concerned-bg-pulse-color-1-dm) 100%); }
-      100% { background-image: linear-gradient(135deg, var(--concerned-bg-pulse-color-1-dm) 0%, var(--concerned-bg-pulse-color-2-dm) 50%, var(--concerned-bg-pulse-color-3-dm) 100%); }
-    }
-    @keyframes backgroundPulseConcernedLight {
-      0% { background-color: var(--concerned-bg-pulse-color-lm-1); }
-      50% { background-color: var(--concerned-bg-pulse-color-lm-2); }
-      100% { background-color: var(--concerned-bg-pulse-color-lm-1); }
-    }
-
-    /* Oracle's Aura Application */
-    body.aura-pleased:not(.animations-disabled) .lol-panel::before {
-      animation-duration: var(--pleased-border-shimmer-duration) !important;
-    }
-    body.aura-pleased:not(.animations-disabled) .particle {
-      background-color: var(--pleased-particle-color-dm) !important;
-      opacity: 0.07 !important; /* Slightly more visible */
-    }
-    body.aura-pleased:not(.animations-disabled) .particle.p-slow1,
-    body.aura-pleased:not(.animations-disabled) .particle.p-slow2,
-    body.aura-pleased:not(.animations-disabled) .particle.p-slow3 {
-      background-color: var(--pleased-particle-slow-color-dm) !important;
-      opacity: 0.04 !important;
-    }
-
-    body.aura-concerned:not(.animations-disabled) {
-      animation-name: backgroundPulseConcernedDark !important;
-    }
-    body.aura-concerned:not(.animations-disabled) .lol-panel::before {
-      animation-duration: var(--concerned-border-shimmer-duration) !important;
-    }
-    body.aura-concerned:not(.animations-disabled) .particle {
-      background-color: var(--concerned-particle-color-dm) !important;
-      opacity: 0.015 !important; /* Dimmer */
-      animation-duration: 28s !important; /* Slower */
-    }
-    body.aura-concerned:not(.animations-disabled) .particle.p-slow1,
-    body.aura-concerned:not(.animations-disabled) .particle.p-slow2,
-    body.aura-concerned:not(.animations-disabled) .particle.p-slow3 {
-      background-color: var(--concerned-particle-slow-color-dm) !important;
-      opacity: 0.008 !important;
-      animation-duration: 50s !important; /* Even slower */
-    }
-
-    /* Light mode Aura adjustments */
-    body.light-mode.aura-pleased:not(.animations-disabled) .particle {
-      background-color: var(--pleased-particle-color-lm) !important;
-    }
-    body.light-mode.aura-pleased:not(.animations-disabled) .particle.p-slow1,
-    body.light-mode.aura-pleased:not(.animations-disabled) .particle.p-slow2,
-    body.light-mode.aura-pleased:not(.animations-disabled) .particle.p-slow3 {
-      background-color: var(--pleased-particle-slow-color-lm) !important;
-    }
-
-    body.light-mode.aura-concerned:not(.animations-disabled) {
-      animation-name: backgroundPulseConcernedLight !important;
-    }
-    body.light-mode.aura-concerned:not(.animations-disabled) .particle {
-      background-color: var(--concerned-particle-color-lm) !important;
-    }
-     body.light-mode.aura-concerned:not(.animations-disabled) .particle.p-slow1,
-    body.light-mode.aura-concerned:not(.animations-disabled) .particle.p-slow2,
-    body.light-mode.aura-concerned:not(.animations-disabled) .particle.p-slow3 {
-      background-color: var(--concerned-particle-slow-color-lm) !important;
-    }
-    /* End Oracle's Aura */
-
-    /* Draft Timeline Styles */
-    .draft-timeline-container {
-      display: flex;
-      width: 100%;
-      height: 60px; /* Increased height */
-      background-color: rgba(15, 23, 42, 0.7); 
-      border-radius: 0.75rem; 
-      padding: 4px;
-      margin-bottom: 1rem; 
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      overflow: hidden;
-    }
-    .draft-timeline-segment {
-      flex-grow: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      font-size: 0.875rem; /* Increased font size (text-sm) */
-      font-weight: 600; 
-      color: var(--dm-text-tertiary); 
-      border-right: 2px solid rgba(30, 41, 59, 0.8); 
-      transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-      padding: 0 0.375rem; /* Adjusted padding */
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .draft-timeline-segment:last-child {
-      border-right: none;
-    }
-    .draft-timeline-segment.active-phase {
-      color: var(--dm-text-primary); 
-      background-color: hsla(var(--accent-yellow-hsl), 0.3); 
-      box-shadow: inset 0 0 8px hsla(var(--accent-yellow-hsl), 0.4), 0 0 10px hsla(var(--accent-yellow-hsl), 0.2);
-      animation: subtleTimelineGlow 2s infinite ease-in-out;
-    }
-    body.light-mode .draft-timeline-container {
-      background-color: hsla(210, 20%, 92%, 0.7); 
-    }
-    body.light-mode .draft-timeline-segment {
-      color: var(--lm-text-tertiary);
-      border-right-color: hsla(210, 18%, 80%, 0.8);
-    }
-    body.light-mode .draft-timeline-segment.active-phase {
-      color: var(--lm-text-primary);
-      background-color: hsla(var(--lm-accent-yellow-hsl), 0.3);
-      box-shadow: inset 0 0 8px hsla(var(--lm-accent-yellow-hsl), 0.4), 0 0 10px hsla(var(--lm-accent-yellow-hsl), 0.2);
-    }
-    @keyframes subtleTimelineGlow {
-      0%, 100% { box-shadow: inset 0 0 8px hsla(var(--accent-yellow-hsl), 0.4), 0 0 10px hsla(var(--accent-yellow-hsl), 0.2); }
-      50% { box-shadow: inset 0 0 12px hsla(var(--accent-yellow-hsl), 0.5), 0 0 15px hsla(var(--accent-yellow-hsl), 0.3); }
-    }
-    body.light-mode .draft-timeline-segment.active-phase {
-      animation-name: subtleTimelineGlowLight;
-    }
-    @keyframes subtleTimelineGlowLight {
-      0%, 100% { box-shadow: inset 0 0 8px hsla(var(--lm-accent-yellow-hsl), 0.4), 0 0 10px hsla(var(--lm-accent-yellow-hsl), 0.2); }
-      50% { box-shadow: inset 0 0 12px hsla(var(--lm-accent-yellow-hsl), 0.5), 0 0 15px hsla(var(--lm-accent-yellow-hsl), 0.3); }
-    }
-    .animations-disabled .draft-timeline-segment.active-phase {
-      animation: none;
-    }
-    /* End Draft Timeline Styles */
-
-    /* General Prose Adjustments for Readability */
-    .prose {
-      font-size: 1.05rem; /* Slightly larger prose */
-    }
-    .prose h2, .prose h3, .prose h4 { /* Ensure prose headings are also scaled */
-        margin-top: 1.5em; 
-        margin-bottom: 0.75em;
-    }
-    .prose p {
-        margin-bottom: 1.25em;
-    }
-
-  </style>
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.8.0",
+    "zustand": "https://esm.sh/zustand@^5.0.6",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1"
+  }
+}
+</script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body>
-  <div id="root"></div>
-  <div class="particle-container" aria-hidden="true">
-    <div class="particle p1"></div>
-    <div class="particle p2"></div>
-    <div class="particle p3"></div>
-    <div class="particle p4"></div>
-    <div class="particle p5"></div>
-    <div class="particle p6"></div>
-    <div class="particle p-slow1"></div>
-    <div class="particle p-slow2"></div>
-    <div class="particle p-slow3"></div>
-  </div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

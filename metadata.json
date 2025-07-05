@@ -1,6 +1,6 @@
 {
-  "name": "LoL Draft Oracle",
-  "description": "A League of Legends draft assistant providing RAG-based recommendations using Gemini API and Google Search to analyze team compositions and suggest champion picks.",
+  "name": "DraftWise AI",
+  "description": "DraftWise AI is an advanced strategic analysis platform for League of Legends, powered by a lead AI analyst. It provides data-driven insights, draft optimization, and tactical guidance to help Commanders elevate their in-game performance and strategic mastery.",
   "requestFramePermissions": [],
   "prompt": ""
 }

@@ -1,279 +1,66 @@
-
-
-import React from 'react';
-// import { IconProps } from './components/icons/IconProps'; // This line was problematic, IconProps should be defined here or imported correctly.
-
-// Define and export IconProps here
-export interface IconProps {
-  className?: string;
-  title?: string; 
-}
-
-
-export enum Team {
-  YourTeam = 'YourTeam',
-  EnemyTeam = 'EnemyTeam',
-}
-
-export type TeamSide = 'BLUE' | 'RED';
-
-export interface ChampionSlot {
-  champion: string;
-  role: string;
-  ddragonKey?: string;
-}
-
-export interface GroundingChunk {
-  web?: {
-    uri?: string;
-    title?: string;
-  };
-  retrievedContext?: {
-    uri?: string;
-    title?: string;
-  };
-}
-
-// --- Structured JSON Response Types ---
-export interface StructuredDraftRecItemAdvice {
-  name: string; // Item Name
-  reason: string; // Why this item
-}
-
-export interface StructuredDraftRecChampionArmory {
-  champion: string;
-  coreItems: StructuredDraftRecItemAdvice[];
-  situationalItems: {
-    condition: string;
-    items: StructuredDraftRecItemAdvice[];
-  }[];
-}
-
-export interface StructuredDraftRec {
-  overallSynopsis: {
-    yourTeamIdentity: string;
-    enemyTeamIdentity: string;
-    expectedTempo: string;
-  };
-  teamCompositionSnapshot: {
-    yourTeamDamageProfile: string;
-    enemyTeamDamageProfile: string;
-  };
-  oracleArmoryRecommendations: StructuredDraftRecChampionArmory[];
-  strategicFocus: {
-    laningPhase: string;
-    keyPowerSpikes: string;
-    midGameObjectivePriority: string;
-    teamfightExecution: string;
-  };
-  enemyTeamThreats: {
-    primaryThreats: string; // Could be array of objects if more detail needed
-    counterplayStrategy: string;
-  };
-  impactOfBans: string;
-  userPreferenceAlignment?: string; // Optional
-  keyInGameReminders: {
-    ourTopWinCondition: string;
-    enemyTopWinCondition: string;
-    keyThreatsSummary: string; // Simplified
-    targetPriorityInFights: string;
-    crucialItemizationNote: string;
-  };
-}
-
-export interface StructuredExplorerRecChampionDetail {
-  counters?: string[];
-  synergies?: string[];
-  strategicUse?: string;
-  itemBuilds?: string; // Could be more structured if needed
-  strengths?: string;
-  weaknesses?: string;
-}
-export interface StructuredExplorerRec {
-  directAnswer: string; // Direct answer to the user's query
-  championInsights?: Record<string, StructuredExplorerRecChampionDetail>; // Keyed by champion name
-  generalStrategicPoints?: string[];
-  keyTakeaways?: string[];
-}
-
-export interface StructuredArmoryRec {
-  strategicNiche: string;
-  idealUsers: string; // Could be array of strings or objects
-  keyScenarios: string;
-  buildTiming: string;
-  commonMistakes: string;
-  goldEfficiencySummary: string;
-  synergisticItems?: string[]; // New field
-  counterItems?: string[];    // New field
-}
-
-export interface StructuredThreatRecItem {
-  champion: string;
-  items: StructuredDraftRecItemAdvice[];
-}
-
-export interface StructuredThreatRec {
-  threatProfile: {
-    keyStrengths: string;
-    typicalBuildPath: string; // Could be array of item names
-    primaryThreatVectors: string;
-  };
-  counterStrategy: {
-    itemizationChoices: StructuredThreatRecItem[];
-    strategicAdjustments: {
-      laningPhase: string;
-      teamfights: string;
-      objectiveControl: string;
-      visionAndGanking: string;
-    };
-  };
-}
-
-export type AnalysisDataType = 
-  | StructuredDraftRec 
-  | StructuredExplorerRec 
-  | StructuredArmoryRec 
-  | StructuredThreatRec 
-  | string; // Fallback for text-only or errors
-
-export type AnalysisType = 'draft' | 'explorer' | 'armory' | 'threat' | 'text_direct' | 'error';
-
-
-export interface DraftAnalysis {
-  analysisData: AnalysisDataType;
-  analysisType: AnalysisType;
-  sources: GroundingChunk[];
-  originalPrompt?: string; 
-  overallSentiment?: 'positive' | 'critical_flaw' | 'neutral'; 
-  auraSentiment?: 'pleased' | 'concerned' | 'neutral'; 
-}
-// --- End Structured JSON Response Types ---
-
-
-export interface EnemyItemSpikeWarning {
-  enemyChampionName: string;
-  predictedCoreItems: string[]; // Array of item names, e.g., ["{{ItemX}}", "{{ItemY}}"]
-  threatDescription: string;
-  strategicConsideration: string;
-}
-
-export interface IndividualPickSuggestion {
-  champion: string;
-  reason:string;
-}
-
-export interface PickSuggestion {
-  suggestions: IndividualPickSuggestion[];
-  explanation?: string;
-  enemyItemSpikeWarnings?: EnemyItemSpikeWarning[];
-  sources: GroundingChunk[];
-}
-
-export interface IndividualBanSuggestion {
-  champion: string;
-  reason: string;
-}
-
-export interface BanSuggestion {
-  suggestions: IndividualBanSuggestion[];
-  explanation?: string;
-  enemyItemSpikeWarnings?: EnemyItemSpikeWarning[];
-  sources: GroundingChunk[];
-}
-
-
-export type OraclePersonality = 'Default' | 'Concise' | 'ForBeginners';
-export type AppTheme = 'light' | 'dark';
-
-export interface AppSettings {
-  oraclePersonality: OraclePersonality;
-  enableAnimations?: boolean; 
-  isFocusModeActive?: boolean; 
-  theme?: AppTheme;
-}
-
+import { Chat } from '@google/genai';
 
 export interface ChampionStaticInfo {
   name: string;
   primaryRole: string;
   championClass?: string;
   championSubclass?: string;
-  ddragonKey?: string;
-  damageType?: 'Physical' | 'Magic' | 'Mixed' | 'True';
+  ddragonKey: string;
+  damageType?: 'Physical' | 'Magic' | 'Mixed';
   ccTypes?: string[];
   engagePotential?: 'Low' | 'Medium' | 'High';
   teamArchetypes?: string[];
-  metaTier?: 'S' | 'A' | 'B' | 'C' | 'D';
-  currentPatchWinRate?: number;
-  notesOnMeta?: string;
 }
 
-export interface ItemStaticInfo {
-  id: string; // DDragon item NUMERICAL ID (e.g., "3031" for Infinity Edge)
-  name: string; 
-  cost?: number; 
-  stats?: string[]; // Descriptive stats from documents
-  type: 'Legendary' | 'Epic' | 'Basic' | 'Boot' | 'SupportUpgrade' | 'Consumable' | 'Starter';
-  strategicSummary?: string; 
-  passiveName?: string; 
-  passiveDescription?: string;
-  activeName?: string;
-  activeDescription?: string;
-  purposeAndSynergies?: string;
-  situationalApplication?: string;
-  primaryUsers?: string[]; 
-  countersInfo?: string; 
-  buildPathNotes?: string; 
-  goldEfficiencyNotes?: string; 
-  keywords?: string[]; 
-}
-
-
-export type AppView = 'HOME' | 'DRAFT' | 'EXPLORER' | 'HISTORY' | 'SETTINGS' | 'PLAYBOOK' | 'DRAFT_LAB' | 'INTERACTIVE_LESSON' | 'ORACLE_TRIALS' | 'ARMORY';
-export type DraftMode = 'SOLO_QUEUE' | 'COMPETITIVE';
-
-
-// --- Data Dragon Types ---
-export interface DDragonImage {
-  full: string; 
-  sprite: string;
-  group: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-export interface DDragonChampionInfo {
-  id: string; 
-  key: string; 
+export interface Champion {
+  id: string;
+  key: string;
   name: string;
   title: string;
   blurb: string;
-  info: any;
-  image: DDragonImage;
+  info: {
+    attack: number;
+    defense: number;
+    magic: number;
+    difficulty: number;
+  };
+  image: {
+    full: string;
+    sprite: string;
+    group: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
   tags: string[];
   partype: string;
-  stats: any;
+  stats: Record<string, number>;
+  // Custom static data
+  primaryRole?: Role;
+  championClass?: string;
+  championSubclass?: string;
+  damageType?: 'AD' | 'AP' | 'Hybrid' | 'True';
+  ccTypes?: string[];
+  engagePotential?: 'Low' | 'Medium' | 'High';
+  teamArchetypes?: string[];
 }
 
-export interface DDragonChampionsData {
-  type: string;
-  format: string;
-  version: string;
-  data: {
-    [championId: string]: DDragonChampionInfo; 
-  };
-}
-
-export interface DDragonItemInfo {
+export interface Item {
   name: string;
-  description: string; 
-  colloq: string; 
-  plaintext: string; 
-  into?: string[]; 
-  from?: string[]; 
-  image: DDragonImage; 
+  description: string;
+  colloq: string;
+  plaintext: string;
+  into?: string[];
+  image: {
+    full: string;
+    sprite: string;
+    group: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
   gold: {
     base: number;
     purchasable: boolean;
@@ -281,571 +68,325 @@ export interface DDragonItemInfo {
     sell: number;
   };
   tags: string[];
-  maps: { [mapId: string]: boolean };
-  stats: { [statName: string]: number }; // DDragon stats: object mapping stat name to numerical value
-  depth?: number; 
-  id?: string; // This is DDragon's string key, like "InfinityEdge". We use numerical ID "3031" as primary.
+  maps: Record<string, boolean>;
+  stats: Record<string, number>;
+  depth?: number;
 }
 
-export interface DDragonItemsData {
-  type: string;
+export interface DDragonData {
   version: string;
-  basic: DDragonItemInfo; 
-  data: {
-    [itemId: string]: DDragonItemInfo; // Keyed by DDragon numerical ID string
-  };
-  groups: any[];
-  tree: any[];
+  champions: Record<string, Champion>;
+  items: Record<string, Item>;
 }
 
-
-// --- DraftingScreen Reducer State & Actions ---
-
-export interface UserPreferencesPayload {
-  preferredRoles: string[];
-  championPool: { [role: string]: string[] };
+export enum View {
+  HOME = 'HOME',
+  PROFILE = 'PROFILE',
+  DRAFTING = 'DRAFTING',
+  DRAFT_LAB = 'DRAFT_LAB',
+  VAULT = 'VAULT',
+  LESSONS = 'LESSONS',
+  TRIALS = 'TRIALS',
+  HISTORY = 'HISTORY',
+  PLAYBOOK = 'PLAYBOOK',
+  SETTINGS = 'SETTINGS',
 }
 
-// --- New Draft Flow Types ---
-export interface DraftStep {
-  type: 'PICK' | 'BAN';
-  team: Team; 
-  phase: string; 
+export type Role = 'TOP' | 'JUNGLE' | 'MIDDLE' | 'BOTTOM' | 'SUPPORT';
+
+export interface UserSettings {
+  oraclePersonality: 'Default' | 'Concise' | 'For Beginners';
+  preferredRoles: Role[];
+  championPool: string[]; // Champion IDs
+  xp: number;
+  completedLessons: string[]; // array of lesson IDs
+  completedTrials: string[]; // array of trial IDs
 }
 
-// --- MVP Analysis Type ---
-export interface MvpData {
-  championName: string;
-  reason: string;
-  ddragonKey?: string; 
-}
-
-export interface SavedDraftState {
-  yourTeamPicks: ChampionSlot[];
-  enemyTeamPicks: ChampionSlot[];
-  yourTeamBans: string[];
-  enemyTeamBans: string[];
-  currentDraftMode: DraftMode; 
-  userStartingSide: TeamSide; 
-  currentStepIndex: number; 
-  isYourTeamTurn: boolean; 
-
-  preferredRoles?: string[];
-  championPool?: { [role: string]: string[] };
-  mvpAnalysis?: MvpData | null; 
-}
-
-
-export interface ContentPart {
-  text: string;
-}
-export interface ConversationTurn {
-  role: 'user' | 'model';
-  parts: ContentPart[];
-}
-
-export interface DraftState { 
-  draftMode: DraftMode; 
-  userStartingSide: TeamSide; 
-
-  draftFlow: DraftStep[]; 
-  currentStepIndex: number; 
-
-  yourTeamPicks: ChampionSlot[];
-  enemyTeamPicks: ChampionSlot[];
-  yourTeamBans: string[];
-  enemyTeamBans: string[];
-  
-  analysis: DraftAnalysis | null;
-  pickSuggestions: PickSuggestion | null;
-  banSuggestions: BanSuggestion | null;
-  mvpAnalysis: MvpData | null; 
-
-  isLoadingFullAnalysis: boolean;
-  isSuggestingPick: boolean;
-  isLoadingBanSuggestions: boolean;
-  isProcessingAction: boolean;
-  isLoadingMvpAnalysis: boolean; 
-
-  error: string | null;
-  banSuggestionError: string | null;
-  mvpAnalysisError: string | null; 
-
-  isChampionGridOpen: boolean;
-  championGridCallback: ((champion: DDragonChampionInfo) => void) | null;
-  championGridTitle: string;
-
-  isStateLoadedFromStorage: boolean;
-
-  roleSwapState: {
-    team: Team;
-    originChampionName: string;
-    originRole: string;
-  } | null;
-
-  preferredRoles: string[];
-  championPool: { [role: string]: string[] };
-  isPreferencesModalOpen: boolean;
-  history: SavedDraftState[]; 
-  isDraftSavedToHistory: boolean;
-  isCheatSheetModalOpen: boolean;
-  isSavePlaybookModalOpen: boolean; 
-
-  conversationHistory: ConversationTurn[]; 
-  currentFollowUpQuery: string;
-  isProcessingFollowUp: boolean;
-}
-
-export type DraftAction =
-  | { type: 'LOAD_STATE_FROM_STORAGE'; payload: Partial<SavedDraftState> & { draftMode: DraftMode; userStartingSide: TeamSide } }
-  | { type: 'SET_DRAFT_FLOW'; payload: { draftFlow: DraftStep[], draftMode: DraftMode, userStartingSide: TeamSide, preferredRoles: string[], championPool: { [role: string]: string[] } } }
-  | { type: 'CONFIRM_ACTION'; payload: { championName: string; championKey?: string } } 
-  | { type: 'REQUEST_PICK_SUGGESTIONS_START' }
-  | { type: 'REQUEST_PICK_SUGGESTIONS_SUCCESS'; payload: PickSuggestion }
-  | { type: 'REQUEST_PICK_SUGGESTIONS_ERROR'; payload: string }
-  | { type: 'REQUEST_BAN_SUGGESTIONS_START' }
-  | { type: 'REQUEST_BAN_SUGGESTIONS_SUCCESS'; payload: BanSuggestion }
-  | { type: 'REQUEST_BAN_SUGGESTIONS_ERROR'; payload: string }
-  | { type: 'REQUEST_FULL_ANALYSIS_START' }
-  | { type: 'REQUEST_FULL_ANALYSIS_SUCCESS'; payload: DraftAnalysis } 
-  | { type: 'REQUEST_FULL_ANALYSIS_ERROR'; payload: string }
-  | { type: 'RESET_DRAFT_STATE' }
-  | { type: 'OPEN_CHAMPION_GRID'; payload: { callback: (champion: DDragonChampionInfo) => void; title: string } }
-  | { type: 'CLOSE_CHAMPION_GRID' }
-  | { type: 'SET_PROCESSING_ACTION'; payload: boolean }
-  | { type: 'CLEAR_SUGGESTIONS_AND_ANALYSIS' }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_BAN_SUGGESTION_ERROR'; payload: string | null }
-  | { type: 'INITIATE_ROLE_SWAP'; payload: RoleSwapPayload }
-  | { type: 'COMPLETE_ROLE_SWAP'; payload: RoleSwapPayload }
-  | { type: 'CANCEL_ROLE_SWAP' }
-  | { type: 'SET_USER_PREFERENCES'; payload: UserPreferencesPayload }
-  | { type: 'OPEN_PREFERENCES_MODAL' }
-  | { type: 'CLOSE_PREFERENCES_MODAL' }
-  | { type: 'UNDO_LAST_ACTION' }
-  | { type: 'MARK_DRAFT_AS_SAVED' }
-  | { type: 'OPEN_CHEAT_SHEET_MODAL' }
-  | { type: 'CLOSE_CHEAT_SHEET_MODAL' }
-  | { type: 'OPEN_SAVE_PLAYBOOK_MODAL' } 
-  | { type: 'CLOSE_SAVE_PLAYBOOK_MODAL' } 
-  | { type: 'SET_FOLLOW_UP_QUERY'; payload: string } 
-  | { type: 'SEND_FOLLOW_UP_START' }
-  | { type: 'SEND_FOLLOW_UP_SUCCESS'; payload: DraftAnalysis }
-  | { type: 'SEND_FOLLOW_UP_ERROR'; payload: string }
-  | { type: 'REQUEST_MVP_ANALYSIS_START' }
-  | { type: 'REQUEST_MVP_ANALYSIS_SUCCESS'; payload: MvpData }
-  | { type: 'REQUEST_MVP_ANALYSIS_ERROR'; payload: string };
-
-
-export interface ArchivedDraft extends SavedDraftState { 
+export interface PlaybookEntry {
   id: string;
-  timestamp: number;
-  analysis: DraftAnalysis | null;
-  name?: string; 
-  mvpAnalysis?: MvpData | null; 
-}
-
-export interface PlaybookEntry extends ArchivedDraft { 
   name: string;
+  description: string;
+  draftState: DraftState;
+  analysis: AIAnalysis;
 }
 
-
-export interface ChampionGridModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  champions: DDragonChampionInfo[];
-  ddragonVersion: string;
-  onChampionSelect: (champion: DDragonChampionInfo) => void;
-  disabledChampionIds?: string[];
-  modalTitle?: string;
-  championStaticData: ChampionStaticInfo[];
-  explorerMode?: boolean;
-  explorerSelectedChampionIds?: string[];
-  filterAvailableChampions?: string[]; 
-}
-
-export interface RecommendationDisplayProps {
-  analysis: DraftAnalysis; // This will now contain analysisData and analysisType
-  title?: string;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-  mvpAnalysis?: MvpData | null;
-  isLoadingMvp?: boolean;
-  overallSentiment?: 'positive' | 'critical_flaw' | 'neutral'; // This might be derived from analysis.overallSentiment now
-}
-
-export interface ChampionGridProps {
-  champions: DDragonChampionInfo[];
-  ddragonVersion: string;
-  championStaticData: ChampionStaticInfo[];
-  disabledChampionIds?: string[];
-  onDragStartChampion: (event: React.DragEvent<HTMLButtonElement>, champion: DDragonChampionInfo) => void;
-  getChampionStaticInfoById: (id: string) => ChampionStaticInfo | undefined;
-}
-
-
-export interface ExplorerScreenProps {
-  onGoHome: () => void;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-  staticChampionData: ChampionStaticInfo[];
-  oraclePersonality: OraclePersonality;
-}
-
-
-export interface HistoryScreenProps {
-  onGoHome: () => void;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-}
-
-
-export interface ReviewDraftModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  archivedDraft: ArchivedDraft | null;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-}
-
-
-export interface Concept {
+export interface Profile {
   id: string;
-  title: string;
-  description: string; 
-  icon: React.FC<IconProps>;
-  onClick?: () => void; // Added for special cases like Oracle Trials
+  name: string;
+  avatar: string;
+  settings: UserSettings;
+  draftHistory: DraftHistoryEntry[];
+  playbook: PlaybookEntry[];
+  isNew?: boolean; // Flag for first-time profile creation
+  isOnboarded?: boolean; // Flag for completing the guided setup
 }
 
+export type Team = 'BLUE' | 'RED';
+export type DraftActionType = 'PICK' | 'BAN';
 
-export interface InGameCheatSheetModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  analysis: DraftAnalysis | null;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
+export interface DraftSlot {
+  champion: Champion | null;
+  role: Role;
 }
 
-export interface SettingsScreenProps {
-  onGoHome: () => void;
-  currentSettings: AppSettings;
-  onSaveSettings: (newSettings: Partial<AppSettings>) => void; 
+export interface DraftState {
+  mode: 'SOLO_QUEUE' | 'COMPETITIVE';
+  blueTeam: {
+    picks: DraftSlot[];
+    bans: (Champion | null)[];
+  };
+  redTeam: {
+    picks: DraftSlot[];
+    bans: (Champion | null)[];
+  };
+  currentTurn: number;
+  pickedChampions: Set<string>; // To prevent duplicate picks
+  history: DraftState[]; // For undo
+  analysis?: AIAnalysis; // Allow analysis to be attached to a state
 }
 
-export interface DraftingScreenProps {
-  onGoHome: () => void;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-  oraclePersonality: OraclePersonality;
-  draftMode: DraftMode;
-  userStartingSide: TeamSide; 
-  onUpdateDraftAura: (aura: DraftAnalysis['auraSentiment']) => void; 
+export type DraftReducerAction =
+  | { type: 'SET_CHAMPION'; payload: { champion: Champion } }
+  | { type: 'SWAP_ROLES'; payload: { team: Team; index1: number; index2: number } }
+  | { type: 'UNDO_LAST_ACTION' }
+  | { type: 'RESET_DRAFT'; payload: { mode: 'SOLO_QUEUE' | 'COMPETITIVE' } };
+
+export interface WinCondition {
+    text: string;
+    category: 'Protect' | 'Siege' | 'Objective' | 'Pick' | 'Teamfight' | 'Macro';
 }
 
-export interface HomeScreenProps {
-  onStartDraft: (mode: DraftMode, side: TeamSide) => void; 
-  onResumeLastDraft: () => void;
-  onGoToExplorer: () => void;
-  onGoToHistory: () => void;
-  onGoToPlaybook: () => void;        
-  onGoToDraftLab: () => void;
-  onGoToArmory: () => void; 
-  onInitiateLessonWithPersona: (concept: Concept) => void; 
-  onGoToOracleTrials: () => void; 
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-  staticChampionData: ChampionStaticInfo[];
-  oraclePersonality: OraclePersonality;
-  greetingMessage: string | null; 
-  greetingVisible: boolean; 
-  viewedConceptIds: string[]; 
-  concepts: Concept[]; // Added for Concept Spotlight and progress
+export interface PowerSpikeData {
+    early: number; // 1-10 scale
+    mid: number; // 1-10 scale
+    late: number; // 1-10 scale
 }
 
-export interface ChooseDraftModeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelectModeAndSide: (mode: DraftMode, side: TeamSide) => void; 
+export interface PowerSpikeDetails {
+    phase: 'Early' | 'Mid' | 'Late';
+    championSpikes: { championName: string; reason: string; }[];
 }
 
-// --- Interactive Learning Journey Types ---
-export interface ChallengeOption {
-  letter: string; 
-  text: string;
-}
-export interface ChallengeData {
-  scenario: string;
-  question: string;
-  options: ChallengeOption[];
-  correctAnswerLetter?: string; 
-}
-export interface InteractiveLessonScreenProps {
-  selectedConcept: Concept | null;
-  championPersona: DDragonChampionInfo | null; 
-  onCompleteLesson: () => void;
-  oraclePersonality: OraclePersonality;
-  allChampionsData: DDragonChampionInfo[]; 
-  allItemsData: DDragonItemsData | null; 
-  ddragonVersion: string; 
-  staticChampionData: ChampionStaticInfo[];
-}
-
-// --- Draft Lab Types ---
-export interface DraftLabScreenProps {
-  onGoHome: () => void;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-  staticChampionData: ChampionStaticInfo[];
-  oraclePersonality: OraclePersonality;
-  initialPlaybookEntryToLoad?: PlaybookEntry | null; 
-  onInitialPlaybookEntryLoaded?: () => void;
-  onUpdateDraftAura: (aura: DraftAnalysis['auraSentiment']) => void;      
-}
-export interface TeamDisplayProps {
-  title: string;
-  teamPicks: ChampionSlot[];
-  teamBans: string[];
-  icon: React.ReactElement<IconProps>;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  activeRoleForPick?: string; 
-  isTeamTurnForPick?: boolean; 
-  roleSwapState: { team: Team; originChampionName: string; originRole: string; } | null;
-  onInitiateRoleSwap: (payload: RoleSwapPayload) => void;
-  onCompleteRoleSwap: (payload: RoleSwapPayload) => void;
-  onCancelRoleSwap: () => void;
-  anyLoading: boolean;
-  isTeamTurnForBan?: boolean;
-  activeBanSlotIndex?: number; 
-  mode: 'draft' | 'lab' | 'review' | 'puzzle'; 
-  draftPhaseForDisplay?: string; 
-  onLabPickSlotClick?: (team: Team, role: string) => void;
-  onLabBanSlotClick?: (team: Team, banIndex: number) => void;
-  onLabFilledPickClick?: (team: Team, role: string, championName: string) => void;
-  onLabFilledBanClick?: (team: Team, banIndex: number, championName: string) => void;
-  onLabChampionDropOnPick?: (team: Team, role: string, champion: DDragonChampionInfo) => void;
-  onLabChampionDropOnBan?: (team: Team, banIndex: number, champion: DDragonChampionInfo) => void;
-  getChampionStaticInfoById: (id: string) => ChampionStaticInfo | undefined;
-  isPuzzleRoleActive?: boolean;
-  onPuzzleChampionSlotClick?: (championSlot: ChampionSlot) => void;
-
-  // Props for Threat Assessment Mode in Draft Lab
-  isThreatAssessmentModeActive?: boolean;
-  targetedThreatChampionName?: string;
-  onSelectTargetThreat?: (championName: string, championKey?: string) => void;
-  analysisSentiment?: DraftAnalysis['overallSentiment']; // Use the type from DraftAnalysis
+export interface AIAnalysis {
+    teamIdentities: { blue: string; red: string };
+    damageProfiles: { blue: string; red: string };
+    keySynergies: { blue: string[]; red: string[] };
+    powerSpikes: {
+        blue: PowerSpikeData;
+        red: PowerSpikeData;
+        summary: { blue: string; red: string; };
+        details?: PowerSpikeDetails[];
+    };
+    winConditions: { blue: WinCondition[]; red: WinCondition[] };
+    strategicFocus: string;
+    coreItemBuilds?: {
+      blue: { championName: string; items: string[] }[];
+      red: { championName: string; items: string[] }[];
+    };
+    mvp: { championName: string; reasoning: string; };
+    enemyThreats: { 
+        championName: string; 
+        threatLevel: 'High' | 'Medium' | 'Low'; 
+        counterplay: string; 
+        itemSpikeWarning?: string;
+    }[];
+    bansImpact: { blue: string; red: string; };
+    inGameCheatSheet: {
+        blue: string[];
+        red: string[];
+    };
 }
 
-
-// --- My Playbook Types ---
-export interface PlaybookScreenProps {
-  onGoHome: () => void;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-  onLoadPlaybookEntryToLab: (entry: PlaybookEntry) => void;
+export interface InitialAIAnalysis {
+  macroStrategy: string;
+  keyMicroTips: string[];
 }
 
-export interface ReviewPlaybookEntryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  playbookEntry: PlaybookEntry | null;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
+export interface MatchupAnalysis {
+  powerSpikes: { champion: string; details: string }[];
+  tradingPatterns: string;
+  waveManagement: string;
+  jungleImpact: string;
 }
 
-export interface SaveToPlaybookModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (name: string) => void;
-  currentName?: string;
+export type ScoreType = 'CC' | 'Engage' | 'Damage Profile';
+
+export interface TeamAnalytics {
+  damageProfile: { ad: number; ap: number; hybrid: number };
+  ccScore: { value: number; label: string };
+  engageScore: { value: number; label: string };
+  teamDNA: Record<string, number>;
 }
 
-export interface RoleSwapPayload {
-  team: Team;
-  championName: string;
-  role: string;
-}
-
-// --- Pre-Game Ritual Types ---
-export interface RitualChampionInfo {
-  champion: string; 
-  reason: string;   
-  ddragonKey?: string; 
-}
-
-export interface PreGameRitualAnalysis {
-  identitySummary: string;
-  fatedAllies: RitualChampionInfo[];
-  graveThreats: RitualChampionInfo[];
-  sources?: GroundingChunk[];
-}
-
-// --- Oracle's Trials (Daily Puzzle) Types ---
-export type PuzzleRatingKey = 'adept' | 'master' | 'oracle' | 'plausible' | 'consider';
-
-export interface DailyPuzzleIdealPick {
-  choiceName: string; // Can be champion name, item name, or MCQ letter
-  ratingKey: PuzzleRatingKey;
+export interface AIExplanation {
   explanation: string;
 }
 
-export interface ItemPuzzleOption {
-  itemId: string; // DDragon numerical ID from item.json or itemStaticData
-  itemName: string; // Expected to be in {{Item Name}} format for display
+export type Aura = 'neutral' | 'positive' | 'negative' | 'thinking' | 'ad-focused' | 'ap-focused';
+
+export interface PostGameAIAnalysis {
+  reevaluation: string;
+  suggestedLessonId?: string;
+  suggestedLessonTitle?: string;
 }
 
-export type PuzzleType = 
-  | 'championPick'       // Existing: Pick the next champion for a role
-  | 'itemPick'           // Existing: Pick the best item in a scenario
-  | 'crucialBan'         // New: Pick the most critical ban
-  | 'weakLinkAnalysis';  // New: Multi-stage - 1. Identify weak champion, 2. Explain why
-
-export interface DailyPuzzle {
+export interface KnowledgeConcept {
   id: string;
+  category: string;
   title: string;
-  scenarioDescription: string;
-  yourTeamInitialPicks: ChampionSlot[];
-  yourTeamInitialBans: string[];
-  enemyTeamInitialPicks: ChampionSlot[];
-  enemyTeamInitialBans: string[];
-  
-  puzzleType: PuzzleType;
-  choiceContextLabel?: string; 
-
-  availableChampionChoices?: string[]; // For 'championPick'
-  itemChoiceOptions?: ItemPuzzleOption[]; // For 'itemPick'
-  banChoiceOptions?: string[]; // For 'crucialBan'
-
-  flawedTeamComposition?: ChampionSlot[]; // For 'weakLinkAnalysis' (stage 1 display)
-  weakLinkCorrectChampionName?: string;  // For 'weakLinkAnalysis' (stage 1 validation)
-  weakLinkExplanationOptions?: ChallengeOption[]; // For 'weakLinkAnalysis' (stage 2 options)
-  weakLinkCorrectExplanationLetter?: string; // For 'weakLinkAnalysis' (stage 2 validation)
-  
-  idealPicks: DailyPuzzleIdealPick[]; 
-  defaultPlausibleRatingKey?: PuzzleRatingKey;
-  defaultPlausibleExplanation?: string;
+  description: string;
+  content: string | RichLessonContent;
+  icon: string;
 }
 
-export interface OracleTrialsLocalStorageState {
-  lastShownPuzzleId: string | null;
-  lastShownPuzzleDate: string | null; 
-  completedPuzzles: {
-    [puzzleId: string]: string; 
-  };
+export interface LessonSection {
+    title: string;
+    champions: string[];
+    text: string;
 }
 
-export interface PuzzleFeedbackDimension {
-  dimensionName: string; 
-  assessment: 'Excellent' | 'Good' | 'Fair' | 'Needs Improvement' | 'Neutral';
-  commentary: string;
-}
-export interface PuzzleValidationResult {
-  userChoiceInitialAssessmentText: string; 
-  userChoiceDetailedCommentary: string; 
-  assessmentDimensions?: PuzzleFeedbackDimension[];
-  oracleOptimalChoice?: {
-    choiceName: string; 
-    explanation: string;
-    isUserChoiceOptimal?: boolean;
-  };
-  isCorrectStage1?: boolean; // For multi-stage puzzles
+export interface PowerCurveSection extends LessonSection {
+    id: 'early' | 'mid' | 'late';
 }
 
-
-export interface OracleTrialsScreenProps {
-  onGoHome: () => void;
-  ddragonVersion: string;
-  allChampionsData: DDragonChampionInfo[];
-  allItemsData: DDragonItemsData | null; 
-  staticChampionData: ChampionStaticInfo[]; 
+export interface CaseStudy {
+    title: string;
+    description: string;
+    teamA: { name: string; champions: string[] };
+    teamB: { name: string; champions: string[] };
+    solution: {
+        champions: string[];
+        text: string;
+    };
 }
 
-// --- Oracle's Armory (Item Encyclopedia) ---
-// MergedItemInfo combines DDragonItemInfo with our strategic ItemStaticInfo
-export interface MergedItemInfo extends
-  Omit<DDragonItemInfo, 'id' | 'name' | 'stats' | 'tags'>, // Omit conflicting/redundant fields from DDragon
-  Omit<ItemStaticInfo, 'stats' | 'type' | 'id' | 'name'> // Omit conflicting/redundant & specific handled fields from ItemStaticInfo
-{
-  id: string; // DDragon numerical ID from ItemStaticInfo (primary key)
-  name: string; // From DDragonItemInfo (primary display name)
-  ddragonStats: DDragonItemInfo['stats']; // Numerical stats from DDragon
-  ddragonTags: DDragonItemInfo['tags']; // Tags from DDragon (e.g., "Boots", "Damage")
-
-  // Explicitly defined static properties (optional because staticData might not exist for all items)
-  staticCost?: ItemStaticInfo['cost'];
-  staticStats?: ItemStaticInfo['stats']; // Descriptive stats from our static data
-  staticStrategicSummary?: ItemStaticInfo['strategicSummary'];
-  staticPassiveName?: ItemStaticInfo['passiveName'];
-  staticPassiveDescription?: ItemStaticInfo['passiveDescription'];
-  staticActiveName?: ItemStaticInfo['activeName'];
-  staticActiveDescription?: ItemStaticInfo['activeDescription'];
-  staticPurposeAndSynergies?: ItemStaticInfo['purposeAndSynergies'];
-  staticSituationalApplication?: ItemStaticInfo['situationalApplication'];
-  staticPrimaryUsers?: ItemStaticInfo['primaryUsers'];
-  staticCountersInfo?: ItemStaticInfo['countersInfo'];
-  staticBuildPathNotes?: ItemStaticInfo['buildPathNotes'];
-  staticGoldEfficiencyNotes?: ItemStaticInfo['goldEfficiencyNotes'];
-  staticKeywords?: ItemStaticInfo['keywords']; // Keywords from our static data for filtering
-  
-  itemType?: ItemStaticInfo['type']; // Type from our static data, made optional here
+export interface RichLessonContent {
+    intro: {
+        title: string;
+        summary: string;
+    };
+    powerCurves: {
+        title: string;
+        description: string;
+        curves: PowerCurveSection[];
+    };
+    caseStudy: CaseStudy;
+    miniChallenge: {
+        question: string;
+        options: { championName: string; isCorrect: boolean; }[];
+        feedback: {
+            correct: string;
+            incorrect: string;
+        };
+    };
 }
 
-
-export interface ArmoryScreenProps {
-  onGoHome: () => void;
-  ddragonVersion: string;
-  allItemsData: DDragonItemsData | null; // Full DDragon item list
-  itemStaticData: ItemStaticInfo[];    // Our curated strategic data
-  oraclePersonality: OraclePersonality;
+export interface TrialDraftPick {
+    championName: string;
+    role: Role;
 }
 
-export interface ArmoryItemWisdom extends DraftAnalysis {} // ArmoryItemWisdom will now use the new DraftAnalysis structure.
+export interface TrialDraftState {
+    blueTeam: { picks: TrialDraftPick[] };
+    redTeam: { picks: TrialDraftPick[] };
+}
 
-// Command Palette Types
-export interface Command {
+export interface Trial {
   id: string;
-  type: 'navigation' | 'action' | 'search_champions_link' | 'search_items_link' | 'search_concepts_link' | 'search_result_champion' | 'search_result_item' | 'search_result_concept';
-  label: string;
-  action: () => void;
-  keywords?: string[];
-  icon?: React.FC<IconProps>;
-  data?: DDragonChampionInfo | DDragonItemInfo | Concept; // For search results
+  lessonId: string; // The lesson that unlocks this trial
+  title: string;
+  scenario: string;
+  question: string;
+  draftState?: TrialDraftState;
+  options: {
+    text: string;
+    isCorrect: boolean;
+  }[];
 }
 
-export interface CommandPaletteProps {
-  isOpen: boolean;
-  onClose: () => void;
-  commands: Command[];
-  champions: DDragonChampionInfo[];
-  items: DDragonItemInfo[];
-  concepts: Concept[];
-  ddragonVersion: string;
-  navigateTo: (view: AppView, params?: any) => void;
+export interface TrialFeedback {
+    feedback: string;
+    isCorrect: boolean;
 }
 
-// Draft Timeline Types
-export interface DraftTimelineProps {
-  draftFlow: DraftStep[];
-  currentStepIndex: number;
-  theme?: AppTheme; // Optional, for accent colors
+export interface DraftHistoryEntry {
+  id: string;
+  date: string;
+  outcome?: 'WIN' | 'LOSS';
+  analysis: AIAnalysis;
+  draftState: DraftState;
+  inDraftNotes?: string;
+  postGameNotes?: string;
+  postGameAnalysis?: PostGameAIAnalysis;
 }
 
-// Animated Number Types
-export interface AnimatedNumberProps {
-  targetValue: number;
-  duration?: number; // in milliseconds
-  className?: string;
-  prefix?: string;
-  suffix?: string;
-  decimals?: number;
+export interface AIChat {
+    session: Chat;
+    history: {
+        isUser: boolean;
+        text: string;
+    }[];
+}
+
+
+export type ContextMenuItemAction = 'ADD_TO_POOL' | 'REMOVE_FROM_POOL';
+
+export interface ContextMenuItem {
+    label: string;
+    action: ContextMenuItemAction;
+    icon: React.ReactNode;
+}
+
+export interface MetaSnapshot {
+    trendingUp: { championName: string; reason: string; }[];
+    trendingDown: { championName: string; reason: string; }[];
+    patchSummary: string;
+}
+
+export interface GroundingSource {
+    web: {
+        uri: string;
+        title: string;
+    }
+}
+
+export interface PuzzleOption {
+    championName: string;
+    isCorrect: boolean;
+    reasoning: string;
+}
+
+export interface DraftPuzzle {
+    id: string;
+    scenario: string;
+    problem: string;
+    bluePicks: string[];
+    redPicks: string[];
+    options: PuzzleOption[];
+}
+
+export interface SharePayload {
+    draftState: DraftState;
+    analysis: AIAnalysis;
+}
+
+// Data for Champion Vault
+export interface ChampionAbilityInfo {
+  key: 'Passive' | 'Q' | 'W' | 'E' | 'R';
+  name: string;
+  description: string;
+}
+
+export interface ChampionVaultData {
+    playstyleSummary: string;
+    abilities: ChampionAbilityInfo[];
+    coreItems: string[];
+    whenToPick: string[];
+    counters: string[];
+    counteredBy: string[];
+    synergies: {
+        lanePartner: string[];
+        jungler: string[];
+    };
 }
