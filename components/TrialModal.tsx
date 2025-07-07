@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Trial, TrialFeedback, TrialDraftState, DDragonData } from '../types';
 import { geminiService } from '../services/geminiService';
@@ -116,7 +117,7 @@ const TrialModal: React.FC<TrialModalProps> = ({ trial, isOpen, onClose, onCompl
                     {feedback.isCorrect ? 'Correct!' : 'Not Quite'}
                 </h3>
                 <p className="text-slate-700 dark:text-slate-300">{feedback.feedback}</p>
-                {feedback.isCorrect && !settings.completedTrials.includes(trial.id) && <p className="text-amber-500 dark:text-amber-400 font-semibold">+50 XP</p>}
+                {feedback.isCorrect && !settings.completedTrials.includes(trial.id) && <p className="text-amber-500 dark:text-amber-400 font-semibold">+50 Strategic XP</p>}
                  <div className="flex justify-center pt-4">
                     <button onClick={feedback.isCorrect ? handleClose : handleReset} className="px-6 py-2 rounded-md bg-primary-gradient text-white">
                         {feedback.isCorrect ? 'Continue' : 'Try Again'}

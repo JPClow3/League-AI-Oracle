@@ -4,14 +4,15 @@ import StatBars from './StatBars';
 
 interface ChampionPopoverProps {
   champion: Champion;
-  position: { top: number; left: number };
+  style: React.CSSProperties;
 }
 
-const ChampionPopover: React.FC<ChampionPopoverProps> = ({ champion, position }) => {
+const ChampionPopover = React.forwardRef<HTMLDivElement, ChampionPopoverProps>(({ champion, style }, ref) => {
   return (
     <div
+      ref={ref}
       className="fixed z-50 w-64 p-3 bg-slate-800 border border-indigo-500 rounded-lg shadow-2xl text-sm text-slate-200 animate-pop-in"
-      style={{ top: position.top, left: position.left, transform: 'translateY(8px)' }}
+      style={style}
     >
         <h4 className="font-bold text-lg text-white">{champion.name}</h4>
         <p className="text-xs text-slate-400 mb-2 italic">{champion.title}</p>
@@ -25,6 +26,6 @@ const ChampionPopover: React.FC<ChampionPopoverProps> = ({ champion, position })
         <StatBars stats={champion.info} />
     </div>
   );
-};
+});
 
 export default ChampionPopover;

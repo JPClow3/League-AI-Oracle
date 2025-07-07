@@ -1,48 +1,51 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useProfile } from '../contexts/ProfileContext';
-import { Champion, DDragonData, Role, View } from '../types';
+import { Champion, DDragonData, Role, View, SummonerDTO, LeagueEntryDTO, ChampionMasteryDTO, StrategicBlindSpot, ChampionPerformance } from '../types';
 import { ChampionIcon } from './common/ChampionIcon';
 import { Icon } from './common/Icon';
+import { riotService, RIOT_PLATFORMS } from '../services/riotService';
+import { Spinner } from './common/Spinner';
+import { analyzeChampionPerformance, analyzeHistoryForBlindSpots } from '../services/historyAnalyzer';
 
-interface ProfileScreenProps {
-  ddragonData: DDragonData;
-  setView: (view: View) => void;
-}
+const getRankedEmblemUrl = (tier: string) => `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/images/ranked-emblem/emblem-${tier.toLowerCase()}.png`;
 
-const ROLES: Role[] = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'];
+// #region Sub-components
+const ProfileHeader: React.FC<{
+    profile: ReturnType<typeof useProfile>['activeProfile'],
+    ddragonData: DDragonData
+}> = ({ profile, ddragonData }) => {
+    if (!profile) return null;
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ ddragonData, setView }) => {
-  const { activeProfile, updateSettings } = useProfile();
+    const { name, avatar, settings, riotData } = profile;
+    const { xp } = settings;
+    const level = Math.floor(xp / 100) + 1;
+    const currentLevelXp = xp % 100;
+    const progress = (currentLevelXp / 100) * 100;
+    
+    const summonerData = riotData?.summoner;
+    const summonerIconUrl = summonerData
+        ? `https://ddragon.leagueoflegends.com/cdn/${ddragonData.version}/img/profileicon/${summonerData.profileIconId}.png`
+        : null;
 
-  if (!activeProfile) return null;
-
-  const { name, avatar, settings } = activeProfile;
-  const { xp, preferredRoles, championPool, oraclePersonality, completedLessons, completedTrials } = settings;
-
-  const level = Math.floor(xp / 100) + 1;
-  const currentLevelXp = xp % 100;
-  const xpToNextLevel = 100;
-  const progress = (currentLevelXp / xpToNextLevel) * 100;
-
-  const championPoolChampions = useMemo(() => {
-    return championPool.map(id => 
-        Object.values(ddragonData.champions).find(c => c.id === id)
-    ).filter((c): c is Champion => c !== undefined);
-  }, [championPool, ddragonData.champions]);
-
-  return (
-    <div className="max-w-7xl mx-auto animate-fade-in">
+    return (
         <div className="flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
-            <div className="text-8xl p-4 bg-slate-200 dark:bg-slate-700 rounded-full">
-                {avatar}
+            <div className="relative">
+                <div className="text-8xl p-4 bg-slate-200 dark:bg-slate-700 rounded-full w-40 h-40 flex items-center justify-center">
+                    {avatar}
+                </div>
+                {summonerIconUrl &&
+                    <img src={summonerIconUrl} alt="Summoner Icon" className="absolute -bottom-2 -right-2 w-16 h-16 rounded-full border-4 border-white dark:border-slate-800" />
+                }
             </div>
             <div className="flex-1 text-center md:text-left">
                 <h1 className="text-5xl font-display font-bold text-slate-800 dark:text-slate-100">{name}</h1>
-                <p className="text-lg text-indigo-600 dark:text-indigo-400 font-semibold">Commander Profile</p>
+                <p className="text-lg text-indigo-600 dark:text-indigo-400 font-semibold">
+                    {summonerData ? `${summonerData.name} - Level ${summonerData.summonerLevel}` : 'Commander Profile'}
+                </p>
                 <div className="mt-4">
                     <div className="flex justify-between items-center text-sm font-semibold mb-1">
-                        <span className="text-slate-600 dark:text-slate-300">Level {level}</span>
-                        <span className="text-slate-500 dark:text-slate-400">{currentLevelXp} / {xpToNextLevel} XP</span>
+                        <span className="text-slate-600 dark:text-slate-300">Strategy Level {level}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{currentLevelXp} / 100 XP</span>
                     </div>
                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
                         <div className="bg-amber-400 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
@@ -50,80 +53,257 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ ddragonData, setView }) =
                 </div>
             </div>
         </div>
+    );
+};
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column - Champion Pool */}
-            <div className="lg:col-span-2 space-y-8">
-                <div className="p-6 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
-                    <h2 className="text-3xl font-display text-slate-800 dark:text-slate-100 mb-4">Champion Pool ({championPool.length})</h2>
-                    {championPoolChampions.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                            {championPoolChampions.map(champ => (
-                                <ChampionIcon
-                                    key={champ.id}
-                                    champion={champ}
-                                    version={ddragonData.version}
-                                    className="w-16 h-16"
-                                    isClickable={false}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-slate-500 dark:text-slate-400">Your champion pool is empty. Right-click on champions in the Draft Lab or other areas to add them.</p>
-                    )}
-                </div>
+const LiveStatsCard: React.FC = () => {
+    const { activeProfile, isSyncing, syncError, syncRiotData } = useProfile();
+    const leagueData = activeProfile?.riotData?.league;
 
-                 <div className="p-6 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
-                    <h2 className="text-3xl font-display text-slate-800 dark:text-slate-100 mb-4">Progress</h2>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                           <Icon name="lessons" className="w-8 h-8 text-indigo-500"/>
-                           <div>
-                             <p className="text-2xl font-bold">{completedLessons.length}</p>
-                             <p className="text-sm text-slate-500 dark:text-slate-400">Lessons Read</p>
-                           </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                           <Icon name="trials" className="w-8 h-8 text-teal-500"/>
-                           <div>
-                             <p className="text-2xl font-bold">{completedTrials.length}</p>
-                             <p className="text-sm text-slate-500 dark:text-slate-400">Trials Mastered</p>
-                           </div>
-                        </div>
-                    </div>
+    const StatDisplay: React.FC<{ entry: LeagueEntryDTO }> = ({ entry }) => {
+        const winRate = entry.wins + entry.losses > 0 ? ((entry.wins / (entry.wins + entry.losses)) * 100).toFixed(1) : 0;
+        return (
+            <div className="flex items-center gap-4">
+                <img src={getRankedEmblemUrl(entry.tier)} alt={entry.tier} className="w-20 h-20" />
+                <div>
+                    <h4 className="font-semibold text-slate-700 dark:text-slate-300">{entry.queueType === 'RANKED_SOLO_5x5' ? 'Ranked Solo/Duo' : 'Ranked Flex'}</h4>
+                    <p className="font-bold text-lg text-indigo-600 dark:text-indigo-400">{entry.tier} {entry.rank} - {entry.leaguePoints} LP</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{entry.wins}W / {entry.losses}L ({winRate}%)</p>
                 </div>
             </div>
+        )
+    };
+    
+    return (
+         <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+             <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-display text-slate-800 dark:text-slate-100">Live Stats</h2>
+                 <button onClick={syncRiotData} disabled={isSyncing || !activeProfile?.riotData || !riotService.isConfigured()} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50">
+                    <Icon name="history" className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+                </button>
+            </div>
+             {syncError && <p className="text-sm text-rose-500 mb-2">{syncError}</p>}
+             {!riotService.isConfigured() ? (
+                <p className="text-sm text-center text-slate-500 py-2">Riot API key not configured. Live stats are unavailable.</p>
+             ) : isSyncing && !leagueData ? <div className="flex justify-center p-4"><Spinner /></div> :
+             !activeProfile?.riotData ? <p className="text-sm text-center text-slate-500 py-2">Link your Riot account to see live stats.</p> :
+             <div className="space-y-4">
+                 {leagueData?.find(e => e.queueType === 'RANKED_SOLO_5x5') ? <StatDisplay entry={leagueData.find(e => e.queueType === 'RANKED_SOLO_5x5')!} /> : <p className="text-sm text-center text-slate-500 py-2">No Ranked Solo/Duo data found.</p>}
+                 {leagueData?.find(e => e.queueType === 'RANKED_FLEX_SR') ? <StatDisplay entry={leagueData.find(e => e.queueType === 'RANKED_FLEX_SR')!} /> : <p className="text-sm text-center text-slate-500 py-2">No Ranked Flex data found.</p>}
+             </div>}
+         </div>
+    );
+};
 
-            {/* Right Column - Settings */}
-            <div className="p-6 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 space-y-6">
-                 <h2 className="text-3xl font-display text-slate-800 dark:text-slate-100">Settings</h2>
-                 <div>
-                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Preferred Roles</label>
-                     <div className="flex flex-wrap gap-2">
-                         {ROLES.map(role => (
-                            <button
-                                key={role}
-                                onClick={() => updateSettings({ preferredRoles: preferredRoles.includes(role) ? preferredRoles.filter(r => r !== role) : [...preferredRoles, role] })}
-                                className={`px-4 py-2 text-sm rounded-md font-semibold transition-colors ${preferredRoles.includes(role) ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
-                            >
-                                {role}
-                            </button>
-                         ))}
-                     </div>
+const RiotAccountLinker: React.FC = () => {
+    const { activeProfile, linkRiotAccount, unlinkRiotAccount, isSyncing, syncError } = useProfile();
+    const [gameName, setGameName] = useState('');
+    const [tagLine, setTagLine] = useState('');
+    const [region, setRegion] = useState('NA1');
+
+    const handleLink = async () => {
+        if (!gameName || !tagLine) {
+            alert('Please enter your full Riot ID (e.g., "PlayerName#NA1").');
+            return;
+        }
+        try {
+            await linkRiotAccount(gameName, tagLine, region);
+        } catch (e) {
+            // Error is handled in context and displayed via syncError
+        }
+    };
+
+    if (!riotService.isConfigured()) {
+        return (
+            <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 text-center">
+                <p className="text-sm text-slate-500">Riot Account linking is disabled. Please provide a `RIOT_API_KEY` in the app's environment settings to enable it.</p>
+            </div>
+        )
+    }
+
+    if (activeProfile?.riotData) {
+        return (
+            <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+                <h3 className="font-semibold text-slate-700 dark:text-slate-300">Riot Account Linked</h3>
+                <div className="flex items-center gap-4 mt-2">
+                    <div className="flex-grow">
+                        <p className="font-bold text-lg text-teal-600 dark:text-teal-400">{activeProfile.riotData.gameName}#{activeProfile.riotData.tagLine}</p>
+                        <p className="text-sm text-slate-500">{RIOT_PLATFORMS[activeProfile.riotData.region as keyof typeof RIOT_PLATFORMS]}</p>
+                    </div>
+                    <button onClick={unlinkRiotAccount} className="px-3 py-1 bg-rose-200 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300 rounded-md hover:bg-rose-300 dark:hover:bg-rose-900 text-sm font-semibold">Unlink</button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 space-y-3">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-300">Link Your Riot Account</h3>
+            <p className="text-xs text-slate-500">Sync your mastery, rank, and summoner info. Your app's environment variable for the Riot API key must be configured for this to work.</p>
+            <div className="flex gap-2">
+                <input type="text" value={gameName} onChange={e => setGameName(e.target.value)} placeholder="Game Name" className="flex-grow p-2 rounded bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"/>
+                <span className="self-center text-slate-400 font-bold">#</span>
+                <input type="text" value={tagLine} onChange={e => setTagLine(e.target.value)} placeholder="TagLine" className="w-24 p-2 rounded bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"/>
+            </div>
+            <select value={region} onChange={e => setRegion(e.target.value)} className="w-full p-2 rounded bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                {Object.entries(RIOT_PLATFORMS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+            {syncError && <p className="text-xs text-rose-500">{syncError}</p>}
+            <button onClick={handleLink} disabled={isSyncing} className="w-full p-2 bg-indigo-600 text-white rounded-md font-semibold hover:bg-indigo-700 disabled:opacity-50">
+                {isSyncing ? <Spinner size="h-5 w-5 mx-auto"/> : 'Link Account'}
+            </button>
+        </div>
+    );
+};
+
+const PerformanceTrends: React.FC<{
+    profile: ReturnType<typeof useProfile>['activeProfile'],
+    ddragonData: DDragonData,
+    onNavigateToLesson: (lessonId: string) => void
+}> = ({ profile, ddragonData, onNavigateToLesson }) => {
+    
+    const performanceData = useMemo(() => {
+        if (!profile || !profile.draftHistory) return { blindSpot: null, champPerformance: [] };
+        const gamesWithOutcome = profile.draftHistory.filter(h => h.outcome);
+        if (gamesWithOutcome.length < 5) return { blindSpot: null, champPerformance: [] };
+
+        const blindSpot = analyzeHistoryForBlindSpots(gamesWithOutcome);
+        const champPerformance = analyzeChampionPerformance(gamesWithOutcome);
+        return { blindSpot, champPerformance };
+    }, [profile]);
+    
+    if (performanceData.champPerformance.length === 0) {
+        return (
+            <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+                <h2 className="text-2xl font-display text-slate-800 dark:text-slate-100 mb-2">Performance Trends</h2>
+                <div className="text-center p-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+                    <p className="text-sm text-slate-500">Play and save at least 5 games with outcomes to see your performance trends.</p>
+                </div>
+            </div>
+        )
+    }
+
+    const { blindSpot, champPerformance } = performanceData;
+
+    return (
+        <div className="p-4 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 space-y-4">
+            <h2 className="text-2xl font-display text-slate-800 dark:text-slate-100">Performance Trends</h2>
+            
+            {blindSpot && (
+                 <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                     <h3 className="font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2"><Icon name="warning" className="w-5 h-5"/>Strategic Blind Spot</h3>
+                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{blindSpot.insight}</p>
+                     <button onClick={() => onNavigateToLesson(blindSpot.suggestedLessonId)} className="mt-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                        Review Lesson: "{blindSpot.suggestedLessonTitle}"
+                     </button>
                  </div>
-                 <div>
-                    <label htmlFor="oracle-personality" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Oracle's Personality</label>
-                    <select
-                        id="oracle-personality"
-                        value={oraclePersonality}
-                        onChange={e => updateSettings({ oraclePersonality: e.target.value as any })}
-                        className="w-full p-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500"
-                    >
-                        <option>Default</option>
-                        <option>Concise</option>
-                        <option>For Beginners</option>
-                    </select>
+            )}
+            
+            <div>
+                <h3 className="font-semibold text-slate-700 dark:text-slate-300">Top Played Champions</h3>
+                 <div className="space-y-2 mt-2">
+                     {champPerformance.slice(0, 5).map(perf => {
+                         const champion = Object.values(ddragonData.champions).find(c => c.id === perf.championId);
+                         if (!champion) return null;
+                         return (
+                             <div key={perf.championId} className="flex items-center gap-3 p-2 bg-slate-100 dark:bg-slate-900/50 rounded-md">
+                                 <ChampionIcon champion={champion} version={ddragonData.version} isClickable={false} className="w-10 h-10 flex-shrink-0" />
+                                 <div className="flex-grow">
+                                     <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{champion.name}</p>
+                                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-1">
+                                         <div className="bg-teal-500 h-1.5 rounded-full" style={{ width: `${perf.winRate}%`}}></div>
+                                     </div>
+                                 </div>
+                                 <div className="text-right text-xs">
+                                     <p className="font-semibold" style={{ color: perf.winRate >= 50 ? '#14b8a6' : '#f43f5e'}}>{perf.winRate.toFixed(0)}% WR</p>
+                                     <p className="text-slate-500">{perf.games} Games</p>
+                                 </div>
+                             </div>
+                         );
+                     })}
                  </div>
+            </div>
+        </div>
+    )
+};
+// #endregion
+
+const ProfileScreen: React.FC<{
+  ddragonData: DDragonData;
+  setView: (view: View) => void;
+  onNavigateToLesson: (lessonId: string) => void;
+}> = ({ ddragonData, setView, onNavigateToLesson }) => {
+  const { activeProfile, isSyncing, syncRiotData } = useProfile();
+  
+  useEffect(() => {
+      if (activeProfile?.riotData?.puuid && !activeProfile.riotData.mastery && riotService.isConfigured()) {
+          syncRiotData();
+      }
+  }, [activeProfile, syncRiotData]);
+
+  const coreChampions = useMemo(() => {
+    if (!activeProfile?.riotData?.mastery) return [];
+    return [...activeProfile.riotData.mastery]
+      .sort((a, b) => b.championPoints - a.championPoints)
+      .slice(0, 15)
+      .map(mastery => Object.values(ddragonData.champions).find(c => Number(c.key) === mastery.championId))
+      .filter((c): c is Champion => !!c);
+  }, [activeProfile?.riotData?.mastery, ddragonData.champions]);
+
+  const practiceChampions = useMemo(() => {
+    return activeProfile?.settings.championPool
+      .map(id => Object.values(ddragonData.champions).find(c => c.id === id))
+      .filter((c): c is Champion => !!c)
+      .sort((a, b) => a.name.localeCompare(b.name)) || [];
+  }, [activeProfile?.settings.championPool, ddragonData.champions]);
+
+  if (!activeProfile) return null;
+
+  return (
+    <div className="max-w-7xl mx-auto animate-fade-in">
+        <ProfileHeader profile={activeProfile} ddragonData={ddragonData} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 p-6 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 space-y-6">
+                <h2 className="text-3xl font-display text-slate-800 dark:text-slate-100">Champion Roster</h2>
+                
+                {/* Core Champions */}
+                <section>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-300">Your Core</h3>
+                    <p className="text-sm text-slate-500 mb-3">Your most played champions, synced from your Riot account.</p>
+                    {isSyncing && !coreChampions.length && <div className="flex justify-center p-4"><Spinner /></div>}
+                    {!activeProfile.riotData && !isSyncing && riotService.isConfigured() && <p className="text-sm text-center text-slate-500 py-4">Link your Riot account to automatically see your core champions.</p>}
+                    {!riotService.isConfigured() && <p className="text-sm text-center text-slate-500 py-4">Riot API key not configured. Champion syncing is unavailable.</p>}
+                    {coreChampions.length > 0 ? (
+                        <div className="flex flex-wrap gap-3">
+                            {coreChampions.map(champ => <ChampionIcon key={champ.id} champion={champ} version={ddragonData.version} isClickable={false} />)}
+                        </div>
+                    ) : activeProfile.riotData && !isSyncing && <p className="text-sm text-center text-slate-500 py-4">No mastery data found.</p>}
+                </section>
+                
+                {/* Favorites to Practice */}
+                <section>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-300">Favorites to Practice</h3>
+                    <p className="text-sm text-slate-500 mb-3">Champions you want to focus on. Add more from the Champion Vault.</p>
+                    {practiceChampions.length > 0 ? (
+                         <div className="flex flex-wrap gap-3">
+                            {practiceChampions.map(champ => <ChampionIcon key={champ.id} champion={champ} version={ddragonData.version} />)}
+                        </div>
+                    ) : (
+                        <div className="text-center p-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+                           <p className="text-sm text-slate-500">Your practice pool is empty.</p>
+                           <button onClick={() => setView(View.VAULT)} className="mt-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                             Go to Champion Vault to add champions
+                           </button>
+                        </div>
+                    )}
+                </section>
+            </div>
+
+            <div className="space-y-6">
+                <LiveStatsCard />
+                <PerformanceTrends profile={activeProfile} ddragonData={ddragonData} onNavigateToLesson={onNavigateToLesson} />
+                <RiotAccountLinker />
             </div>
         </div>
     </div>

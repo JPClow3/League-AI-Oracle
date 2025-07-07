@@ -5,15 +5,15 @@ type IconName =
   | 'profile' | 'settings' | 'logout' | 'sun' | 'moon' | 'search' | 'plus' | 'x'
   | 'chevron-down' | 'chevron-right' | 'check' | 'copy' | 'brain' | 'shield' | 'map'
   | 'briefcase' | 'lock' | 'sword' | 'warning' | 'info' | 'delete' | 'edit' | 'image'
-  | 'dragon' | 'tower' | 'target' | 'book-open';
+  | 'dragon' | 'tower' | 'target' | 'book-open' | 'binoculars';
 
 const ICONS: Record<IconName, React.ReactNode> = {
   home: <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10 0h3a1 1 0 001-1V10M9 20v-6a2 2 0 012-2h2a2 2 0 012 2v6" />,
   draft: <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />,
   lab: <path fillRule="evenodd" clipRule="evenodd" d="M5.5 2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1h-5v-1zM5 6.5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 15 6.5v6.242c0 .414-.168.81-.469 1.112l-2.08 2.08a1.5 1.5 0 0 1-1.112.469H8.16a1.5 1.5 0 0 1-1.112-.469l-2.08-2.08A1.5 1.5 0 0 1 4.5 12.742V6.5H5zm2.5 2a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4z" />,
-  playbook: <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6-2.292m0 0v14.25" />,
+  playbook: <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-4a5 5 0 100-10 5 5 0 000 10zm0-2a3 3 0 100-6 3 3 0 000 6z" />,
   vault: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />,
-  lessons: <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6-2.292m0 0v14.25" />,
+  lessons: <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />,
   trials: <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />,
   history: <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,
   profile: <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
@@ -43,6 +43,7 @@ const ICONS: Record<IconName, React.ReactNode> = {
   tower: <path strokeLinecap="round" strokeLinejoin="round" d="M4 21h16M6 21V9h12v12M6 9l6-6 6 6M9 9h6v4H9V9z" />,
   target: <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-4a5 5 0 100-10 5 5 0 000 10zm0-2a3 3 0 100-6 3 3 0 000 6z" />,
   'book-open': <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />,
+  binoculars: <><circle cx="8" cy="14" r="4" /><circle cx="16" cy="14" r="4" /><path d="M10 14L8 7l-2 7" /><path d="M18 14l-2-7-2 7" /></>,
 };
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {

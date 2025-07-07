@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Champion, Item } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
@@ -32,19 +31,21 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, setVie
   const commands = useMemo<Command[]>(() => {
     const navCommands: Command[] = [
       { type: 'navigation', id: 'home', name: 'Go to Home', action: () => setView(View.HOME), icon: <Icon name="home" className="w-5 h-5"/> },
-      { type: 'navigation', id: 'drafting', name: 'Go to Drafting', action: () => setView(View.DRAFTING), icon: <Icon name="draft" className="w-5 h-5"/> },
-      { type: 'navigation', id: 'lab', name: 'Go to Draft Lab', action: () => setView(View.DRAFT_LAB), icon: <Icon name="lab" className="w-5 h-5"/> },
-      { type: 'navigation', id: 'playbook', name: 'Go to Playbook', action: () => setView(View.PLAYBOOK), icon: <Icon name="playbook" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'drafting', name: 'Go to Arena', action: () => setView(View.DRAFTING), icon: <Icon name="draft" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'lab', name: 'Go to The Forge', action: () => setView(View.DRAFT_LAB), icon: <Icon name="lab" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'scout', name: 'Go to Live Game Scout', action: () => setView(View.SCOUT), icon: <Icon name="binoculars" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'playbook', name: 'Go to Playbook', action: () => setView(View.PLAYBOOK), icon: <Icon name="target" className="w-5 h-5"/> },
       { type: 'navigation', id: 'vault', name: 'Go to Champion Vault', action: () => setView(View.VAULT), icon: <Icon name="vault" className="w-5 h-5"/> },
-      { type: 'navigation', id: 'lessons', name: 'Go to Knowledge Hub', action: () => setView(View.LESSONS), icon: <Icon name="lessons" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'armory', name: 'Go to Oracle\'s Armory', action: () => setView(View.ARMORY), icon: <Icon name="book-open" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'lessons', name: 'Go to The Academy', action: () => setView(View.LESSONS), icon: <Icon name="lessons" className="w-5 h-5"/> },
       { type: 'navigation', id: 'history', name: 'Go to History', action: () => setView(View.HISTORY), icon: <Icon name="history" className="w-5 h-5"/> },
     ];
     
     const actionCommands: Command[] = [
         { 
             type: 'action', 
-            id: 'new-draft-lab', 
-            name: 'New Draft Lab', 
+            id: 'new-composition', 
+            name: 'Forge New Composition', 
             action: () => {
                 useDraftStore.getState().actions.resetDraft();
                 setView(View.DRAFT_LAB);

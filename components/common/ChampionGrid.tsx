@@ -7,10 +7,11 @@ import { useProfile } from '../../contexts/ProfileContext';
 interface ChampionGridProps {
     ddragonData: DDragonData;
     onChampionSelect: (champion: Champion) => void;
-    onChampionHover?: (champion: Champion) => void;
+    onChampionHover?: (champion: Champion, event: React.MouseEvent) => void;
     onChampionLeave?: () => void;
     pickedChampionIds: Set<string>;
     iconClassName?: string;
+    highlightArchetypes?: string[] | null;
 }
 
 const roleOrder: Role[] = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'];
@@ -21,7 +22,8 @@ export const ChampionGrid: React.FC<ChampionGridProps> = ({
     onChampionHover,
     onChampionLeave,
     pickedChampionIds,
-    iconClassName = 'w-16 h-16'
+    iconClassName = 'w-16 h-16',
+    highlightArchetypes,
 }) => {
     const { activeProfile } = useProfile();
     const { settings } = activeProfile!;
@@ -82,8 +84,14 @@ export const ChampionGrid: React.FC<ChampionGridProps> = ({
                         <h4 className="font-display text-lg text-slate-500 dark:text-slate-400 mb-2 capitalize">{role.toLowerCase().replace('_', ' ')}</h4>
                         <div className="grid grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-3">
                             {roleChamps.map(champ => (
-                                <div key={champ.id} className="animate-item-add" onMouseEnter={() => onChampionHover?.(champ)} onMouseLeave={onChampionLeave}>
-                                    <ChampionIcon champion={champ} version={ddragonData.version} onClick={onChampionSelect} className={iconClassName} />
+                                <div key={champ.id} className="animate-item-add" onMouseEnter={(e) => onChampionHover?.(champ, e)} onMouseLeave={onChampionLeave}>
+                                    <ChampionIcon 
+                                        champion={champ} 
+                                        version={ddragonData.version} 
+                                        onClick={onChampionSelect} 
+                                        className={iconClassName}
+                                        isHighlighted={highlightArchetypes?.some(arch => champ.teamArchetypes?.includes(arch))}
+                                    />
                                 </div>
                             ))}
                         </div>

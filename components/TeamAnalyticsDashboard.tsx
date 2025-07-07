@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Champion, Team, TeamAnalytics, ScoreType } from '../types';
 import { calculateTeamAnalytics } from '../data/analyticsHelper';
@@ -56,8 +57,8 @@ const TeamAnalyticsDashboard: React.FC<TeamAnalyticsDashboardProps> = ({ teamNam
             <span className="text-xs font-semibold">{scoreType}: {score.label}</span>
             <OracleEyeButton onClick={() => handleGetExplanation(scoreType)} isLoading={loadingExplanation === scoreType} title={`Explain ${scoreType} score`} />
         </div>
-        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-1">
-            <div className="bg-indigo-600 dark:bg-indigo-500 h-1.5 rounded-full transition-all duration-200" style={{ width: `${maxScore > 0 ? (score.value / maxScore) * 100 : 0}%` }}></div>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-1">
+            <div className="bg-indigo-600 dark:bg-indigo-500 h-2.5 rounded-full transition-all duration-200" style={{ width: `${maxScore > 0 ? (score.value / maxScore) * 100 : 0}%` }}></div>
         </div>
         {explanation?.type === scoreType && <p className="text-xs text-right italic text-indigo-500 dark:text-indigo-400 p-1 bg-slate-100 dark:bg-slate-900/50 rounded mt-1 animate-fade-in">"{explanation.text}"</p>}
     </div>
@@ -66,8 +67,8 @@ const TeamAnalyticsDashboard: React.FC<TeamAnalyticsDashboardProps> = ({ teamNam
   const DNABar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
     <div>
         <span className="text-xs font-semibold">{label}</span>
-        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-0.5">
-            <div className={`bg-${teamColor}-500 h-1.5 rounded-full transition-all duration-300`} style={{ width: `${(value / maxDnaScore) * 100}%` }}></div>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-0.5">
+            <div className={`bg-${teamColor}-500 h-2.5 rounded-full transition-all duration-300`} style={{ width: `${(value / maxDnaScore) * 100}%` }}></div>
         </div>
     </div>
   );

@@ -93,11 +93,13 @@ const ProfileDisplay: React.FC<{setView: (view: View) => void}> = ({ setView }) 
 
 const NAV_LINKS: { view: View; label: string; iconName: React.ComponentProps<typeof Icon>['name'] }[] = [
     { view: View.HOME, label: "Home", iconName: "home" },
-    { view: View.DRAFTING, label: "Drafting", iconName: "draft" },
-    { view: View.DRAFT_LAB, label: "Lab", iconName: "lab" },
-    { view: View.PLAYBOOK, label: "Playbook", iconName: "playbook" },
+    { view: View.DRAFTING, label: "Arena", iconName: "draft" },
+    { view: View.DRAFT_LAB, label: "Forge", iconName: "lab" },
+    { view: View.SCOUT, label: "Scout", iconName: "binoculars" },
+    { view: View.PLAYBOOK, label: "Playbook", iconName: "target" },
     { view: View.VAULT, label: "Vault", iconName: "vault" },
-    { view: View.LESSONS, label: "Lessons", iconName: "lessons" },
+    { view: View.ARMORY, label: "Armory", iconName: "book-open" },
+    { view: View.LESSONS, label: "Academy", iconName: "lessons" },
     { view: View.HISTORY, label: "History", iconName: "history" },
 ];
 

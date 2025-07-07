@@ -1,7 +1,7 @@
-
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { KEYWORD_MAP } from '../../data/keywordMapping';
 import KeywordPopover from './KeywordPopover';
+import { useFloatingElementPosition } from '../../hooks/useFloatingElementPosition';
 
 interface InteractiveTextProps {
   children: string;
@@ -9,31 +9,41 @@ interface InteractiveTextProps {
 }
 
 const InteractiveText: React.FC<InteractiveTextProps> = ({ children, onKeywordClick }) => {
-  const [popover, setPopover] = React.useState<{ lessonId: string; summary: string; position: { top: number; left: number } } | null>(null);
+  const [activeKeyword, setActiveKeyword] = useState<{ lessonId: string; summary: string } | null>(null);
+  
+  // A ref that can be dynamically pointed to the currently active keyword span
+  const triggerRef = useRef<HTMLSpanElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  
+  const { position, isVisible, show, hide } = useFloatingElementPosition(triggerRef, popoverRef);
 
   const handleKeywordClick = (event: React.MouseEvent<HTMLSpanElement>, lessonId: string, summary: string) => {
     event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    setPopover({
-      lessonId,
-      summary,
-      position: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX },
-    });
-  };
+    
+    if (activeKeyword?.lessonId === lessonId && isVisible) {
+        hide();
+        setActiveKeyword(null);
+        return;
+    }
 
-  const closePopover = () => setPopover(null);
+    // Set the current span as the trigger for the popover hook
+    triggerRef.current = event.currentTarget;
+    setActiveKeyword({ lessonId, summary });
+    // This will cause useLayoutEffect in the hook to recalculate position based on the new triggerRef
+    show(); 
+  };
   
   const handleMoreInfo = () => {
-      if (popover) {
-        onKeywordClick(popover.lessonId);
-        closePopover();
+      if (activeKeyword) {
+        onKeywordClick(activeKeyword.lessonId);
+        hide();
+        setActiveKeyword(null);
       }
   };
 
-  const renderContent = (text: string): React.ReactNode => {
-    if (!text) return text;
+  const renderContent = (text: string): React.ReactNode[] => {
+    if (!text) return [text];
 
-    // Sort keywords by length descending to match longer phrases first
     const keywords = Array.from(KEYWORD_MAP.keys()).sort((a, b) => b.length - a.length);
     const keywordsRegex = `\\b(${keywords.join('|')})\\b`;
     const boldRegex = `\\*\\*(.*?)\\*\\*`;
@@ -45,43 +55,39 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ children, onKeywordCl
     const matches = Array.from(text.matchAll(combinedRegex));
 
     matches.forEach((match, i) => {
-      // Deconstruct the match array
       const fullMatch = match[0];
       const isBold = match[1] !== undefined;
       const boldContent = match[2];
       const keyword = match[3];
       const index = match.index!;
 
-      // Add text before the match
       if (index > lastIndex) {
         nodes.push(text.substring(lastIndex, index));
       }
 
       if (isBold) {
-        // It's a bold match, recursively render content inside
         nodes.push(<strong key={`b-${i}`}>{renderContent(boldContent)}</strong>);
       } else if (keyword) {
-        // It's a keyword match
         const keywordInfo = KEYWORD_MAP.get(keyword.toLowerCase());
         if (keywordInfo) {
           nodes.push(
             <span
               key={`k-${i}`}
               className="text-indigo-400 font-semibold cursor-pointer hover:underline"
+              data-keyword="true"
               onClick={(e) => handleKeywordClick(e, keywordInfo.lessonId, keywordInfo.summary)}
             >
               {keyword}
             </span>
           );
         } else {
-            nodes.push(keyword); // Fallback
+            nodes.push(keyword);
         }
       }
       
       lastIndex = index + fullMatch.length;
     });
 
-    // Add any remaining text after the last match
     if (lastIndex < text.length) {
       nodes.push(text.substring(lastIndex));
     }
@@ -92,12 +98,13 @@ const InteractiveText: React.FC<InteractiveTextProps> = ({ children, onKeywordCl
   return (
     <span className="whitespace-pre-wrap font-sans leading-relaxed">
       {renderContent(children)}
-      {popover && (
+      {isVisible && activeKeyword && (
         <KeywordPopover
-          summary={popover.summary}
+          ref={popoverRef}
+          summary={activeKeyword.summary}
           onMoreInfoClick={handleMoreInfo}
-          position={popover.position}
-          onClose={closePopover}
+          onClose={() => { hide(); setActiveKeyword(null); }}
+          style={{ top: position.top, left: position.left }}
         />
       )}
     </span>

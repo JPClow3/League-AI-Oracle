@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, DDragonData, KnowledgeConcept, MetaSnapshot, GroundingSource, Champion, DraftPuzzle, PuzzleOption } from '../types';
 import { KNOWLEDGE_BASE } from '../data/knowledgeBase';
@@ -16,16 +17,16 @@ const PrimaryActions: React.FC<{ setView: (view: View) => void }> = ({ setView }
         >
             <div className="absolute top-4 right-4 h-16 w-16 bg-white/10 rounded-full transition-transform duration-300 group-hover:scale-125"></div>
             <Icon name="draft" className="w-12 h-12 mb-4 text-indigo-300 dark:text-indigo-300 transition-transform duration-300 group-hover:scale-110" />
-            <h3 className="font-display text-4xl font-semibold">Start Live Draft</h3>
-            <p className="text-indigo-200 dark:text-indigo-300 mt-1">Enter a live draft for real-time AI suggestions and analysis.</p>
+            <h3 className="font-display text-4xl font-semibold">Enter the Arena</h3>
+            <p className="text-indigo-200 dark:text-indigo-300 mt-1">Start a live draft for real-time AI suggestions and analysis.</p>
         </button>
         <div className="lg:col-span-2 grid grid-rows-2 gap-6">
             <button 
                 onClick={() => setView(View.DRAFT_LAB)}
                 className="group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1"
             >
-                <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">Draft Lab</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm">Experiment with compositions.</p>
+                <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">The Forge</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Craft compositions.</p>
             </button>
             <button 
                 onClick={() => setView(View.HISTORY)}
@@ -44,13 +45,14 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedOption, setSelectedOption] = useState<PuzzleOption | null>(null);
-    const isPuzzleSolved = useMemo(() => puzzle && activeProfile?.settings.completedTrials.includes(puzzle.id), [puzzle, activeProfile]);
-
+    const [showXpGain, setShowXpGain] = useState(false);
+    
     const fetchPuzzle = useCallback(async () => {
         if (!activeProfile) return;
         setIsLoading(true);
         setError(null);
         setSelectedOption(null);
+        setShowXpGain(false);
         try {
             const today = new Date().toISOString().split('T')[0];
             const cachedPuzzleRaw = localStorage.getItem(`draftwise_puzzle_${today}`);
@@ -62,12 +64,12 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
                     setPuzzle(newPuzzle);
                     localStorage.setItem(`draftwise_puzzle_${today}`, JSON.stringify(newPuzzle));
                 } else {
-                    setError("Could not retrieve today's puzzle. The Oracle is resting.");
+                    setError("Could not retrieve today's quest. The Oracle is resting.");
                 }
             }
         } catch (err) {
             console.error(err);
-            setError("An error occurred while fetching the puzzle.");
+            setError("An error occurred while fetching the quest.");
         } finally {
             setIsLoading(false);
         }
@@ -79,24 +81,25 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
 
     const handleSelectOption = (option: PuzzleOption) => {
         setSelectedOption(option);
-        if (option.isCorrect && !isPuzzleSolved) {
-            onProgressUpdate('trial', puzzle!.id, 20); // Daily puzzle XP
+        if (option.isCorrect) {
+            onProgressUpdate('trial', puzzle!.id, 75);
+            setShowXpGain(true);
         }
     };
 
     if (isLoading) {
-        return <div className="flex items-center justify-center p-8 h-full bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700"><Spinner /> <span className="ml-4 text-slate-500 dark:text-slate-400">Forging Daily Puzzle...</span></div>
+        return <div className="flex items-center justify-center p-8 h-full bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700"><Spinner /> <span className="ml-4 text-slate-500 dark:text-slate-400">Forging Daily Quest...</span></div>
     }
 
     if (error || !puzzle) {
-        return <div className="p-8 h-full bg-rose-600/10 text-rose-600 dark:bg-rose-500/10 dark:text-rose-500 rounded-2xl border border-rose-500/20 text-center">{error || "No puzzle available."}</div>
+        return <div className="p-8 h-full bg-rose-600/10 text-rose-600 dark:bg-rose-500/10 dark:text-rose-500 rounded-2xl border border-rose-500/20 text-center">{error || "No quest available."}</div>
     }
     
     const getChampion = (name: string) => Object.values(ddragonData.champions).find(c => c.name === name);
 
     return (
         <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col h-full">
-             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">Daily Draft Puzzle</h3>
+             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">Daily Quest</h3>
              <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{puzzle.scenario}</p>
              <p className="p-3 mb-4 text-center font-semibold bg-slate-200 dark:bg-slate-900/70 rounded-md border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">"{puzzle.problem}"</p>
              
@@ -110,15 +113,15 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
                          <div key={option.championName}>
                              <button
                                  onClick={() => handleSelectOption(option)}
-                                 disabled={!!selectedOption || isPuzzleSolved}
+                                 disabled={!!selectedOption}
                                  className={`w-full flex items-center gap-3 p-2 rounded-md transition-all duration-200 border-2 disabled:cursor-not-allowed
-                                     ${!selectedOption && !isPuzzleSolved ? 'bg-slate-200/50 dark:bg-slate-700/50 border-transparent hover:bg-slate-200 dark:hover:bg-slate-600/50 hover:border-indigo-500 dark:hover:border-indigo-400' : 'border-transparent'}
+                                     ${!selectedOption ? 'bg-slate-200/50 dark:bg-slate-700/50 border-transparent hover:bg-slate-200 dark:hover:bg-slate-600/50 hover:border-indigo-500 dark:hover:border-indigo-400' : 'border-transparent'}
                                      ${isSelected && isCorrect ? 'bg-teal-600/20 dark:bg-teal-400/20 border-teal-600 dark:border-teal-400' : ''}
                                      ${isSelected && !isCorrect ? 'bg-rose-600/20 dark:bg-rose-500/20 border-rose-600 dark:border-rose-500' : ''}
-                                     ${(selectedOption || isPuzzleSolved) && !isSelected ? 'opacity-50' : ''}
+                                     ${selectedOption && !isSelected ? 'opacity-50' : ''}
                                  `}
                             >
-                                 {champion && <ChampionIcon champion={champion} version={ddragonData.version} isClickable={false} className="w-12 h-12 flex-shrink-0" showName={false} />}
+                                 {champion && <ChampionIcon champion={champion} version={ddragonData.version} isClickable={false} className="w-10 h-10 flex-shrink-0" />}
                                  <span className="font-semibold">{option.championName}</span>
                              </button>
                              {isSelected && (
@@ -131,9 +134,15 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
                  })}
              </div>
              
-             {(selectedOption || isPuzzleSolved) && (
-                <button onClick={fetchPuzzle} disabled={true} className="w-full mt-4 text-center text-sm p-2 bg-slate-200 dark:bg-slate-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isPuzzleSolved && !selectedOption ? 'Puzzle already solved today!' : 'Puzzle Solved!'}
+             {showXpGain && (
+                <div className="text-center py-2 text-amber-500 dark:text-amber-400 font-semibold animate-pop-in">
+                    Quest Complete! +75 Strategic XP
+                </div>
+             )}
+
+             {selectedOption && (
+                <button onClick={fetchPuzzle} className="w-full mt-4 text-center text-sm p-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md">
+                    Another Quest
                 </button>
              )}
         </div>
@@ -155,15 +164,15 @@ const LearningPathWidget: React.FC<{ setView: (view: View) => void }> = ({ setVi
                  <Icon name="lessons" className="w-16 h-16 text-indigo-600 dark:text-indigo-500 mb-2" />
                 {nextLesson ? (
                     <>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Next Recommended Lesson:</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Next Tome of Knowledge:</p>
                     <p className="font-semibold text-slate-800 dark:text-slate-200">{nextLesson.title}</p>
                     </>
                 ) : (
-                    <p className="text-teal-600 dark:text-teal-400 font-semibold">All lessons completed!</p>
+                    <p className="text-teal-600 dark:text-teal-400 font-semibold">All tomes read!</p>
                 )}
             </div>
             <button onClick={() => setView(View.LESSONS)} className="w-full mt-4 p-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-400 text-white font-semibold rounded-md">
-                Go to Knowledge Hub
+                Go to The Academy
             </button>
         </div>
     )
@@ -232,7 +241,7 @@ const MetaSnapshotWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonDat
 
         return (
             <div className="flex items-center gap-3">
-                <ChampionIcon champion={champion} version={ddragonData.version} isClickable={false} className="w-12 h-12 flex-shrink-0"/>
+                <ChampionIcon champion={champion} version={ddragonData.version} isClickable={false} className="w-10 h-10 flex-shrink-0"/>
                 <div>
                     <p className="font-semibold text-slate-800 dark:text-slate-200">{name}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{reason}</p>

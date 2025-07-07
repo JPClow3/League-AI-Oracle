@@ -73,6 +73,15 @@ export interface Item {
   depth?: number;
 }
 
+export interface DetailedItemAnalysis {
+    name: string;
+    cost: string;
+    stats: string[];
+    mechanics: string;
+    strategicPurpose: string;
+    situationalApplication: string;
+}
+
 export interface DDragonData {
   version: string;
   champions: Record<string, Champion>;
@@ -84,7 +93,9 @@ export enum View {
   PROFILE = 'PROFILE',
   DRAFTING = 'DRAFTING',
   DRAFT_LAB = 'DRAFT_LAB',
+  SCOUT = 'SCOUT',
   VAULT = 'VAULT',
+  ARMORY = 'ARMORY',
   LESSONS = 'LESSONS',
   TRIALS = 'TRIALS',
   HISTORY = 'HISTORY',
@@ -97,7 +108,7 @@ export type Role = 'TOP' | 'JUNGLE' | 'MIDDLE' | 'BOTTOM' | 'SUPPORT';
 export interface UserSettings {
   oraclePersonality: 'Default' | 'Concise' | 'For Beginners';
   preferredRoles: Role[];
-  championPool: string[]; // Champion IDs
+  championPool: string[]; // Champion IDs for "Favorites to Practice"
   xp: number;
   completedLessons: string[]; // array of lesson IDs
   completedTrials: string[]; // array of trial IDs
@@ -120,6 +131,17 @@ export interface Profile {
   playbook: PlaybookEntry[];
   isNew?: boolean; // Flag for first-time profile creation
   isOnboarded?: boolean; // Flag for completing the guided setup
+
+  // Unified Riot Data object
+  riotData?: {
+      puuid: string;
+      gameName: string;
+      tagLine: string;
+      region: string;
+      summoner?: SummonerDTO;
+      mastery?: ChampionMasteryDTO[];
+      league?: LeagueEntryDTO[];
+  }
 }
 
 export type Team = 'BLUE' | 'RED';
@@ -319,6 +341,19 @@ export interface DraftHistoryEntry {
   inDraftNotes?: string;
   postGameNotes?: string;
   postGameAnalysis?: PostGameAIAnalysis;
+  performanceAnalysis?: PerformanceAnalysis;
+  matchId?: string;
+}
+
+export interface PerformanceAnalysisInsight {
+    category: 'Win Condition' | 'Itemization' | 'Objectives' | 'Teamfighting' | 'Laning';
+    evaluation: 'Excellent' | 'Good' | 'Average' | 'Poor' | 'Critical';
+    feedback: string;
+}
+
+export interface PerformanceAnalysis {
+    overallExecutionSummary: string;
+    insights: PerformanceAnalysisInsight[];
 }
 
 export interface AIChat {
@@ -371,22 +406,215 @@ export interface SharePayload {
     analysis: AIAnalysis;
 }
 
-// Data for Champion Vault
-export interface ChampionAbilityInfo {
-  key: 'Passive' | 'Q' | 'W' | 'E' | 'R';
-  name: string;
-  description: string;
+export interface CounterIntelligence {
+    vulnerabilities: string[];
+    counterArchetypes: string[];
+    quickTip: string;
 }
 
-export interface ChampionVaultData {
-    playstyleSummary: string;
-    abilities: ChampionAbilityInfo[];
-    coreItems: string[];
-    whenToPick: string[];
-    counters: string[];
-    counteredBy: string[];
-    synergies: {
-        lanePartner: string[];
-        jungler: string[];
+export interface ContextualDraftTip {
+    insight: string;
+    suggestedLessonId: string;
+}
+
+export interface StrategicBlindSpot {
+  blindSpotKey: string;
+  winRate: number;
+  gamesAnalyzed: number;
+  suggestedLessonId: string;
+  suggestedLessonTitle: string;
+  insight: string;
+}
+
+export interface ChampionPerformance {
+    championId: string;
+    games: number;
+    wins: number;
+    losses: number;
+    winRate: number;
+}
+
+export interface MetaComposition {
+  id: string;
+  name: string;
+  description: string;
+  champions: { name: string; role: Role }[];
+}
+
+export interface CompositionDeconstruction {
+    coreIdentity: string;
+    strategicGoal: string;
+    keySynergies: {
+        championNames: string[];
+        description: string;
+    }[];
+    winCondition: {
+        championName: string;
+        reasoning: string;
     };
+    powerCurve: {
+        summary: string;
+        details: string;
+    };
+    itemDependencies: {
+        championName:string;
+        items: string[];
+        reasoning: string;
+    }[];
+}
+
+
+// Data for Champion Vault
+export interface ChampionAbilityAnalysis {
+  key: 'P' | 'Q' | 'W' | 'E' | 'R';
+  name: string;
+  proTip: string;
+}
+
+export interface ChampionVaultEntry {
+    championId: string; // e.g., 'Aatrox'
+    overview: string;
+    playstyle: string;
+    strengths: string[];
+    weaknesses: string[];
+    abilities: ChampionAbilityAnalysis[];
+    build: {
+        coreItems: { name: string, description: string }[];
+        explanation: string;
+    };
+    matchups: {
+        strongAgainst: { championName: string; tip: string; }[];
+        weakAgainst: { championName: string; tip: string; }[];
+    };
+    synergies: {
+        partners: { championName: string; reason: string; }[];
+        idealComps: string[];
+    };
+}
+
+export interface SynergyAndCounterAnalysis {
+    synergies: { championName: string; reasoning: string; }[];
+    counters: { championName:string; reasoning: string; }[];
+}
+
+export interface PlayerProfile {
+    personaTag: string;
+    insight: string;
+    error?: string; // To handle cases where analysis fails for one player
+}
+
+export interface LiveGameParticipant {
+    puuid: string;
+    champion: Champion | null;
+    summonerName: string;
+    teamId: 100 | 200;
+    profile?: PlayerProfile;
+    isLoadingProfile: boolean;
+}
+
+
+// Riot API Types
+export interface RiotAccount {
+    puuid: string;
+    gameName: string;
+    tagLine: string;
+}
+
+export interface SummonerDTO {
+    id: string;
+    accountId: string;
+    puuid: string;
+    name: string;
+    profileIconId: number;
+    revisionDate: number;
+    summonerLevel: number;
+}
+
+export interface ChampionMasteryDTO {
+    championId: number;
+    championLevel: number;
+    championPoints: number;
+    lastPlayTime: number;
+    championPointsSinceLastLevel: number;
+    championPointsUntilNextLevel: number;
+    chestGranted: boolean;
+    tokensEarned: number;
+    summonerId: string;
+}
+
+export interface LeagueEntryDTO {
+  leagueId: string;
+  summonerId: string;
+  summonerName: string;
+  queueType: 'RANKED_SOLO_5x5' | 'RANKED_FLEX_SR' | string;
+  tier: 'IRON' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'EMERALD' | 'DIAMOND' | 'MASTER' | 'GRANDMASTER' | 'CHALLENGER' | string;
+  rank: 'I' | 'II' | 'III' | 'IV';
+  leaguePoints: number;
+  wins: number;
+  losses: number;
+}
+
+export interface LiveGameDTO {
+    gameId: number;
+    mapId: number;
+    gameMode: string;
+    gameType: string;
+    gameQueueConfigId: number;
+    participants: {
+        puuid: string;
+        championId: number;
+        summonerName: string;
+        teamId: 100 | 200;
+        summonerId: string;
+    }[];
+    gameStartTime: number;
+    gameLength: number;
+}
+
+export interface MatchDTO {
+    metadata: {
+        matchId: string;
+        participants: string[]; // List of puuids
+    };
+    info: {
+        gameCreation: number;
+        gameDuration: number;
+        gameMode: string;
+        participants: ParticipantDTO[];
+        teams: TeamDTO[];
+    };
+}
+
+export interface ParticipantDTO {
+    puuid: string;
+    summonerName: string;
+    championName: string;
+    teamId: 100 | 200; // 100 for blue, 200 for red
+    win: boolean;
+    kills: number;
+    deaths: number;
+    assists: number;
+    totalDamageDealtToChampions: number;
+    goldEarned: number;
+    visionScore: number;
+    item0: number;
+    item1: number;
+    item2: number;
+    item3: number;
+    item4: number;
+    item5: number;
+    item6: number; // trinket
+}
+
+export interface TeamDTO {
+    teamId: 100 | 200;
+    win: boolean;
+    objectives: {
+        baron: { first: boolean; kills: number };
+        champion: { first: boolean; kills: number };
+        dragon: { first: boolean; kills: number };
+        inhibitor: { first: boolean; kills: number };
+        riftHerald: { first: boolean; kills: number };
+        tower: { first: boolean; kills: number };
+    }
 }

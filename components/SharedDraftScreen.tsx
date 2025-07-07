@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { SharePayload, DDragonData, Champion, DraftSlot } from '../types';
 import FullAnalysisDisplay from './common/FullAnalysisDisplay';
@@ -86,7 +87,7 @@ const SharedDraftScreen: React.FC<SharedDraftScreenProps> = ({ sharedData, ddrag
 
         <div className="p-4 sm:p-6 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
             <h2 className="text-3xl font-display text-teal-600 dark:text-teal-400 mb-4">In-Depth AI Analysis</h2>
-            <FullAnalysisDisplay analysis={analysis} onKeywordClick={() => { /* No-op for shared view */ }} ddragonData={ddragonData} />
+            <FullAnalysisDisplay analysis={analysis} onKeywordClick={() => { /* No-op for shared view */ }} ddragonData={ddragonData} draftState={draftState} />
         </div>
       </div>
     </div>

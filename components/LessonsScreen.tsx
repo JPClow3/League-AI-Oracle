@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { KnowledgeConcept, View, RichLessonContent, DDragonData, Champion, PowerCurveSection, CaseStudy } from '../types';
 import { KNOWLEDGE_BASE } from '../data/knowledgeBase';
@@ -318,7 +319,7 @@ const LessonsScreen: React.FC<LessonsScreenProps> = ({ setView, selectedLessonId
         return (
             <div className="max-w-4xl mx-auto animate-slide-fade-in">
                 <button onClick={() => setSelectedLesson(null)} className="mb-4 text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
-                    <Icon name="chevron-right" className="w-4 h-4 transform rotate-180" /> Back to Knowledge Hub
+                    <Icon name="chevron-right" className="w-4 h-4 transform rotate-180" /> Back to The Academy
                 </button>
                 
                 {isRichLesson ? (
@@ -350,7 +351,7 @@ const LessonsScreen: React.FC<LessonsScreenProps> = ({ setView, selectedLessonId
                             className="px-5 py-2.5 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
                         >
                             <Icon name="lab" className="w-5 h-5" />
-                            Experiment in Draft Lab
+                            Experiment in the Forge
                         </button>
                     </div>
                 </div>
@@ -361,8 +362,8 @@ const LessonsScreen: React.FC<LessonsScreenProps> = ({ setView, selectedLessonId
     return (
         <div className="animate-fade-in">
             <div className="text-center mb-12">
-                <h1 className="text-6xl font-display font-bold text-gradient-primary">Knowledge Hub</h1>
-                <p className="text-xl text-slate-500 dark:text-slate-400 mt-2">Explore the strategy library. The fundamentals rotate to offer new insights on each visit.</p>
+                <h1 className="text-6xl font-display font-bold text-gradient-primary">The Academy</h1>
+                <p className="text-xl text-slate-500 dark:text-slate-400 mt-2">Explore the archives of strategic knowledge. The fundamentals rotate to offer new insights.</p>
             </div>
             <div className="space-y-12">
                 {Object.entries(displayedLessons).map(([category, lessons]) => (

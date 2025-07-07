@@ -18,7 +18,7 @@ const createInitialState = (mode: 'SOLO_QUEUE' | 'COMPETITIVE'): DraftState => (
 interface DraftStoreActions {
   setMode: (mode: 'SOLO_QUEUE' | 'COMPETITIVE') => void;
   setChampion: (champion: Champion) => void;
-  setChampionInLab: (team: Team, index: number, champion: Champion) => void;
+  setChampionInLab: (team: Team, index: number, champion: Champion | null) => void;
   swapChampions: (team: Team, index1: number, index2: number) => void;
   undo: () => void;
   resetDraft: () => void;
@@ -67,24 +67,40 @@ export const useDraftStore = create<DraftState & DraftStore>((set, get) => ({
     setChampionInLab: (team, index, champion) => set(state => {
       const newState = { ...state, pickedChampions: new Set(state.pickedChampions) };
 
-      const clearChampion = (teamKey: 'blueTeam' | 'redTeam') => {
-        const teamPicks = newState[teamKey].picks;
-        const champIndex = teamPicks.findIndex(p => p.champion?.id === champion.id);
-        if (champIndex !== -1) {
-          newState.pickedChampions.delete(teamPicks[champIndex].champion!.id);
-          teamPicks[champIndex] = { ...teamPicks[champIndex], champion: null };
-        }
-      };
-      
-      clearChampion('blueTeam');
-      clearChampion('redTeam');
+      if (champion) {
+          // If we are adding a champion, remove it from wherever else it might be.
+          const clearChampionFromAllSlots = (champId: string) => {
+              newState.blueTeam.picks.forEach((pick, i) => {
+                  if (pick.champion?.id === champId) {
+                      newState.blueTeam.picks[i] = { ...pick, champion: null };
+                  }
+              });
+              newState.redTeam.picks.forEach((pick, i) => {
+                  if (pick.champion?.id === champId) {
+                      newState.redTeam.picks[i] = { ...pick, champion: null };
+                  }
+              });
+              newState.pickedChampions.delete(champId);
+          };
+          clearChampionFromAllSlots(champion.id);
+      }
       
       const targetTeamKey = team === 'BLUE' ? 'blueTeam' : 'redTeam';
-      const oldChampion = newState[targetTeamKey].picks[index].champion;
-      if (oldChampion) newState.pickedChampions.delete(oldChampion.id);
-
-      newState[targetTeamKey].picks[index] = { ...newState[targetTeamKey].picks[index], champion };
-      newState.pickedChampions.add(champion.id);
+      const teamToUpdate = newState[targetTeamKey];
+      
+      // Remove the champion that was previously in the slot from the picked set
+      const oldChampion = teamToUpdate.picks[index].champion;
+      if (oldChampion) {
+          newState.pickedChampions.delete(oldChampion.id);
+      }
+      
+      // Set the new champion in the slot
+      teamToUpdate.picks[index] = { ...teamToUpdate.picks[index], champion };
+      
+      // Add the new champion to the picked set
+      if (champion) {
+          newState.pickedChampions.add(champion.id);
+      }
 
       return { ...newState, analysis: undefined };
     }),

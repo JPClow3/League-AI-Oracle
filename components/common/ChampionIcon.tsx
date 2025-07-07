@@ -4,6 +4,7 @@ import ChampionPopover from './ChampionPopover';
 import ContextMenu from './ContextMenu';
 import { useProfile } from '../../contexts/ProfileContext';
 import { Icon } from './Icon';
+import { useFloatingElementPosition } from '../../hooks/useFloatingElementPosition';
 
 interface ChampionIconProps {
   champion: Champion | null;
@@ -13,6 +14,7 @@ interface ChampionIconProps {
   isClickable?: boolean;
   onContextMenuAction?: (action: ContextMenuItemAction, championId: string) => void;
   showName?: boolean;
+  isHighlighted?: boolean;
 }
 
 export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({ 
@@ -22,30 +24,17 @@ export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({
     className = 'w-16 h-16', 
     isClickable = true,
     onContextMenuAction,
-    showName = true
+    showName = true,
+    isHighlighted = false,
 }) => {
   const { activeProfile, toggleChampionInPool } = useProfile();
 
-  const [popover, setPopover] = useState<{ visible: boolean; position: { top: number; left: number } }>({ visible: false, position: { top: 0, left: 0 } });
-  const [contextMenu, setContextMenu] = useState<{ visible: boolean; position: { top: number; left: number } }>({ visible: false, position: { top: 0, left: 0 } });
-  
   const iconRef = useRef<HTMLDivElement>(null);
-  const popoverTimeoutRef = useRef<number | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  
+  const { position: popoverPosition, isVisible: isPopoverVisible, show: showPopover, hide: hidePopover } = useFloatingElementPosition(iconRef, popoverRef);
 
-  const handleMouseEnter = () => {
-    if (popoverTimeoutRef.current) clearTimeout(popoverTimeoutRef.current);
-    popoverTimeoutRef.current = window.setTimeout(() => {
-        if (iconRef.current) {
-            const rect = iconRef.current.getBoundingClientRect();
-            setPopover({ visible: true, position: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX } });
-        }
-    }, 500); // 0.5 second delay
-  };
-
-  const handleMouseLeave = () => {
-    if (popoverTimeoutRef.current) clearTimeout(popoverTimeoutRef.current);
-    setPopover(prev => ({ ...prev, visible: false }));
-  };
+  const [contextMenu, setContextMenu] = useState<{ visible: boolean; position: { top: number; left: number } }>({ visible: false, position: { top: 0, left: 0 } });
   
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -83,8 +72,8 @@ export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({
       <div
         ref={iconRef}
         onClick={isClickable && onClick ? () => onClick(champion) : undefined}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onMouseEnter={showPopover}
+        onMouseLeave={hidePopover}
         onContextMenu={handleContextMenu}
         className={`relative group ${className} ${isClickable ? 'cursor-pointer' : ''} transition-transform duration-200 hover:scale-110`}
         title={champion.name}
@@ -92,17 +81,26 @@ export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({
         <img
           src={imageUrl}
           alt={champion.name}
-          className="w-full h-full object-cover border-2 border-slate-400 dark:border-slate-600 group-hover:border-indigo-500 transition-all duration-200 rounded-md"
+          className={`w-full h-full object-cover border-2 transition-all duration-200 rounded-md 
+            ${isHighlighted ? 'border-teal-400 ring-2 ring-teal-400' : 'border-slate-400 dark:border-slate-600 group-hover:border-indigo-500'}
+        `}
         />
         {showName && (
           <div className="absolute bottom-0 w-full bg-black bg-opacity-70 text-white text-xs text-center p-0.5 rounded-b-md truncate">
             {champion.name}
           </div>
         )}
+        {isHighlighted && (
+          <div className="absolute inset-0 bg-teal-500/30 rounded-md pointer-events-none animate-pulse" style={{ animationDuration: '2s' }} />
+        )}
       </div>
 
-      {popover.visible && champion && (
-          <ChampionPopover champion={champion} position={popover.position} />
+      {isPopoverVisible && champion && (
+          <ChampionPopover
+              ref={popoverRef}
+              champion={champion}
+              style={{ top: popoverPosition.top, left: popoverPosition.left }}
+          />
       )}
       
       {contextMenu.visible && champion && (

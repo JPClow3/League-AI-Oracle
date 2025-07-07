@@ -2,5 +2,6 @@
   "name": "DraftWise AI",
   "description": "DraftWise AI is an advanced strategic analysis platform for League of Legends, powered by a lead AI analyst. It provides data-driven insights, draft optimization, and tactical guidance to help Commanders elevate their in-game performance and strategic mastery.",
   "requestFramePermissions": [],
-  "prompt": ""
+  "prompt": "",
+  "env": ["API_KEY", "RIOT_API_KEY"]
 }

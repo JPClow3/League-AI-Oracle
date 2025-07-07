@@ -23,6 +23,9 @@ import ProfileScreen from './components/ProfileScreen';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { shareService } from './utils/shareService';
 import SharedDraftScreen from './components/SharedDraftScreen';
+import { NotificationHub } from './components/common/NotificationHub';
+import OraclesArmory from './components/OraclesArmory';
+import ScoutScreen from './components/ScoutScreen';
 
 const App: React.FC = () => {
   const { activeProfile, loading: profileLoading } = useProfile();
@@ -182,17 +185,21 @@ const App: React.FC = () => {
       case View.HOME:
         return <Home setView={setView} ddragonData={ddragonData} />;
       case View.PROFILE:
-        return <ProfileScreen ddragonData={ddragonData} setView={setView} />;
+        return <ProfileScreen ddragonData={ddragonData} setView={setView} onNavigateToLesson={handleNavigateToLesson} />;
       case View.DRAFTING:
-        return <DraftingScreen ddragonData={ddragonData} setAura={setAura} setView={setView} setHoverAura={setHoverAura} />;
+        return <DraftingScreen ddragonData={ddragonData} setAura={setAura} setView={setView} setHoverAura={setHoverAura} onNavigateToLesson={handleNavigateToLesson} />;
       case View.DRAFT_LAB:
         return <DraftLab ddragonData={ddragonData} setAura={setAura} setView={setView} setHoverAura={setHoverAura} />;
+      case View.SCOUT:
+        return <ScoutScreen ddragonData={ddragonData} />;
       case View.VAULT:
         return <ChampionVault 
                     ddragonData={ddragonData}
                     initialChampion={initialVaultChampion}
                     onInitialChampionConsumed={() => setInitialVaultChampion(null)} 
                 />;
+      case View.ARMORY:
+        return <OraclesArmory ddragonData={ddragonData} />;
       case View.HISTORY:
         return <HistoryScreen ddragonData={ddragonData} setView={setView} onNavigateToLesson={handleNavigateToLesson} />;
       case View.PLAYBOOK:
@@ -239,6 +246,7 @@ const App: React.FC = () => {
           onNavigateToVault={handleNavigateToVault}
         />
       )}
+      <NotificationHub onNavigateToLesson={handleNavigateToLesson} />
     </div>
   );
 };

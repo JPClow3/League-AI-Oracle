@@ -1,19 +1,22 @@
-
 import React from 'react';
 
 interface KeywordPopoverProps {
   summary: string;
   onMoreInfoClick: () => void;
-  position: { top: number; left: number };
   onClose: () => void;
+  style: React.CSSProperties;
 }
 
-const KeywordPopover: React.FC<KeywordPopoverProps> = ({ summary, onMoreInfoClick, position, onClose }) => {
-    const popoverRef = React.useRef<HTMLDivElement>(null);
-
+const KeywordPopover = React.forwardRef<HTMLDivElement, KeywordPopoverProps>(({ summary, onMoreInfoClick, onClose, style }, ref) => {
+    
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            // Don't close if clicking another keyword
+            if (target.nodeType === 1 && (target as HTMLElement).closest('[data-keyword="true"]')) {
+                return;
+            }
+            if ((ref as React.RefObject<HTMLDivElement>)?.current && !(ref as React.RefObject<HTMLDivElement>)?.current?.contains(target)) {
                 onClose();
             }
         };
@@ -21,13 +24,14 @@ const KeywordPopover: React.FC<KeywordPopoverProps> = ({ summary, onMoreInfoClic
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [onClose]);
+    }, [onClose, ref]);
+
 
     return (
         <div
-            ref={popoverRef}
-            className="fixed z-50 w-64 p-3 bg-slate-900 border border-indigo-500 rounded-lg shadow-2xl text-sm text-slate-200 animate-fade-in"
-            style={{ top: position.top, left: position.left, transform: 'translateY(10px)' }}
+            ref={ref}
+            className="fixed z-50 w-64 p-3 bg-slate-900 border border-indigo-500 rounded-lg shadow-2xl text-sm text-slate-200 animate-pop-in"
+            style={style}
         >
             <p>{summary}</p>
             <button
@@ -38,6 +42,6 @@ const KeywordPopover: React.FC<KeywordPopoverProps> = ({ summary, onMoreInfoClic
             </button>
         </div>
     );
-};
+});
 
 export default KeywordPopover;
