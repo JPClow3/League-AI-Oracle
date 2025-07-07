@@ -12,47 +12,54 @@ DraftWise AI is an advanced strategic analysis platform for League of Legends, d
 
 ## ✨ Key Features
 
--   **Live Drafting Arena**: Get real-time AI suggestions for picks and bans during a live draft simulation, tailored to your team's composition and your personal champion pool.
--   **The Forge (Draft Lab)**: An experimental sandbox to theory-craft compositions, see instant team analytics, and get AI-powered suggestions to fill in the gaps.
--   **In-Depth AI Analysis**: Once a draft is complete, receive a comprehensive breakdown including team identities, power spike timelines, win conditions, and matchup-specific threats.
--   **Personalized Learning Path**: The Academy provides a curated library of strategic knowledge. The AI tracks your progress and suggests lessons based on your gameplay patterns.
--   **Strategic Trials & Daily Puzzles**: Test your drafting knowledge with interactive scenarios and daily challenges to earn XP and sharpen your strategic mind.
--   **Game History & Post-Game Debriefs**: Log your game outcomes to receive a post-game AI analysis, identifying what went right, what went wrong, and which lesson could help you improve.
--   **Champion Vault**: A complete database of all champions, featuring AI-generated strategic summaries, strengths, weaknesses, and build synergies.
+-   **Live Drafting Arena**: Get real-time AI suggestions, counter-intel on enemy picks, and contextual tips during a live draft simulation.
+-   **The Forge (Draft Lab)**: An experimental sandbox to theory-craft compositions. Load meta blueprints, get live analytics, and use AI to find the perfect final pick.
+-   **Commander's Playbook**: Save your best strategies and team compositions from the Lab or Arena for future reference and analysis.
+-   **Live Game Scout**: Enter any player's Riot ID to get a live scouting report of their current game, including AI-generated player profiles for all participants.
+-   **Riot Account Sync**: Link your Riot account to automatically import your top champions, track your ranked stats, and analyze your match history.
+-   **In-Depth AI Analysis**: Receive comprehensive breakdowns of drafts, including team identities, power spike timelines, win conditions, and matchup-specific threats.
+-   **Champion Vault & Oracle's Armory**: Explore a complete champion database with detailed strategic guides, and use the Armory to instantly find synergies and counters for any champion.
+-   **Personalized Learning & Daily Challenges**: A full learning Academy with lessons and trials. Test your knowledge with a unique, AI-generated draft puzzle every day.
+-   **Game History & Performance Analysis**: Review past drafts, get post-game AI debriefs, and see analysis of your strategic blind spots based on your play history.
 -   **Live Meta Snapshot**: Stay ahead of the curve with an AI-generated summary of the current patch's trending champions, powered by Google Search.
--   **Shareable Drafts**: Export your completed draft and analysis as a shareable link or a downloadable image to discuss with your team.
+-   **Shareable Drafts**: Export your completed draft and analysis as a shareable link or a downloadable image.
 -   **Dynamic Aura System**: The app's UI subtly changes color to reflect the state of your draft, providing at-a-glance feedback on your team's damage profile or the AI's current "mood".
+
 
 ## 🛠️ Tech Stack
 
 -   **Frontend**: React, TypeScript, Tailwind CSS
 -   **AI Engine**: Google Gemini API (`@google/genai`)
--   **State Management**: Zustand
--   **Game Data**: Riot Games Data Dragon (DDragon) API
+-   **State Management**: Zustand (global state) & React Context (profile state)
+-   **Game Data**: Riot Games Data Dragon (DDragon) for static assets & Riot Games API for live player/game data.
 -   **Utilities**: `html2canvas` for image exports, `import-maps` for dependency management.
 
-## 🏗️ Architecture & Design
-
-DraftWise AI is built with a modern, scalable frontend architecture:
-
--   **Component-Based UI**: Built with React and TypeScript for a strongly-typed, maintainable, and reusable component library.
--   **Service-Oriented Logic**: Core functionalities like AI interaction (`geminiService`) and game data fetching (`ddragonService`) are abstracted into dedicated services, keeping components clean.
--   **Hybrid State Management**:
-    -   **React Context (`ProfileContext`)**: Manages user profiles, settings, and history, which are persisted to `localStorage`. This is ideal for data that changes infrequently but is needed across the app.
-    -   **Zustand (`draftStore`, `notificationStore`)**: A lightweight global store for managing transient, high-frequency state like the current draft and UI notifications.
--   **Data-Driven AI**: The `geminiService` constructs highly contextualized prompts using a combination of the current game state, user profile settings, and an internal knowledge base (`gameKnowledge.ts`, `knowledgeBase.ts`) to guide the Gemini model towards expert-level analysis.
--   **UX-First Design**: The application prioritizes a fluid and intuitive user experience with smooth animations, a dynamic theme system (light/dark), and responsive design that adapts to different screen sizes. The "Aura" system provides subtle, ambient feedback on the state of the draft.
 
 ## 🚀 Getting Started
 
-To run DraftWise AI locally, follow these steps:
-
 ### Prerequisites
 
--   Node.js (v18 or later)
--   npm or yarn
+You will need a local web server to run the project. A simple option is the `serve` package:
+```bash
+# Install serve globally if you don't have it
+npm install -g serve
+```
 
-### Installation
+### Environment Variables
+
+The application requires API keys to function. These are expected to be available as environment variables in the execution context.
+
+Create a `.env` file in the root of the project and add your keys:
+```
+# For all AI features
+API_KEY=YOUR_GEMINI_API_KEY_HERE
+
+# For live game scouting and player data sync
+RIOT_API_KEY=YOUR_RIOT_API_KEY_HERE
+```
+_Note: For a static project like this, a build tool (e.g., Vite, Parcel) or a custom server setup is required to correctly inject these environment variables for the browser to access them via `process.env`._
+
+### Running the Application
 
 1.  **Clone the repository:**
     ```bash
@@ -60,30 +67,12 @@ To run DraftWise AI locally, follow these steps:
     cd draftwise-ai
     ```
 
-2.  **Install dependencies:**
-    The project uses ES modules and an `importmap` in `index.html`, so there's no traditional `npm install` step for frontend libraries. However, you'll need a local server to run the app. A simple way is to use a package like `serve`.
-
-    ```bash
-    # Install serve globally if you don't have it
-    npm install -g serve
-    ```
-
-3.  **Set up your Environment Variable:**
-    The application requires a Google Gemini API key.
-
-    -   Create a file named `.env` in the root of the project.
-    -   Add your API key to this file:
-        ```
-        API_KEY=YOUR_GEMINI_API_KEY_HERE
-        ```
-    -   _Note: The application is designed to load this key from `process.env.API_KEY`. You will need a build tool or server setup that makes this environment variable available to the client-side code. For local development with basic servers, this may require a simple build script._
-
-4.  **Run the application:**
-    Use a local server to serve the project files.
+2.  **Serve the project:**
     ```bash
     serve -s .
     ```
     This will start a server, typically on `http://localhost:3000`. Open this URL in your browser to use the application.
+
 
 ## 📁 Project Structure
 
@@ -93,35 +82,37 @@ To run DraftWise AI locally, follow these steps:
 │   └── ... (Static assets if any)
 ├── src/
 │   ├── components/
-│   │   ├── common/         # Reusable components (Icon, Spinner, Modals)
+│   │   ├── common/             # Reusable components (Icon, Spinner, Modals)
 │   │   ├── DraftingScreen.tsx  # The live drafting view
-│   │   ├── DraftLab.tsx      # The composition sandbox
-│   │   ├── Home.tsx          # The main dashboard
+│   │   ├── DraftLab.tsx        # The composition sandbox
+│   │   ├── ScoutScreen.tsx     # Live game scouting view
+│   │   ├── Home.tsx            # The main dashboard
 │   │   └── ... (Other screen components)
 │   ├── contexts/
-│   │   └── ProfileContext.tsx # Manages user profiles and settings
+│   │   └── ProfileContext.tsx  # Manages user profiles, settings, and Riot account data
 │   ├── data/
-│   │   ├── gameData.ts       # Static champion roles, classes, etc.
-│   │   ├── knowledgeBase.ts  # The AI's strategic "textbook"
+│   │   ├── gameData.ts         # Static champion roles, classes, etc.
+│   │   ├── knowledgeBase.ts    # The AI's strategic "textbook"
 │   │   └── ... (Other static data)
 │   ├── hooks/
-│   │   └── useLocalStorage.ts # Custom hook for persisting state
+│   │   └── useLocalStorage.ts  # Custom hook for persisting state
 │   ├── services/
-│   │   ├── ddragonService.ts # Fetches data from Riot's DDragon API
-│   │   ├── geminiService.ts  # Handles all communication with the Gemini API
-│   │   └── historyAnalyzer.ts# Analyzes user game history for insights
+│   │   ├── ddragonService.ts   # Fetches data from Riot's DDragon API
+│   │   ├── riotService.ts      # Fetches live data from the Riot Games API
+│   │   ├── geminiService.ts    # Handles all communication with the Gemini API
+│   │   └── historyAnalyzer.ts  # Analyzes user game history for insights
 │   ├── store/
-│   │   ├── draftStore.ts     # Zustand store for live draft state
-│   │   └── notificationStore.ts # Zustand store for UI notifications
+│   │   ├── draftStore.ts       # Zustand store for live draft state
+│   │   └── notificationStore.ts# Zustand store for UI notifications
 │   ├── types/
-│   │   └── types.ts          # Centralized TypeScript interfaces
+│   │   └── types.ts            # Centralized TypeScript interfaces
 │   ├── utils/
-│   │   └── shareService.ts   # Logic for compressing/encoding drafts for URL sharing
-│   ├── App.tsx             # Main app component, handles routing
-│   └── index.tsx           # React root entry point
-├── index.html              # Main HTML file with importmap
-├── README.md               # You are here!
-└── metadata.json           # Application metadata
+│   │   └── shareService.ts     # Logic for compressing/encoding drafts for URL sharing
+│   ├── App.tsx                 # Main app component, handles routing
+│   └── index.tsx               # React root entry point
+├── index.html                  # Main HTML file with importmap
+├── README.md                   # You are here!
+└── metadata.json               # Application metadata
 ```
 
 ## 🤝 Contributing
@@ -140,6 +131,6 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgements
 
--   **Riot Games** for the [Data Dragon API](https://developer.riotgames.com/docs/lol#data-dragon), which provides the essential game data.
+-   **Riot Games** for the [Data Dragon API](https://developer.riotgames.com/docs/lol#data-dragon) and the [Riot Games API](https://developer.riotgames.com/).
 -   **Google** for the powerful and flexible [Gemini API](https://ai.google.dev/).
 -   The creators of all the open-source libraries used in this project.
