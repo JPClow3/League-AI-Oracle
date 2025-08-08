@@ -9,35 +9,68 @@ import { geminiService } from '../services/geminiService';
 import { Spinner } from './common/Spinner';
 import { getChampionStaticInfoById } from '../data/gameData';
 
-const PrimaryActions: React.FC<{ setView: (view: View) => void }> = ({ setView }) => (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <button 
-            onClick={() => setView(View.DRAFTING)}
-            className="group relative lg:col-span-3 p-8 text-left bg-primary-gradient text-white rounded-2xl shadow-2xl shadow-indigo-500/20 transition-all duration-300 transform hover:-translate-y-1"
-        >
-            <div className="absolute top-4 right-4 h-16 w-16 bg-white/10 rounded-full transition-transform duration-300 group-hover:scale-125"></div>
-            <Icon name="draft" className="w-12 h-12 mb-4 text-indigo-300 dark:text-indigo-300 transition-transform duration-300 group-hover:scale-110" />
-            <h3 className="font-display text-4xl font-semibold">Enter the Arena</h3>
-            <p className="text-indigo-200 dark:text-indigo-300 mt-1">Start a live draft for real-time AI suggestions and analysis.</p>
-        </button>
-        <div className="lg:col-span-2 grid grid-rows-2 gap-6">
-            <button 
-                onClick={() => setView(View.DRAFT_LAB)}
-                className="group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1"
-            >
-                <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">The Forge</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm">Craft compositions.</p>
-            </button>
-            <button 
-                onClick={() => setView(View.HISTORY)}
-                className="group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1"
-            >
-                <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">Review History</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm">Analyze past games.</p>
-            </button>
-        </div>
-    </div>
+const FeatureCard: React.FC<{
+    icon: React.ComponentProps<typeof Icon>['name'];
+    title: string;
+    description: string;
+    onClick: () => void;
+    isPrimary?: boolean;
+}> = ({ icon, title, description, onClick, isPrimary = false }) => (
+    <button
+        onClick={onClick}
+        className={`group p-6 text-left rounded-2xl shadow-lg border transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col
+            ${isPrimary
+                ? 'bg-primary-gradient text-white border-transparent shadow-indigo-500/30'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500'
+            }`}
+    >
+        <Icon name={icon} className={`w-10 h-10 mb-4 transition-transform duration-300 group-hover:scale-110 ${isPrimary ? 'text-indigo-200' : 'text-indigo-600 dark:text-indigo-400'}`} />
+        <h3 className={`font-display text-2xl font-semibold ${isPrimary ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{title}</h3>
+        <p className={`text-sm mt-1 flex-grow ${isPrimary ? 'text-indigo-200' : 'text-slate-500 dark:text-slate-400'}`}>{description}</p>
+    </button>
 );
+
+const FeatureGrid: React.FC<{ setView: (view: View) => void }> = ({ setView }) => {
+    const features = [
+        {
+            icon: 'draft' as const,
+            title: 'Live Draft Arena',
+            description: 'Enter the Arena for real-time AI suggestions and analysis during a live draft.',
+            onClick: () => setView(View.DRAFTING),
+            isPrimary: true,
+        },
+        {
+            icon: 'lab' as const,
+            title: 'The Forge',
+            description: 'A sandbox to theory-craft compositions and experiment with synergies.',
+            onClick: () => setView(View.DRAFT_LAB),
+        },
+        {
+            icon: 'history' as const,
+            title: 'Review History',
+            description: 'Analyze past games, review AI debriefs, and track your performance trends.',
+            onClick: () => setView(View.HISTORY),
+        },
+        {
+            icon: 'playbook' as const,
+            title: 'Playbook',
+            description: 'Access your saved strategies and powerful meta compositions.',
+            onClick: () => setView(View.PLAYBOOK),
+        },
+    ];
+
+    return (
+        <section aria-labelledby="features-title">
+            <h2 id="features-title" className="text-3xl font-display mb-4 text-slate-800 dark:text-slate-200">Core Features</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {features.map(feature => (
+                    <FeatureCard key={feature.title} {...feature} />
+                ))}
+            </div>
+        </section>
+    );
+};
+
 
 const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData }) => {
     const { activeProfile, onProgressUpdate } = useProfile();
@@ -64,12 +97,12 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
                     setPuzzle(newPuzzle);
                     localStorage.setItem(`draftwise_puzzle_${today}`, JSON.stringify(newPuzzle));
                 } else {
-                    setError("Could not retrieve today's quest. The Oracle is resting.");
+                    setError("Could not retrieve today's puzzle. The Oracle is resting.");
                 }
             }
         } catch (err) {
             console.error(err);
-            setError("An error occurred while fetching the quest.");
+            setError("An error occurred while fetching the puzzle.");
         } finally {
             setIsLoading(false);
         }
@@ -88,18 +121,18 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
     };
 
     if (isLoading) {
-        return <div className="flex items-center justify-center p-8 h-full bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700"><Spinner /> <span className="ml-4 text-slate-500 dark:text-slate-400">Forging Daily Quest...</span></div>
+        return <div className="flex items-center justify-center p-8 h-full bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700"><Spinner /> <span className="ml-4 text-slate-500 dark:text-slate-400">Forging Daily Puzzle...</span></div>
     }
 
     if (error || !puzzle) {
-        return <div className="p-8 h-full bg-rose-600/10 text-rose-600 dark:bg-rose-500/10 dark:text-rose-500 rounded-2xl border border-rose-500/20 text-center">{error || "No quest available."}</div>
+        return <div className="p-8 h-full bg-rose-600/10 text-rose-600 dark:bg-rose-500/10 dark:text-rose-500 rounded-2xl border border-rose-500/20 text-center">{error || "No puzzle available."}</div>
     }
     
     const getChampion = (name: string) => Object.values(ddragonData.champions).find(c => c.name === name);
 
     return (
         <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col h-full">
-             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">Daily Quest</h3>
+             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">Daily Puzzle</h3>
              <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{puzzle.scenario}</p>
              <p className="p-3 mb-4 text-center font-semibold bg-slate-200 dark:bg-slate-900/70 rounded-md border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">"{puzzle.problem}"</p>
              
@@ -136,13 +169,13 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
              
              {showXpGain && (
                 <div className="text-center py-2 text-amber-500 dark:text-amber-400 font-semibold animate-pop-in">
-                    Quest Complete! +75 Strategic XP
+                    Puzzle Complete! +75 Strategic XP
                 </div>
              )}
 
              {selectedOption && (
                 <button onClick={fetchPuzzle} className="w-full mt-4 text-center text-sm p-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md">
-                    Another Quest
+                    Another Puzzle
                 </button>
              )}
         </div>
@@ -259,8 +292,8 @@ const MetaSnapshotWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonDat
     }
 
     return (
-        <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
-            <h3 className="font-display text-2xl mb-4 text-slate-800 dark:text-slate-200">Live Meta Snapshot</h3>
+        <section aria-labelledby="meta-snapshot-title" className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <h2 id="meta-snapshot-title" className="font-display text-3xl mb-4 text-slate-800 dark:text-slate-200">Live Meta Snapshot</h2>
             <div className="mb-4">
                 <p className="text-sm text-slate-800 dark:text-slate-300 font-semibold mb-2">Patch Summary:</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{snapshot.patchSummary}</p>
@@ -282,7 +315,7 @@ const MetaSnapshotWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonDat
                     </p>
                 </div>
              )}
-        </div>
+        </section>
     );
 };
 
@@ -301,23 +334,19 @@ const Home: React.FC<{ setView: (view: View) => void, ddragonData: DDragonData }
             </p>
         </div>
         
-        <section aria-labelledby="primary-actions">
-            <h2 id="primary-actions" className="sr-only">Primary Actions</h2>
-            <PrimaryActions setView={setView} />
-        </section>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Main content column */}
+            <div className="lg:col-span-2 space-y-8">
+                <FeatureGrid setView={setView} />
+                <MetaSnapshotWidget ddragonData={ddragonData} />
+            </div>
 
-        <section aria-labelledby="daily-agenda">
-             <h2 id="daily-agenda" className="text-3xl font-display mb-4 text-slate-800 dark:text-slate-200">Your Daily Agenda</h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Sidebar column */}
+            <div className="lg:col-span-1 space-y-8">
                 <DailyPuzzleWidget ddragonData={ddragonData} />
                 <LearningPathWidget setView={setView} />
             </div>
-        </section>
-
-        <section aria-labelledby="meta-snapshot">
-            <h2 id="meta-snapshot" className="sr-only">Meta Snapshot</h2>
-            <MetaSnapshotWidget ddragonData={ddragonData} />
-        </section>
+        </div>
     </div>
   );
 };

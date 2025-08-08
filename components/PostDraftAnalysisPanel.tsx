@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AIAnalysis, AIChat, DDragonData, DraftState } from '../types';
 import { Spinner } from './common/Spinner';
 import InteractiveText from './common/InteractiveText';
@@ -36,12 +35,21 @@ interface PostDraftAnalysisPanelProps {
     onKeywordClick: (lessonId: string) => void;
 }
 
+const BlinkingCursor: React.FC = () => <span className="animate-ping">▍</span>;
+
 export const PostDraftAnalysisPanel: React.FC<PostDraftAnalysisPanelProps> = ({
     analysis, draftState, handleExportImage, isExporting, handleShare, copied, handleSaveToHistory, setPlaybookModalOpen,
     chat, handleSendChatMessage, isChatLoading, draftNotes, setDraftNotes, ddragonData, onKeywordClick
 }) => {
     const [activeTab, setActiveTab] = useState<'ai' | 'notes'>('ai');
     const [chatMessage, setChatMessage] = useState('');
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [chat?.history, isChatLoading]);
 
     const onSendMessage = () => {
         if (!chatMessage.trim()) return;
@@ -76,10 +84,11 @@ export const PostDraftAnalysisPanel: React.FC<PostDraftAnalysisPanelProps> = ({
                         {chat && (
                             <div className="p-3 rounded-lg bg-slate-100 dark:bg-black/20">
                                 <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Follow-up Questions</h4>
-                                <div className="space-y-2 max-h-48 overflow-y-auto mb-2 pr-2">
+                                <div ref={chatContainerRef} className="space-y-2 max-h-48 overflow-y-auto mb-2 pr-2">
                                     {chat.history.map((msg, i) => (
                                         <div key={i} className={`p-2 rounded-lg text-sm ${msg.isUser ? 'bg-indigo-100 dark:bg-indigo-900/50 ml-auto' : 'bg-slate-200 dark:bg-slate-700/50'}`} style={{maxWidth: '85%'}}>
                                             <InteractiveText onKeywordClick={onKeywordClick}>{msg.text}</InteractiveText>
+                                            {msg.isStreaming && <BlinkingCursor />}
                                         </div>
                                     ))}
                                     {isChatLoading && <div className="flex justify-start p-2"><Spinner size="h-5 w-5" /></div>}

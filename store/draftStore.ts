@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { Champion, DraftState, Role, Team } from '../types';
-import { getDraftSequence } from '../data/draftRules';
+import { getDraftSequence } from '../data/gameplayConstants';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'];
 

@@ -1,25 +1,25 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { DDragonData, Champion, ChampionVaultEntry, Role, Item, SynergyAndCounterAnalysis } from '../types';
 import { Spinner } from './common/Spinner';
-import { useDebounce } from '../../hooks/useDebounce';
+import { useDebounce } from '../hooks/useDebounce';
 import { ChampionIcon } from './common/ChampionIcon';
 import { Icon } from './common/Icon';
 import { staticChampionInfoList } from '../data/gameData';
 import { CHAMPION_VAULT_DATA } from '../data/championVaultData';
-import { useProfile } from '../../contexts/ProfileContext';
+import { useProfile } from '../contexts/ProfileContext';
 import { geminiService } from '../services/geminiService';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'];
 const DAMAGE_TYPES = ['Physical', 'Magic', 'Mixed'];
 const CHAMPION_CLASSES = Array.from(new Set(staticChampionInfoList.map(c => c.championClass).filter(Boolean))) as string[];
 
-interface ChampionVaultProps {
+interface ArmoryScreenProps {
     ddragonData: DDragonData;
     initialChampion?: Champion | null;
     onInitialChampionConsumed?: () => void;
 }
 
-const ChampionVault: React.FC<ChampionVaultProps> = ({ ddragonData, initialChampion, onInitialChampionConsumed }) => {
+const ArmoryScreen: React.FC<ArmoryScreenProps> = ({ ddragonData, initialChampion, onInitialChampionConsumed }) => {
     const [selectedChampion, setSelectedChampion] = useState<Champion | null>(null);
 
     const handleSelectChampion = (champion: Champion) => {
@@ -80,8 +80,8 @@ const ChampionGridComponent: React.FC<{
     return (
         <div>
             <div className="text-center mb-12">
-                <h1 className="text-6xl font-display font-bold text-gradient-primary">Champion Vault</h1>
-                <p className="text-xl text-slate-500 dark:text-slate-400 mt-2">Explore strategic data for every champion in the league.</p>
+                <h1 className="text-6xl font-display font-bold text-gradient-primary">The Armory</h1>
+                <p className="text-xl text-slate-500 dark:text-slate-400 mt-2">Explore strategic data and matchups for every champion in the league.</p>
             </div>
             <div className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mb-8 sticky top-20 z-10">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -163,7 +163,7 @@ const ChampionDetailView: React.FC<{
         <div className="space-y-6">
             <button onClick={onBack} className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
                 <Icon name="chevron-right" className="w-4 h-4 transform rotate-180"/>
-                Back to Vault
+                Back to Armory
             </button>
             
             <div className="relative rounded-lg overflow-hidden shadow-2xl">
@@ -403,4 +403,4 @@ const Section: React.FC<{title: string; icon: React.ComponentProps<typeof Icon>[
 );
 // #endregion
 
-export default ChampionVault;
+export default ArmoryScreen;

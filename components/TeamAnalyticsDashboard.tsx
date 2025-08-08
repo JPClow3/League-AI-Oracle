@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Champion, Team, TeamAnalytics, ScoreType } from '../types';
 import { calculateTeamAnalytics } from '../data/analyticsHelper';

@@ -1,6 +1,6 @@
-import { GoogleGenAI, GenerateContentResponse, Chat, Part } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Chat, Part, Type } from "@google/genai";
 import { AIAnalysis, Champion, DraftState, InitialAIAnalysis, Item, Role, UserSettings, ScoreType, AIExplanation, MatchupAnalysis, PostGameAIAnalysis, Trial, TrialFeedback, MetaSnapshot, DraftPuzzle, TrialDraftPick, CounterIntelligence, ContextualDraftTip, CompositionDeconstruction, SynergyAndCounterAnalysis, PerformanceAnalysis, MatchDTO, PlayerProfile } from "../types";
-import * as GameKnowledge from '../data/gameKnowledge';
+import * as AiConstants from '../data/aiConstants';
 import { KNOWLEDGE_BASE } from '../data/knowledgeBase';
 
 const API_KEY = process.env.API_KEY;
@@ -10,20 +10,20 @@ if (!API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
-const model = 'gemini-2.5-flash-preview-04-17';
+const model = 'gemini-2.5-flash';
 
 // Schemas for structured JSON responses
 const GetDraftSuggestionSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
         suggestions: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             description: "An array of 1-3 champion suggestions.",
             items: {
-                type: 'OBJECT',
+                type: Type.OBJECT,
                 properties: {
-                    championName: { type: 'STRING' },
-                    reasoning: { type: 'STRING' },
+                    championName: { type: Type.STRING },
+                    reasoning: { type: Type.STRING },
                 },
                 required: ['championName', 'reasoning'],
             },
@@ -33,24 +33,33 @@ const GetDraftSuggestionSchema = {
 };
 
 const GetCompositionSuggestionSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        championName: { type: 'STRING' },
-        reasoning: { type: 'STRING', description: 'A concise explanation for why this champion is the best fit.' },
+        championName: { type: Type.STRING },
+        reasoning: { type: Type.STRING, description: 'A concise explanation for why this champion is the best fit.' },
     },
     required: ['championName', 'reasoning'],
 };
 
+const GetCompositionStrengthsWeaknessesSchema = {
+    type: Type.OBJECT,
+    properties: {
+        strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: "An array of 2-3 key strengths of the current composition." },
+        weaknesses: { type: Type.ARRAY, items: { type: Type.STRING }, description: "An array of 2-3 key weaknesses of the current composition." },
+    },
+    required: ['strengths', 'weaknesses'],
+};
+
 const GetInitialDraftAnalysisSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
         macroStrategy: {
-            type: 'STRING',
+            type: Type.STRING,
             description: "A concise, one-sentence game plan for the blue team."
         },
         keyMicroTips: {
-            type: 'ARRAY',
-            items: { type: 'STRING' },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description: "An array of 3 crucial tips for the user's team."
         },
     },
@@ -58,82 +67,89 @@ const GetInitialDraftAnalysisSchema = {
 };
 
 const GetFullDraftAnalysisSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        teamIdentities: { type: 'OBJECT', properties: { blue: { type: 'STRING' }, red: { type: 'STRING' } }, required: ['blue', 'red'] },
-        damageProfiles: { type: 'OBJECT', properties: { blue: { type: 'STRING' }, red: { type: 'STRING' } }, required: ['blue', 'red'] },
-        keySynergies: { type: 'OBJECT', properties: { blue: { type: 'ARRAY', items: { type: 'STRING' } }, red: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['blue', 'red'] },
+        teamIdentities: { type: Type.OBJECT, properties: { blue: { type: Type.STRING }, red: { type: Type.STRING } }, required: ['blue', 'red'] },
+        damageProfiles: { type: Type.OBJECT, properties: { blue: { type: Type.STRING }, red: { type: Type.STRING } }, required: ['blue', 'red'] },
+        keySynergies: { type: Type.OBJECT, properties: { blue: { type: Type.ARRAY, items: { type: Type.STRING } }, red: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['blue', 'red'] },
         powerSpikes: {
-            type: 'OBJECT',
+            type: Type.OBJECT,
             description: "Analysis of each team's power levels throughout the game.",
             properties: {
-                blue: { type: 'OBJECT', description: "Blue team's power ratings.", properties: { early: { type: 'NUMBER', description: "Power level from 1-10 in early game." }, mid: { type: 'NUMBER', description: "Power level from 1-10 in mid game." }, late: { type: 'NUMBER', description: "Power level from 1-10 in late game." } }, required: ['early', 'mid', 'late'] },
-                red: { type: 'OBJECT', description: "Red team's power ratings.", properties: { early: { type: 'NUMBER' }, mid: { type: 'NUMBER' }, late: { type: 'NUMBER' } }, required: ['early', 'mid', 'late'] },
-                summary: { type: 'OBJECT', description: "A textual summary of the power spikes.", properties: { blue: { type: 'STRING' }, red: { type: 'STRING' } }, required: ['blue', 'red'] },
-                details: { type: 'ARRAY', description: "Specific champion spikes per phase.", items: { type: 'OBJECT', properties: { phase: { type: 'STRING', enum: ['Early', 'Mid', 'Late'] }, championSpikes: { type: 'ARRAY', items: { type: 'OBJECT', properties: { championName: { type: 'STRING' }, reason: { type: 'STRING' } }, required: ['championName', 'reason'] } } }, required: ['phase', 'championSpikes'] } }
+                blue: { type: Type.OBJECT, description: "Blue team's power ratings.", properties: { early: { type: Type.NUMBER, description: "Power level from 1-10 in early game." }, mid: { type: Type.NUMBER, description: "Power level from 1-10 in mid game." }, late: { type: Type.NUMBER, description: "Power level from 1-10 in late game." } }, required: ['early', 'mid', 'late'] },
+                red: { type: Type.OBJECT, description: "Red team's power ratings.", properties: { early: { type: Type.NUMBER }, mid: { type: Type.NUMBER }, late: { type: Type.NUMBER } }, required: ['early', 'mid', 'late'] },
+                summary: { type: Type.OBJECT, description: "A textual summary of the power spikes.", properties: { blue: { type: Type.STRING }, red: { type: Type.STRING } }, required: ['blue', 'red'] },
+                details: { type: Type.ARRAY, description: "Specific champion spikes per phase.", items: { type: Type.OBJECT, properties: { phase: { type: Type.STRING, enum: ['Early', 'Mid', 'Late'] }, championSpikes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { championName: { type: Type.STRING }, reason: { type: Type.STRING } }, required: ['championName', 'reason'] } } }, required: ['phase', 'championSpikes'] } }
             },
             required: ['blue', 'red', 'summary']
         },
         winConditions: {
-            type: 'OBJECT',
+            type: Type.OBJECT,
             description: "Primary objectives and strategies for each team to win.",
             properties: {
-                blue: { type: 'ARRAY', items: { type: 'OBJECT', properties: { text: { type: 'STRING' }, category: { type: 'STRING', enum: ['Protect', 'Siege', 'Objective', 'Pick', 'Teamfight', 'Macro'] } }, required: ['text', 'category'] } },
-                red: { type: 'ARRAY', items: { type: 'OBJECT', properties: { text: { type: 'STRING' }, category: { type: 'STRING', enum: ['Protect', 'Siege', 'Objective', 'Pick', 'Teamfight', 'Macro'] } }, required: ['text', 'category'] } }
+                blue: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING }, category: { type: Type.STRING, enum: ['Protect', 'Siege', 'Objective', 'Pick', 'Teamfight', 'Macro'] } }, required: ['text', 'category'] } },
+                red: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING }, category: { type: Type.STRING, enum: ['Protect', 'Siege', 'Objective', 'Pick', 'Teamfight', 'Macro'] } }, required: ['text', 'category'] } }
             },
             required: ['blue', 'red']
         },
-        strategicFocus: { type: 'STRING', description: "Overall game plan for the blue team, covering game phases." },
-        coreItemBuilds: { type: 'OBJECT', properties: { blue: { type: 'ARRAY', items: { type: 'OBJECT', properties: { championName: { type: 'STRING' }, items: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['championName', 'items'] } }, red: { type: 'ARRAY', items: { type: 'OBJECT', properties: { championName: { type: 'STRING' }, items: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['championName', 'items'] } } }, required: ['blue', 'red'] },
-        mvp: { type: 'OBJECT', properties: { championName: { type: 'STRING' }, reasoning: { type: 'STRING' } }, required: ['championName', 'reasoning'] },
-        enemyThreats: { type: 'ARRAY', items: { type: 'OBJECT', properties: { championName: { type: 'STRING' }, threatLevel: { type: 'STRING', enum: ['High', 'Medium', 'Low'] }, counterplay: { type: 'STRING' }, itemSpikeWarning: { type: 'STRING' } }, required: ['championName', 'threatLevel', 'counterplay'] } },
-        bansImpact: { type: 'OBJECT', properties: { blue: { type: 'STRING' }, red: { type: 'STRING' } }, required: ['blue', 'red'] },
-        inGameCheatSheet: { type: 'OBJECT', properties: { blue: { type: 'ARRAY', items: { type: 'STRING' } }, red: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['blue', 'red'] },
+        strategicFocus: { type: Type.STRING, description: "Overall game plan for the blue team, covering game phases." },
+        coreItemBuilds: {
+            type: Type.OBJECT,
+            properties: {
+                blue: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { championName: { type: Type.STRING }, items: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['championName', 'items'] } },
+                red: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { championName: { type: Type.STRING }, items: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['championName', 'items'] } }
+            },
+            required: ['blue', 'red'],
+        },
+        mvp: { type: Type.OBJECT, properties: { championName: { type: Type.STRING }, reasoning: { type: Type.STRING } }, required: ['championName', 'reasoning'] },
+        enemyThreats: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { championName: { type: Type.STRING }, threatLevel: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] }, counterplay: { type: Type.STRING }, itemSpikeWarning: { type: Type.STRING } }, required: ['championName', 'threatLevel', 'counterplay'] } },
+        bansImpact: { type: Type.OBJECT, properties: { blue: { type: Type.STRING }, red: { type: Type.STRING } }, required: ['blue', 'red'] },
+        inGameCheatSheet: { type: Type.OBJECT, properties: { blue: { type: Type.ARRAY, items: { type: Type.STRING } }, red: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['blue', 'red'] },
     },
-    required: ['teamIdentities', 'damageProfiles', 'keySynergies', 'powerSpikes', 'winConditions', 'strategicFocus', 'mvp', 'enemyThreats', 'bansImpact', 'inGameCheatSheet', 'coreItemBuilds'],
+    required: ['teamIdentities', 'damageProfiles', 'keySynergies', 'powerSpikes', 'winConditions', 'strategicFocus', 'mvp', 'enemyThreats', 'bansImpact', 'inGameCheatSheet'],
 };
 
 const GetMatchupAnalysisSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        powerSpikes: { type: 'ARRAY', items: { type: 'OBJECT', properties: { champion: { type: 'STRING' }, details: { type: 'STRING' } }, required: ['champion', 'details'] } },
-        tradingPatterns: { type: 'STRING' },
-        waveManagement: { type: 'STRING' },
-        jungleImpact: { type: 'STRING' },
+        powerSpikes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { champion: { type: Type.STRING }, details: { type: Type.STRING } }, required: ['champion', 'details'] } },
+        tradingPatterns: { type: Type.STRING },
+        waveManagement: { type: Type.STRING },
+        jungleImpact: { type: Type.STRING },
     },
     required: ['powerSpikes', 'tradingPatterns', 'waveManagement', 'jungleImpact'],
 };
 
 const GetScoreExplanationSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        explanation: { type: 'STRING', description: "A concise, one-sentence explanation for the team's score in the specified area." },
+        explanation: { type: Type.STRING, description: "A concise, one-sentence explanation for the team's score in the specified area." },
     },
     required: ['explanation'],
 };
 
 const GetPostGameAnalysisSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        reevaluation: { type: 'STRING', description: "A multi-paragraph string containing the critical re-evaluation and lessons learned." },
-        suggestedLessonId: { type: 'STRING', description: 'The ID of the most relevant lesson from the provided list, if any.' },
-        suggestedLessonTitle: { type: 'STRING', description: 'The title of the suggested lesson, if any.' },
+        reevaluation: { type: Type.STRING, description: "A multi-paragraph string containing the critical re-evaluation and lessons learned." },
+        suggestedLessonId: { type: Type.STRING, description: 'The ID of the most relevant lesson from the provided list, if any.' },
+        suggestedLessonTitle: { type: Type.STRING, description: 'The title of the suggested lesson, if any.' },
     },
     required: ['reevaluation'],
 };
 
 const GetPerformanceAnalysisSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        overallExecutionSummary: { type: 'STRING', description: "A one-paragraph summary of how well the user's team executed on their draft's strategic plan." },
+        overallExecutionSummary: { type: Type.STRING, description: "A one-paragraph summary of how well the user's team executed on their draft's strategic plan." },
         insights: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             items: {
-                type: 'OBJECT',
+                type: Type.OBJECT,
                 properties: {
-                    category: { type: 'STRING', enum: ['Win Condition', 'Itemization', 'Objectives', 'Teamfighting', 'Laning'] },
-                    evaluation: { type: 'STRING', enum: ['Excellent', 'Good', 'Average', 'Poor', 'Critical'], description: "A single-word evaluation of the performance in this category." },
-                    feedback: { type: 'STRING', description: 'Specific, actionable feedback comparing the strategic plan to the in-game execution for this category. Focus on the user\'s performance.'}
+                    category: { type: Type.STRING, enum: ['Win Condition', 'Itemization', 'Objectives', 'Teamfighting', 'Laning'] },
+                    evaluation: { type: Type.STRING, enum: ['Excellent', 'Good', 'Average', 'Poor', 'Critical'], description: "A single-word evaluation of the performance in this category." },
+                    feedback: { type: Type.STRING, description: 'Specific, actionable feedback comparing the strategic plan to the in-game execution for this category. Focus on the user\'s performance.'}
                 },
                 required: ['category', 'evaluation', 'feedback']
             }
@@ -143,50 +159,50 @@ const GetPerformanceAnalysisSchema = {
 };
 
 const GetPlayerProfileSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        personaTag: { type: 'STRING', description: 'A short, descriptive tag for the player\'s style (e.g., "Aggressive Invader", "Passive Scaling Mage", "Reliable Carry").' },
-        insight: { type: 'STRING', description: 'A concise, actionable insight based on their playstyle (e.g., "This player has a high first-blood rate. Ward your jungle entrances early.").' },
+        personaTag: { type: Type.STRING, description: 'A short, descriptive tag for the player\'s style (e.g., "Aggressive Invader", "Passive Scaling Mage", "Reliable Carry").' },
+        insight: { type: Type.STRING, description: 'A concise, actionable insight based on their playstyle (e.g., "This player has a high first-blood rate. Ward your jungle entrances early.").' },
     },
     required: ['personaTag', 'insight'],
 };
 
 const GetTrialFeedbackSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        feedback: { type: 'STRING', description: "Detailed explanation and feedback for the user's answer." },
-        isCorrect: { type: 'BOOLEAN' },
+        feedback: { type: Type.STRING, description: "Detailed explanation and feedback for the user's answer." },
+        isCorrect: { type: Type.BOOLEAN },
     },
     required: ['feedback', 'isCorrect'],
 };
 
 const GetMetaSnapshotSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        trendingUp: { type: 'ARRAY', items: { type: 'OBJECT', properties: { championName: { type: 'STRING' }, reason: { type: 'STRING' } }, required: ['championName', 'reason']}},
-        trendingDown: { type: 'ARRAY', items: { type: 'OBJECT', properties: { championName: { type: 'STRING' }, reason: { type: 'STRING' } }, required: ['championName', 'reason']}},
-        patchSummary: { type: 'STRING' },
+        trendingUp: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { championName: { type: Type.STRING }, reason: { type: Type.STRING } }, required: ['championName', 'reason']}},
+        trendingDown: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { championName: { type: Type.STRING }, reason: { type: Type.STRING } }, required: ['championName', 'reason']}},
+        patchSummary: { type: Type.STRING },
     },
     required: ['trendingUp', 'trendingDown', 'patchSummary'],
 }
 
 const GetDailyDraftPuzzleSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        id: { type: 'STRING', description: "A unique ID for the puzzle, e.g., 'puzzle-20240729'" },
-        scenario: { type: 'STRING', description: "A brief, narrative description of the draft situation." },
-        problem: { type: 'STRING', description: "A clear, one-sentence description of the strategic problem the user needs to solve." },
-        bluePicks: { type: 'ARRAY', items: { type: 'STRING' }, description: "An array of 2-4 champion names for the Blue team." },
-        redPicks: { type: 'ARRAY', items: { type: 'STRING' }, description: "An array of 2-4 champion names for the Red team." },
+        id: { type: Type.STRING, description: "A unique ID for the puzzle, e.g., 'puzzle-20240729'" },
+        scenario: { type: Type.STRING, description: "A brief, narrative description of the draft situation." },
+        problem: { type: Type.STRING, description: "A clear, one-sentence description of the strategic problem the user needs to solve." },
+        bluePicks: { type: Type.ARRAY, items: { type: Type.STRING }, description: "An array of 2-4 champion names for the Blue team." },
+        redPicks: { type: Type.ARRAY, items: { type: Type.STRING }, description: "An array of 2-4 champion names for the Red team." },
         options: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             description: "An array of 3-4 champion options for the user to choose from.",
             items: {
-                type: 'OBJECT',
+                type: Type.OBJECT,
                 properties: {
-                    championName: { type: 'STRING' },
-                    isCorrect: { type: 'BOOLEAN' },
-                    reasoning: { type: 'STRING', description: "A detailed explanation for why this champion is a good or bad choice in this specific context." },
+                    championName: { type: Type.STRING },
+                    isCorrect: { type: Type.BOOLEAN },
+                    reasoning: { type: Type.STRING, description: "A detailed explanation for why this champion is a good or bad choice in this specific context." },
                 },
                 required: ['championName', 'isCorrect', 'reasoning'],
             },
@@ -196,20 +212,20 @@ const GetDailyDraftPuzzleSchema = {
 }
 
 const GetCounterIntelligenceSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
         vulnerabilities: {
-            type: 'ARRAY',
-            items: { type: 'STRING' },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description: 'An array of 2-3 key strategic weaknesses of the champion (e.g., "Hard CC", "Grievous Wounds", "Kiting").'
         },
         counterArchetypes: {
-            type: 'ARRAY',
-            items: { type: 'STRING' },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description: 'An array of 2-3 champion archetypes that are effective counters (e.g., "Warden", "Artillery", "Assassin").'
         },
         quickTip: {
-            type: 'STRING',
+            type: Type.STRING,
             description: 'A single, concise sentence with a tactical tip for playing against this champion.'
         }
     },
@@ -217,14 +233,14 @@ const GetCounterIntelligenceSchema = {
 };
 
 const GetContextualDraftTipSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
         insight: {
-            type: 'STRING',
+            type: Type.STRING,
             description: 'A single, actionable sentence identifying a key strategic opportunity or vulnerability in the current draft state.'
         },
         suggestedLessonId: {
-            type: 'STRING',
+            type: Type.STRING,
             description: 'The ID of the single most relevant lesson from the provided knowledge base that relates to the insight.'
         }
     },
@@ -232,48 +248,48 @@ const GetContextualDraftTipSchema = {
 };
 
 const GetCompositionDeconstructionSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
-        coreIdentity: { type: 'STRING', description: 'A short name for the composition\'s main strategy (e.g., "Protect the Hyper-Carry", "All-in Dive").' },
-        strategicGoal: { type: 'STRING', description: 'A detailed explanation of how the composition aims to win the game, covering its general game plan.' },
+        coreIdentity: { type: Type.STRING, description: 'A short name for the composition\'s main strategy (e.g., "Protect the Hyper-Carry", "All-in Dive").' },
+        strategicGoal: { type: Type.STRING, description: 'A detailed explanation of how the composition aims to win the game, covering its general game plan.' },
         keySynergies: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             description: 'An array of the most important champion synergies in the composition.',
             items: {
-                type: 'OBJECT',
+                type: Type.OBJECT,
                 properties: {
-                    championNames: { type: 'ARRAY', items: { type: 'STRING' } },
-                    description: { type: 'STRING', description: 'Explanation of why these champions work well together.' },
+                    championNames: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    description: { type: Type.STRING, description: 'Explanation of why these champions work well together.' },
                 },
                 required: ['championNames', 'description'],
             },
         },
         winCondition: {
-            type: 'OBJECT',
+            type: Type.OBJECT,
             description: 'Identifies the single most important champion for the composition\'s success.',
             properties: {
-                championName: { type: 'STRING' },
-                reasoning: { type: 'STRING', description: 'Why this champion is the core win condition.' },
+                championName: { type: Type.STRING },
+                reasoning: { type: Type.STRING, description: 'Why this champion is the core win condition.' },
             },
             required: ['championName', 'reasoning'],
         },
         powerCurve: {
-            type: 'OBJECT',
+            type: Type.OBJECT,
             properties: {
-                summary: { type: 'STRING', description: 'A one-sentence summary of the team\'s power curve (e.g., "Weak early, dominant late").' },
-                details: { type: 'STRING', description: 'A more detailed explanation of how the team performs in the early, mid, and late game.' },
+                summary: { type: Type.STRING, description: 'A one-sentence summary of the team\'s power curve (e.g., "Weak early, dominant late").' },
+                details: { type: Type.STRING, description: 'A more detailed explanation of how the team performs in the early, mid, and late game.' },
             },
             required: ['summary', 'details'],
         },
         itemDependencies: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             description: 'Key items that are crucial for the composition to function.',
             items: {
-                type: 'OBJECT',
+                type: Type.OBJECT,
                 properties: {
-                    championName: { type: 'STRING' },
-                    items: { type: 'ARRAY', items: { type: 'STRING' } },
-                    reasoning: { type: 'STRING' },
+                    championName: { type: Type.STRING },
+                    items: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    reasoning: { type: Type.STRING },
                 },
                 required: ['championName', 'items', 'reasoning'],
             },
@@ -283,28 +299,28 @@ const GetCompositionDeconstructionSchema = {
 };
 
 const GetSynergiesAndCountersSchema = {
-    type: 'OBJECT',
+    type: Type.OBJECT,
     properties: {
         synergies: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             description: "An array of 3-5 champions that have strong synergy with the input champion.",
             items: {
-                type: 'OBJECT',
+                type: Type.OBJECT,
                 properties: {
-                    championName: { type: 'STRING' },
-                    reasoning: { type: 'STRING', description: 'A concise explanation for the synergy.' },
+                    championName: { type: Type.STRING },
+                    reasoning: { type: Type.STRING, description: 'A concise explanation for the synergy.' },
                 },
                 required: ['championName', 'reasoning'],
             },
         },
         counters: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             description: "An array of 3-5 champions that are strong counters to the input champion.",
             items: {
-                type: 'OBJECT',
+                type: Type.OBJECT,
                 properties: {
-                    championName: { type: 'STRING' },
-                    reasoning: { type: 'STRING', description: 'A concise explanation for why this champion is a counter.' },
+                    championName: { type: Type.STRING },
+                    reasoning: { type: Type.STRING, description: 'A concise explanation for why this champion is a counter.' },
                 },
                 required: ['championName', 'reasoning'],
             },
@@ -334,7 +350,7 @@ const generateSystemInstruction = (settings: UserSettings) => {
   const { oraclePersonality, xp } = settings;
   const level = Math.floor((xp || 0) / 100) + 1;
 
-  let instruction = `${GameKnowledge.CORE_AI_PERSONA}
+  let instruction = `${AiConstants.CORE_AI_PERSONA}
 You are the analysis engine for DraftWise AI. Your purpose is to provide clear, objective, data-driven analysis for the Commander (the user).
 
 You must ground your analysis in a deep understanding of League of Legends strategy. This includes:
@@ -342,7 +358,7 @@ You must ground your analysis in a deep understanding of League of Legends strat
 - **Power Curves & Win Conditions**: You must identify if a team is built for the Early, Mid, or Late game, and what specific conditions they need to meet to win.
 - **Advanced In-Game Concepts**: Your analysis should reflect knowledge of wave management (freezing, slow pushing), trading stances, vision control, and objective prioritization (including bounties).
 - **Economic Principles**: You understand the value of CS, gold efficiency of items, and how recalls create tempo.
-- **Key Win Indicators**: ${GameKnowledge.KEY_WIN_INDICATORS_INFO.join(' ')}
+- **Key Win Indicators**: ${AiConstants.KEY_WIN_INDICATORS_INFO.join(' ')}
 `;
 
   // Add level-based adaptation
@@ -405,18 +421,21 @@ export const geminiService = {
       
       Prioritize strategically sound suggestions from their core champion pool for the highest probability of success. If a champion from their practice pool is a particularly good fit for the team composition, you can suggest it as well, noting it's a good opportunity to practice.
     `;
-
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          systemInstruction: generateSystemInstruction(settings),
-          responseMimeType: "application/json",
-          responseSchema: GetDraftSuggestionSchema,
-        }
-    });
-
-    return parseJsonResponse<{ suggestions: { championName: string; reasoning: string }[] }>(response.text);
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetDraftSuggestionSchema,
+            }
+        });
+        return parseJsonResponse<{ suggestions: { championName: string; reasoning: string }[] }>(response.text);
+    } catch (error) {
+        console.error("Error in getDraftSuggestion:", error);
+        return null;
+    }
   },
 
   async getCompositionSuggestion(
@@ -433,17 +452,53 @@ export const geminiService = {
       Provide the champion's name and a concise reason for the choice.
     `;
     
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          systemInstruction: generateSystemInstruction(settings),
-          responseMimeType: "application/json",
-          responseSchema: GetCompositionSuggestionSchema,
-        }
-    });
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetCompositionSuggestionSchema,
+            }
+        });
 
-    return parseJsonResponse<{ championName: string; reasoning: string }>(response.text);
+        return parseJsonResponse<{ championName: string; reasoning: string }>(response.text);
+    } catch (error) {
+        console.error("Error in getCompositionSuggestion:", error);
+        return null;
+    }
+  },
+
+  async getCompositionStrengthsWeaknesses(
+    currentPicks: Champion[],
+    settings: UserSettings
+  ): Promise<{ strengths: string[]; weaknesses: string[] } | null> {
+    const teamComp = currentPicks.map(c => c.name).join(', ');
+    const prompt = `
+      Analyze the current incomplete team composition: [${teamComp}].
+      Provide a brief, high-level analysis of this group.
+      Identify 2-3 of its most prominent strengths and 2-3 of its most critical weaknesses in bullet-point form.
+      For example, Strengths: "Strong teamfight engage", "Good magic damage". Weaknesses: "Lacks a frontline tank", "Vulnerable to poke".
+    `;
+    
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetCompositionStrengthsWeaknessesSchema,
+            thinkingConfig: { thinkingBudget: 0 }
+            }
+        });
+
+        return parseJsonResponse<{ strengths: string[]; weaknesses: string[] }>(response.text);
+    } catch (error) {
+        console.error("Error in getCompositionStrengthsWeaknesses:", error);
+        return null;
+    }
   },
 
   async getInitialDraftAnalysis(draft: DraftState, settings: UserSettings): Promise<InitialAIAnalysis | null> {
@@ -453,19 +508,23 @@ export const geminiService = {
       The draft is complete. Provide a quick, high-level analysis for the user's team (Blue Team).
       This analysis should be extremely fast to generate and focus on the most immediate, actionable advice.
     `;
-
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        systemInstruction: generateSystemInstruction(settings),
-        responseMimeType: "application/json",
-        responseSchema: GetInitialDraftAnalysisSchema,
-        thinkingConfig: { thinkingBudget: 0 }
-      },
-    });
-    
-    return parseJsonResponse<InitialAIAnalysis>(response.text);
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetInitialDraftAnalysisSchema,
+            thinkingConfig: { thinkingBudget: 0 }
+        },
+        });
+        
+        return parseJsonResponse<InitialAIAnalysis>(response.text);
+    } catch (error) {
+        console.error("Error in getInitialDraftAnalysis:", error);
+        return null;
+    }
   },
 
   async getFullDraftAnalysis(draft: DraftState, settings: UserSettings): Promise<AIAnalysis | null> {
@@ -478,18 +537,22 @@ export const geminiService = {
       
       For the 'powerSpikes' field, provide 'blue' and 'red' team data. Each team's data should include 'early', 'mid', and 'late' properties with a numerical power rating from 1 to 10, where 1 is very weak and 10 is extremely dominant for that game phase. Also provide a 'summary' string for each team's power curve.
     `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetFullDraftAnalysisSchema,
+            }
+        });
 
-     const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          systemInstruction: generateSystemInstruction(settings),
-          responseMimeType: "application/json",
-          responseSchema: GetFullDraftAnalysisSchema,
-        }
-    });
-
-    return parseJsonResponse<AIAnalysis>(response.text);
+        return parseJsonResponse<AIAnalysis>(response.text);
+    } catch (error) {
+        console.error("Error in getFullDraftAnalysis:", error);
+        return null;
+    }
   },
   
    async getMatchupAnalysis(yourChampion: Champion, enemyChampion: Champion, settings: UserSettings): Promise<MatchupAnalysis | null> {
@@ -497,18 +560,22 @@ export const geminiService = {
       Analyze the specific 1v1 lane matchup between "${yourChampion.name}" (Your Champion) and "${enemyChampion.name}" (Enemy Laner).
       Provide a detailed tactical briefing for the "${yourChampion.name}" player.
     `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetMatchupAnalysisSchema,
+            }
+        });
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          systemInstruction: generateSystemInstruction(settings),
-          responseMimeType: "application/json",
-          responseSchema: GetMatchupAnalysisSchema,
-        }
-    });
-
-    return parseJsonResponse<MatchupAnalysis>(response.text);
+        return parseJsonResponse<MatchupAnalysis>(response.text);
+    } catch (error) {
+        console.error("Error in getMatchupAnalysis:", error);
+        return null;
+    }
   },
 
   async getScoreExplanation(
@@ -526,19 +593,23 @@ export const geminiService = {
       Example for 'CC': "High CC due to the long-range initiation from Ashe's Arrow combined with Leona's lockdown potential."
       Example for 'Damage Profile': "Well-balanced damage, with sustained physical from Jinx and burst magic from Syndra, making them hard to itemize against."
     `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetScoreExplanationSchema,
+            thinkingConfig: { thinkingBudget: 0 }
+        },
+        });
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        systemInstruction: generateSystemInstruction(settings),
-        responseMimeType: "application/json",
-        responseSchema: GetScoreExplanationSchema,
-        thinkingConfig: { thinkingBudget: 0 }
-      },
-    });
-
-    return parseJsonResponse<AIExplanation>(response.text);
+        return parseJsonResponse<AIExplanation>(response.text);
+    } catch (error) {
+        console.error("Error in getScoreExplanation:", error);
+        return null;
+    }
   },
 
   async getPostGameAnalysis(
@@ -565,27 +636,32 @@ export const geminiService = {
           The user has now reported the game outcome: **${outcome}**.
           They also provided these notes on what happened: "${postGameNotes || 'No notes provided.'}"
 
-          Critically re-evaluate your initial analysis based on this new information. Your task is to provide a "lessons learned" debrief for the user.
-          1. Was your initial strategy flawed given the user's report, or was the loss more likely due to in-game execution?
-          2. Specifically, how did the events described by the user (${postGameNotes}) align with or deviate from your predicted win conditions?
-          3. What could have been drafted differently to better mitigate the risk of what the user described happening? Suggest 1-2 alternative champion picks or bans and explain why.
-          4. Based on your analysis of the strategic failure, review the provided list of lessons and identify the single most relevant lesson that would help the user understand and avoid this mistake in the future. If a relevant lesson is found, include its 'id' and 'title' in your response as 'suggestedLessonId' and 'suggestedLessonTitle'. If no lesson is directly applicable, omit these fields.
+          Critically re-evaluate your initial analysis based on this new information. Your task is to provide a "lessons learned" debrief for the user inside the 'reevaluation' string. Structure your response in three distinct paragraphs:
+          1.  **Strategy Critique:** Was the initial strategy flawed given the outcome and user notes? Or was it more likely a failure of in-game execution?
+          2.  **Execution Analysis:** How did the events described by the user align with or deviate from the predicted win conditions?
+          3.  **Future Recommendations:** What could have been drafted differently to mitigate these risks? Suggest 1-2 alternative picks or bans and explain why.
+
+          Based on your analysis, review the provided list of lessons and identify the single most relevant lesson that would help the user understand and avoid this mistake. If a relevant lesson is found, include its 'id' and 'title' in your response. If no lesson is directly applicable, omit these fields.
 
           Be analytical and constructive. Help the user learn from this game.
           ${lessonsContext}
       `;
+      try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                responseMimeType: "application/json",
+                responseSchema: GetPostGameAnalysisSchema,
+            }
+        });
 
-      const response: GenerateContentResponse = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: {
-              systemInstruction: generateSystemInstruction(settings),
-              responseMimeType: "application/json",
-              responseSchema: GetPostGameAnalysisSchema,
-          }
-      });
-
-      return parseJsonResponse<PostGameAIAnalysis>(response.text);
+        return parseJsonResponse<PostGameAIAnalysis>(response.text);
+      } catch (error) {
+        console.error("Error in getPostGameAnalysis:", error);
+        return null;
+      }
   },
 
   async getPerformanceAnalysis(
@@ -641,17 +717,22 @@ export const geminiService = {
         4.  **Overall Summary:** Write a one-paragraph summary of how well the team executed their strategy and give the user one key takeaway for their next game.
       `;
 
-      const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction: generateSystemInstruction(settings),
-            responseMimeType: "application/json",
-            responseSchema: GetPerformanceAnalysisSchema,
-        }
-    });
+      try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                responseMimeType: "application/json",
+                responseSchema: GetPerformanceAnalysisSchema,
+            }
+        });
 
-    return parseJsonResponse<PerformanceAnalysis>(response.text);
+        return parseJsonResponse<PerformanceAnalysis>(response.text);
+      } catch (error) {
+        console.error("Error in getPerformanceAnalysis:", error);
+        return null;
+      }
   },
 
   async getPlayerProfile(matchHistory: MatchDTO[], playerPuuid: string, settings: UserSettings): Promise<PlayerProfile | null> {
@@ -687,17 +768,22 @@ export const geminiService = {
         Look for patterns in champion types (tanks, assassins, mages), aggression (high kills/deaths), and consistency.
     `;
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction: generateSystemInstruction(settings),
-            responseMimeType: "application/json",
-            responseSchema: GetPlayerProfileSchema,
-        }
-    });
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                responseMimeType: "application/json",
+                responseSchema: GetPlayerProfileSchema,
+            }
+        });
 
-    return parseJsonResponse<PlayerProfile>(response.text);
+        return parseJsonResponse<PlayerProfile>(response.text);
+    } catch (error) {
+        console.error("Error in getPlayerProfile:", error);
+        return null;
+    }
 },
 
   async getMetaSnapshot(settings: UserSettings): Promise<{ data: MetaSnapshot | null, sources: any[] | undefined } | null> {
@@ -712,19 +798,24 @@ export const geminiService = {
         "patchSummary": "string"
       }`;
       
-      const response: GenerateContentResponse = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: {
-              systemInstruction: generateSystemInstruction(settings),
-              tools: [{ googleSearch: {} }],
-          }
-      });
-      
-      const data = parseJsonResponse<MetaSnapshot>(response.text);
-      const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                tools: [{ googleSearch: {} }],
+            }
+        });
+        
+        const data = parseJsonResponse<MetaSnapshot>(response.text);
+        const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
 
-      return { data, sources };
+        return { data, sources };
+      } catch (error) {
+          console.error("Error in getMetaSnapshot:", error);
+          return null;
+      }
   },
 
   async getDailyDraftPuzzle(settings: UserSettings): Promise<DraftPuzzle | null> {
@@ -740,17 +831,22 @@ export const geminiService = {
       Ensure the puzzle is non-trivial and teaches a valuable drafting concept.
     `;
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          systemInstruction: generateSystemInstruction(settings),
-          responseMimeType: "application/json",
-          responseSchema: GetDailyDraftPuzzleSchema,
-        }
-    });
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetDailyDraftPuzzleSchema,
+            }
+        });
 
-    return parseJsonResponse<DraftPuzzle>(response.text);
+        return parseJsonResponse<DraftPuzzle>(response.text);
+    } catch (error) {
+        console.error("Error in getDailyDraftPuzzle:", error);
+        return null;
+    }
   },
 
   async getCounterIntelligence(championName: string, settings: UserSettings): Promise<CounterIntelligence | null> {
@@ -758,19 +854,23 @@ export const geminiService = {
         Provide a concise tactical briefing on how to counter the champion: "${championName}".
         Focus on their primary weaknesses and the types of champions or strategies that exploit them.
     `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                responseMimeType: "application/json",
+                responseSchema: GetCounterIntelligenceSchema,
+                thinkingConfig: { thinkingBudget: 0 } // Ensure a very fast response
+            },
+        });
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction: generateSystemInstruction(settings),
-            responseMimeType: "application/json",
-            responseSchema: GetCounterIntelligenceSchema,
-            thinkingConfig: { thinkingBudget: 0 } // Ensure a very fast response
-        },
-    });
-
-    return parseJsonResponse<CounterIntelligence>(response.text);
+        return parseJsonResponse<CounterIntelligence>(response.text);
+    } catch (error) {
+        console.error("Error in getCounterIntelligence:", error);
+        return null;
+    }
   },
 
   async getContextualDraftTip(draft: DraftState, settings: UserSettings): Promise<ContextualDraftTip | null> {
@@ -789,19 +889,23 @@ export const geminiService = {
         
         Your response must be a single, actionable sentence for the insight and the ID of the suggested lesson.
     `;
-
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction: generateSystemInstruction(settings),
-            responseMimeType: "application/json",
-            responseSchema: GetContextualDraftTipSchema,
-            thinkingConfig: { thinkingBudget: 0 } // Fast response needed
-        }
-    });
-    
-    return parseJsonResponse<ContextualDraftTip>(response.text);
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                responseMimeType: "application/json",
+                responseSchema: GetContextualDraftTipSchema,
+                thinkingConfig: { thinkingBudget: 0 } // Fast response needed
+            }
+        });
+        
+        return parseJsonResponse<ContextualDraftTip>(response.text);
+    } catch (error) {
+        console.error("Error in getContextualDraftTip:", error);
+        return null;
+    }
   },
 
   async getCompositionDeconstruction(champions: Champion[], settings: UserSettings): Promise<CompositionDeconstruction | null> {
@@ -816,18 +920,22 @@ export const geminiService = {
       - **powerCurve**: Analyze the team's strength over the course of the game.
       - **itemDependencies**: List critical items for key champions that enable the strategy.
     `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+            systemInstruction: generateSystemInstruction(settings),
+            responseMimeType: "application/json",
+            responseSchema: GetCompositionDeconstructionSchema,
+            }
+        });
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          systemInstruction: generateSystemInstruction(settings),
-          responseMimeType: "application/json",
-          responseSchema: GetCompositionDeconstructionSchema,
-        }
-    });
-
-    return parseJsonResponse<CompositionDeconstruction>(response.text);
+        return parseJsonResponse<CompositionDeconstruction>(response.text);
+    } catch (error) {
+        console.error("Error in getCompositionDeconstruction:", error);
+        return null;
+    }
   },
 
   async getSynergiesAndCounters(championName: string, settings: UserSettings): Promise<SynergyAndCounterAnalysis | null> {
@@ -836,18 +944,22 @@ export const geminiService = {
         Identify 3-5 champions that have strong synergy with them and 3-5 champions that are effective counters.
         For each, provide a clear, one-sentence reasoning.
     `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                responseMimeType: "application/json",
+                responseSchema: GetSynergiesAndCountersSchema,
+            },
+        });
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction: generateSystemInstruction(settings),
-            responseMimeType: "application/json",
-            responseSchema: GetSynergiesAndCountersSchema,
-        },
-    });
-
-    return parseJsonResponse<SynergyAndCounterAnalysis>(response.text);
+        return parseJsonResponse<SynergyAndCounterAnalysis>(response.text);
+    } catch (error) {
+        console.error("Error in getSynergiesAndCounters:", error);
+        return null;
+    }
   },
 
   startAnalysisChat: (analysis: AIAnalysis, settings: UserSettings): Chat => {
@@ -870,9 +982,9 @@ export const geminiService = {
     return chat;
   },
 
-  continueChat: async (chat: Chat, message: string): Promise<GenerateContentResponse> => {
-      const response = await chat.sendMessage({ message });
-      return response;
+  continueChat: async (session: Chat, message: string): Promise<GenerateContentResponse> => {
+    const response = await session.sendMessage({ message });
+    return response;
   },
 
   async getTrialFeedback(
@@ -907,17 +1019,21 @@ export const geminiService = {
 
       Keep the feedback concise, around 2-3 sentences.
     `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                systemInstruction: generateSystemInstruction(settings),
+                responseMimeType: "application/json",
+                responseSchema: GetTrialFeedbackSchema,
+            }
+        });
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction: generateSystemInstruction(settings),
-            responseMimeType: "application/json",
-            responseSchema: GetTrialFeedbackSchema,
-        }
-    });
-
-    return parseJsonResponse<TrialFeedback>(response.text);
+        return parseJsonResponse<TrialFeedback>(response.text);
+    } catch (error) {
+        console.error("Error in getTrialFeedback:", error);
+        return null;
+    }
   },
 };

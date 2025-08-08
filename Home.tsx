@@ -1,44 +1,54 @@
 
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, DDragonData, KnowledgeConcept, MetaSnapshot, GroundingSource, Champion, DraftPuzzle, PuzzleOption } from '../types';
-import { KNOWLEDGE_BASE } from '../data/knowledgeBase';
-import { useProfile } from '../contexts/ProfileContext';
-import { ChampionIcon } from './common/ChampionIcon';
-import { Icon } from './common/Icon';
-import { geminiService } from '../services/geminiService';
-import { Spinner } from './common/Spinner';
-import { getChampionStaticInfoById } from '../data/gameData';
+import { View, DDragonData, KnowledgeConcept, MetaSnapshot, GroundingSource, Champion, DraftPuzzle, PuzzleOption } from './types';
+import { KNOWLEDGE_BASE } from './data/knowledgeBase';
+import { useProfile } from './contexts/ProfileContext';
+import { ChampionIcon } from './components/common/ChampionIcon';
+import { Icon } from './components/common/Icon';
+import { geminiService } from './services/geminiService';
+import { Spinner } from './components/common/Spinner';
+import { getChampionStaticInfoById } from './data/gameData';
 
-const PrimaryActions: React.FC<{ setView: (view: View) => void }> = ({ setView }) => (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <button 
-            onClick={() => setView(View.DRAFTING)}
-            className="group relative lg:col-span-3 p-8 text-left bg-primary-gradient text-white rounded-2xl shadow-2xl shadow-indigo-500/20 transition-all duration-300 transform hover:-translate-y-1"
-        >
-            <div className="absolute top-4 right-4 h-16 w-16 bg-white/10 rounded-full transition-transform duration-300 group-hover:scale-125"></div>
-            <Icon name="draft" className="w-12 h-12 mb-4 text-indigo-300 dark:text-indigo-300 transition-transform duration-300 group-hover:scale-110" />
-            <h3 className="font-display text-4xl font-semibold">Start Live Draft</h3>
-            <p className="text-indigo-200 dark:text-indigo-300 mt-1">Enter a live draft for real-time AI suggestions and analysis.</p>
-        </button>
-        <div className="lg:col-span-2 grid grid-rows-2 gap-6">
-            <button 
-                onClick={() => setView(View.DRAFT_LAB)}
-                className="group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1"
-            >
-                <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">Draft Lab</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm">Experiment with compositions.</p>
-            </button>
-            <button 
-                onClick={() => setView(View.HISTORY)}
-                className="group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1"
-            >
-                <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">Review History</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm">Analyze past games.</p>
-            </button>
-        </div>
-    </div>
-);
+const PrimaryActions: React.FC<{ setView: (view: View) => void }> = ({ setView }) => {
+    const secondaryActions = [
+        { view: View.DRAFT_LAB, icon: 'lab' as const, title: 'The Forge', description: 'Experiment with compositions.' },
+        { view: View.HISTORY, icon: 'history' as const, title: 'Review History', description: 'Analyze past games.' },
+        { view: View.PLAYBOOK, icon: 'playbook' as const, title: 'Playbook', description: 'Access saved strategies.' },
+    ];
+
+    return (
+        <section aria-labelledby="primary-actions-title">
+            <h2 id="primary-actions-title" className="sr-only">Primary Actions</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <button 
+                    onClick={() => setView(View.DRAFTING)}
+                    className="group p-8 text-left bg-primary-gradient text-white rounded-2xl shadow-2xl shadow-indigo-500/20 transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
+                >
+                    <Icon name="draft" className="w-12 h-12 mb-4 text-indigo-300 transition-transform duration-300 group-hover:scale-110" />
+                    <h3 className="font-display text-4xl font-semibold">Live Draft Arena</h3>
+                    <p className="text-indigo-200 mt-1 flex-grow">Enter a live draft for real-time AI suggestions and analysis.</p>
+                </button>
+                <div className="space-y-4">
+                    {secondaryActions.map(action => (
+                         <button 
+                            key={action.view}
+                            onClick={() => setView(action.view)}
+                            className="w-full group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1"
+                        >
+                            <div className="flex items-center gap-4">
+                                <Icon name={action.icon} className="w-8 h-8 text-indigo-500"/>
+                                <div>
+                                    <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">{action.title}</h3>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm">{action.description}</p>
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
 
 const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData }) => {
     const { activeProfile, onProgressUpdate } = useProfile();
@@ -81,7 +91,6 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
     const handleSelectOption = (option: PuzzleOption) => {
         setSelectedOption(option);
         if (option.isCorrect) {
-            // A real app might check if the puzzle was already solved today before awarding XP
             onProgressUpdate('trial', puzzle!.id, 75);
         }
     };
@@ -98,7 +107,7 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
 
     return (
         <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col h-full">
-             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">Daily Draft Puzzle</h3>
+             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">Daily Puzzle</h3>
              <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{puzzle.scenario}</p>
              <p className="p-3 mb-4 text-center font-semibold bg-slate-200 dark:bg-slate-900/70 rounded-md border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">"{puzzle.problem}"</p>
              
@@ -157,15 +166,15 @@ const LearningPathWidget: React.FC<{ setView: (view: View) => void }> = ({ setVi
                  <Icon name="lessons" className="w-16 h-16 text-indigo-600 dark:text-indigo-500 mb-2" />
                 {nextLesson ? (
                     <>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Next Recommended Lesson:</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Next Tome of Knowledge:</p>
                     <p className="font-semibold text-slate-800 dark:text-slate-200">{nextLesson.title}</p>
                     </>
                 ) : (
-                    <p className="text-teal-600 dark:text-teal-400 font-semibold">All lessons completed!</p>
+                    <p className="text-teal-600 dark:text-teal-400 font-semibold">All tomes read!</p>
                 )}
             </div>
             <button onClick={() => setView(View.LESSONS)} className="w-full mt-4 p-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-400 text-white font-semibold rounded-md">
-                Go to Knowledge Hub
+                Go to The Academy
             </button>
         </div>
     )
@@ -252,8 +261,8 @@ const MetaSnapshotWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonDat
     }
 
     return (
-        <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
-            <h3 className="font-display text-2xl mb-4 text-slate-800 dark:text-slate-200">Live Meta Snapshot</h3>
+        <section aria-labelledby="meta-snapshot-title" className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <h2 id="meta-snapshot-title" className="font-display text-3xl mb-4 text-slate-800 dark:text-slate-200">Live Meta Snapshot</h2>
             <div className="mb-4">
                 <p className="text-sm text-slate-800 dark:text-slate-300 font-semibold mb-2">Patch Summary:</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{snapshot.patchSummary}</p>
@@ -275,7 +284,7 @@ const MetaSnapshotWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonDat
                     </p>
                 </div>
              )}
-        </div>
+        </section>
     );
 };
 
@@ -287,30 +296,26 @@ const Home: React.FC<{ setView: (view: View) => void, ddragonData: DDragonData }
     <div className="space-y-8">
         <div className="text-left pt-4 pb-2">
             <h1 className="text-5xl md:text-6xl font-display tracking-tight text-gradient-primary">
-                Commander's Hub
+                Dashboard
             </h1>
             <p className="mt-2 text-lg md:text-xl text-slate-500 dark:text-slate-400">
-                Welcome, {activeProfile?.name}. Your AI-powered strategic overview awaits.
+                Welcome back, {activeProfile?.name}. Let's get started.
             </p>
         </div>
         
-        <section aria-labelledby="primary-actions">
-            <h2 id="primary-actions" className="sr-only">Primary Actions</h2>
-            <PrimaryActions setView={setView} />
-        </section>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+            {/* Main content column */}
+            <div className="lg:col-span-3 space-y-8">
+                <PrimaryActions setView={setView} />
+                <MetaSnapshotWidget ddragonData={ddragonData} />
+            </div>
 
-        <section aria-labelledby="daily-agenda">
-             <h2 id="daily-agenda" className="text-3xl font-display mb-4 text-slate-800 dark:text-slate-200">Your Daily Agenda</h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Sidebar column */}
+            <div className="lg:col-span-2 space-y-8">
                 <DailyPuzzleWidget ddragonData={ddragonData} />
                 <LearningPathWidget setView={setView} />
             </div>
-        </section>
-
-        <section aria-labelledby="meta-snapshot">
-            <h2 id="meta-snapshot" className="sr-only">Meta Snapshot</h2>
-            <MetaSnapshotWidget ddragonData={ddragonData} />
-        </section>
+        </div>
     </div>
   );
 };

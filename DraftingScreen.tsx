@@ -1,25 +1,24 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Champion, DDragonData, DraftState, Team, AIAnalysis, Aura, DraftHistoryEntry, Role, View, AIChat, SharePayload, CounterIntelligence } from '../types';
-import { geminiService } from '../services/geminiService';
+import { Champion, DDragonData, DraftState, Team, AIAnalysis, Aura, DraftHistoryEntry, Role, View, AIChat, SharePayload, ContextualDraftTip } from './types';
+import { geminiService } from './services/geminiService';
 import { ChampionIcon } from './common/ChampionIcon';
-import { useProfile } from '../contexts/ProfileContext';
-import { DraftTimeline } from './DraftTimeline';
+import { useProfile } from './contexts/ProfileContext';
 import SaveToPlaybookModal from './common/SaveToPlaybookModal';
-import { useDraftStore } from '../store/draftStore';
-import { getDraftSequence } from '../data/draftRules';
-import { shareService } from '../utils/shareService';
+import { useDraftStore } from './store/draftStore';
+import { getDraftSequence } from './data/gameplayConstants';
+import { shareService } from './utils/shareService';
 import { Icon } from './common/Icon';
-import { calculateTeamAnalytics } from '../data/analyticsHelper';
 import html2canvas from 'html2canvas';
 import ShareableImage from './common/ShareableImage';
 import { ChampionGrid } from './common/ChampionGrid';
-import { MidDraftAnalysisPanel } from './MidDraftAnalysisPanel';
-import { PostDraftAnalysisPanel } from './PostDraftAnalysisPanel';
 import { Spinner } from './common/Spinner';
-import { isChampion } from '../utils/typeGuards';
-import { CounterIntelToast } from './common/CounterIntelToast';
-import { HoverDnaTooltip } from './common/HoverDnaTooltip';
+import { isChampion } from './utils/typeGuards';
+import { useNotificationStore } from './store/notificationStore';
+import { DraftTimeline } from './DraftTimeline';
+import { PostDraftAnalysisPanel } from './PostDraftAnalysisPanel';
+import DraftingRightPanel from './DraftingRightPanel';
+import { calculateTeamAnalytics } from './data/analyticsHelper';
 
 const TeamColumn: React.FC<{
     team: Team;
@@ -82,22 +81,23 @@ const TeamColumn: React.FC<{
     );
 };
 
-
 interface DraftingScreenProps {
   ddragonData: DDragonData;
   setAura: (aura: Aura) => void;
   setView: (view: View) => void;
   setHoverAura: (aura: string | null) => void;
+  onNavigateToLesson: (lessonId: string) => void;
 }
 
-const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, setView, setHoverAura }) => {
+const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, setView, setHoverAura, onNavigateToLesson }) => {
   const { activeProfile, updateHistory, saveToPlaybook } = useProfile();
   const { settings, draftHistory } = activeProfile!;
   
   const draftState = useDraftStore(state => state);
-  const { setChampion, undo, setMode } = useDraftStore(state => state.actions);
+  const { setChampion, undo, setMode, resetDraft } = useDraftStore(state => state.actions);
 
   const [isAiLoading, setAiLoading] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<{ championName: string; reasoning: string }[] | null>(null);
   const [fullAnalysis, setFullAnalysis] = useState<AIAnalysis | null>(null);
   const [chat, setChat] = useState<AIChat | null>(null);
@@ -107,9 +107,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
   const [isExporting, setIsExporting] = useState(false);
   const shareableRef = useRef<HTMLDivElement>(null);
   
-  const [counterIntel, setCounterIntel] = useState<{ championName: string; data: CounterIntelligence } | null>(null);
-  const [showIntelToast, setShowIntelToast] = useState(false);
-  const [hoveredChampionDnaChange, setHoveredChampionDnaChange] = useState<{ changes: Record<string, number>, position: { x: number, y: number } } | null>(null);
+  const addNotification = useNotificationStore(state => state.addNotification);
   const lastSeenRedPicks = useRef<(Champion|null)[]>([]);
 
   const sequence = getDraftSequence(draftState.mode);
@@ -117,6 +115,10 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
   
   const blueTeamPicks = useMemo(() => draftState.blueTeam.picks.map(p => p.champion), [draftState.blueTeam.picks]);
   const redTeamPicks = useMemo(() => draftState.redTeam.picks.map(p => p.champion), [draftState.redTeam.picks]);
+
+  useEffect(() => {
+    resetDraft(); // Reset on mount to ensure clean state
+  }, [resetDraft]);
 
   useEffect(() => {
     const specialAuras: Aura[] = ['thinking', 'positive', 'negative'];
@@ -132,6 +134,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
     else setAura('neutral');
   }, [blueTeamPicks, setAura]);
 
+
   useEffect(() => {
     const newRedPicks = draftState.redTeam.picks.filter(p => p.champion);
     const lastSeenRedPickObjects = lastSeenRedPicks.current.filter(p => p);
@@ -142,16 +145,35 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
             const fetchIntel = async () => {
                 const intel = await geminiService.getCounterIntelligence(newPick.champion!.name, settings);
                 if (intel) {
-                    setCounterIntel({ championName: newPick.champion!.name, data: intel });
-                    setShowIntelToast(true);
+                    addNotification({
+                        type: 'counterIntel',
+                        payload: { championName: newPick.champion!.name, intel },
+                        duration: 8000,
+                    });
                 }
             };
             fetchIntel();
         }
     }
     lastSeenRedPicks.current = draftState.redTeam.picks.map(p => p.champion);
-  }, [draftState.redTeam.picks, settings]);
+  }, [draftState.redTeam.picks, settings, addNotification]);
 
+  useEffect(() => {
+    const CONTEXTUAL_TIP_TURNS = [5, 12];
+    if (CONTEXTUAL_TIP_TURNS.includes(draftState.currentTurn)) {
+        const fetchContextualTip = async () => {
+            const tip = await geminiService.getContextualDraftTip(draftState, settings);
+            if (tip) {
+                addNotification({
+                    type: 'contextualTip',
+                    payload: tip,
+                    duration: 10000,
+                });
+            }
+        };
+        fetchContextualTip();
+    }
+  }, [draftState.currentTurn, draftState, settings, addNotification]);
 
   const handleChampionSelect = useCallback((champion: Champion) => {
     setChampion(champion);
@@ -164,16 +186,11 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
     setAura('thinking');
 
     const championMap = new Map(Object.values(ddragonData.champions).map(c => [c.id, c.name]));
-
-    const coreChampionNames = (activeProfile.riotData?.mastery ?? [])
-        .sort((a,b) => b.championPoints - a.championPoints)
-        .slice(0, 15)
+    const coreChampionNames = (activeProfile?.riotData?.mastery ?? [])
+        .sort((a,b) => b.championPoints - a.championPoints).slice(0, 15)
         .map(m => Object.values(ddragonData.champions).find(c => Number(c.key) === m.championId)?.name)
         .filter((name): name is string => !!name);
-
-    const practiceChampionNames = settings.championPool
-        .map(id => championMap.get(id))
-        .filter((name): name is string => !!name);
+    const practiceChampionNames = settings.championPool.map(id => championMap.get(id)).filter((name): name is string => !!name);
         
     const { team, type } = sequence[draftState.currentTurn];
     const suggestions = await geminiService.getDraftSuggestion(
@@ -204,23 +221,23 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
   }, [isAiLoading, isDraftComplete, draftState, settings, setAura]);
 
   const handleSendChatMessage = async (message: string) => {
-    if (!chat || !message.trim() || !chat) return;
+    if (!chat || !message.trim() || isChatLoading) return;
     
-    const currentChat = chat;
-    
+    setIsChatLoading(true);
     setChat(prev => prev ? ({ ...prev, history: [...prev.history, { isUser: true, text: message }] }) : null);
     
     try {
-        const response = await geminiService.continueChat(currentChat.session, message);
-        const modelResponse = response.text;
-        setChat(prev => prev ? ({ ...prev, history: [...prev.history, { isUser: false, text: modelResponse }] }) : null);
+        const response = await geminiService.continueChat(chat.session, message);
+        setChat(prev => prev ? ({ ...prev, history: [...prev.history, { isUser: false, text: response.text }] }) : null);
     } catch (e) {
         console.error("Chat error:", e);
          setChat(prev => prev ? ({ ...prev, history: [...prev.history, { isUser: false, text: "Sorry, I encountered an error." }] }) : null);
+    } finally {
+        setIsChatLoading(false);
     }
   };
   
-  const handleKeywordClick = useCallback((lessonId: string) => { setView(View.LESSONS); }, [setView]);
+  const handleKeywordClick = useCallback((lessonId: string) => { onNavigateToLesson(lessonId) }, [onNavigateToLesson]);
 
   const resetAll = (mode: 'SOLO_QUEUE' | 'COMPETITIVE') => {
     setMode(mode);
@@ -230,9 +247,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
     setChat(null);
     setCopied(false);
     setDraftNotes('');
-    setCounterIntel(null);
-    setShowIntelToast(false);
-    setHoveredChampionDnaChange(null);
+    useNotificationStore.getState().clearAll();
     lastSeenRedPicks.current = [];
   };
 
@@ -243,8 +258,6 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
     setAura('neutral');
     setChat(null);
     setCopied(false);
-    setCounterIntel(null);
-    setShowIntelToast(false);
   };
 
   const handleSaveToHistory = () => {
@@ -258,7 +271,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
     };
     const newHistory = [newHistoryEntry, ...draftHistory].slice(0, 50);
     updateHistory(newHistory);
-    alert("Draft saved to History!");
+    addNotification({ type: 'genericInfo', payload: { title: 'Draft saved to History!'}, duration: 3000 });
   };
   
   const handleSaveToPlaybook = (name: string, description: string) => {
@@ -270,7 +283,7 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
         draftState: { ...draftState, pickedChampions: new Set(Array.from(draftState.pickedChampions)) },
     });
     setPlaybookModalOpen(false);
-    alert("Strategy saved to Playbook!");
+     addNotification({ type: 'genericInfo', payload: { title: 'Strategy saved to Playbook!' }, duration: 3000 });
   };
 
   const handleShare = async () => {
@@ -308,46 +321,6 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
     }
   };
 
-  const handleChampionHover = useCallback((champion: Champion, event: React.MouseEvent) => {
-    if (isDraftComplete) return;
-
-    const currentAction = sequence[draftState.currentTurn];
-    if (currentAction.team !== 'BLUE' || currentAction.type !== 'PICK') {
-        setHoveredChampionDnaChange(null);
-        return;
-    }
-
-    const currentPicks = draftState.blueTeam.picks.map(p => p.champion).filter(isChampion);
-    const currentAnalytics = calculateTeamAnalytics(currentPicks);
-    
-    const hypotheticalPicks = [...currentPicks, champion];
-    const hypotheticalAnalytics = calculateTeamAnalytics(hypotheticalPicks);
-    
-    const dnaChanges: Record<string, number> = {};
-    const allDnaKeys = new Set([...Object.keys(currentAnalytics.teamDNA), ...Object.keys(hypotheticalAnalytics.teamDNA)]);
-
-    allDnaKeys.forEach(key => {
-        const oldValue = currentAnalytics.teamDNA[key] || 0;
-        const newValue = hypotheticalAnalytics.teamDNA[key] || 0;
-        if (oldValue !== newValue) {
-            dnaChanges[key] = newValue - oldValue;
-        }
-    });
-
-    setHoveredChampionDnaChange({ changes: dnaChanges, position: { x: event.clientX, y: event.clientY } });
-    
-    const { ad, ap } = currentAnalytics.damageProfile;
-    if (champion.engagePotential === 'High') setHoverAura('engage');
-    else if (currentPicks.length >= 2 && ad > ap + 1 && champion.damageType === 'AP') setHoverAura('positive');
-    else if (currentPicks.length >= 2 && ap > ad + 1 && champion.damageType === 'AD') setHoverAura('positive');
-  }, [draftState, isDraftComplete, setHoverAura, sequence]);
-
-  const handleChampionLeave = useCallback(() => {
-    setHoverAura(null);
-    setHoveredChampionDnaChange(null);
-  }, [setHoverAura]);
-
-
   const currentActionInfo = useMemo(() => {
     if(isDraftComplete) return "Draft Complete";
     const { team, type } = sequence[draftState.currentTurn];
@@ -361,29 +334,14 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
   };
 
   return (
-    <div className="space-y-6">
-        {showIntelToast && counterIntel && (
-            <CounterIntelToast
-                championName={counterIntel.championName}
-                intel={counterIntel.data}
-                onClose={() => setShowIntelToast(false)}
-            />
-        )}
-        {hoveredChampionDnaChange && (
-            <HoverDnaTooltip
-                dnaChanges={hoveredChampionDnaChange.changes}
-                position={hoveredChampionDnaChange.position}
-            />
-        )}
-
-        {/* Top Controls */}
+    <div className="space-y-4">
         {draftState.currentTurn === 0 && !isDraftComplete ? (
             <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-3">
-            <h2 className="text-2xl font-display">Select Draft Mode</h2>
-            <div className="flex space-x-4">
-                <button onClick={() => resetAll('COMPETITIVE')} className={`px-6 py-2 rounded-md font-semibold transition-all ${draftState.mode === 'COMPETITIVE' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900 dark:ring-offset-slate-800' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}>Competitive</button>
-                <button onClick={() => resetAll('SOLO_QUEUE')} className={`px-6 py-2 rounded-md font-semibold transition-all ${draftState.mode === 'SOLO_QUEUE' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900 dark:ring-offset-slate-800' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}>Solo Queue</button>
-            </div>
+                <h2 className="text-2xl font-display">Select Draft Mode</h2>
+                <div className="flex space-x-4">
+                    <button onClick={() => resetAll('COMPETITIVE')} className={`px-6 py-2 rounded-md font-semibold transition-all ${draftState.mode === 'COMPETITIVE' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900 dark:ring-offset-slate-800' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}>Competitive</button>
+                    <button onClick={() => resetAll('SOLO_QUEUE')} className={`px-6 py-2 rounded-md font-semibold transition-all ${draftState.mode === 'SOLO_QUEUE' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900 dark:ring-offset-slate-800' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}>Solo Queue</button>
+                </div>
             </div>
         ) : (
             <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
@@ -397,69 +355,68 @@ const DraftingScreen: React.FC<DraftingScreenProps> = ({ ddragonData, setAura, s
         
         {draftState.mode === 'COMPETITIVE' && <DraftTimeline sequence={sequence} currentTurn={draftState.currentTurn} />}
         
-        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
-            <TeamColumn team="BLUE" draftState={draftState} version={ddragonData.version} />
-            <TeamColumn team="RED" draftState={draftState} version={ddragonData.version} />
-        </div>
-
-        {isDraftComplete ? (
-            <div className="mt-8 w-full">
-                {fullAnalysis ? (
-                    <PostDraftAnalysisPanel
-                        analysis={fullAnalysis}
-                        draftState={draftState}
-                        chat={chat}
-                        ddragonData={ddragonData}
-                        draftNotes={draftNotes}
-                        isChatLoading={isAiLoading}
-                        isExporting={isExporting}
-                        copied={copied}
-                        onKeywordClick={handleKeywordClick}
-                        handleExportImage={handleExportImage}
-                        handleSaveToHistory={handleSaveToHistory}
-                        handleSendChatMessage={handleSendChatMessage}
-                        handleShare={handleShare}
-                        setDraftNotes={setDraftNotes}
-                        setPlaybookModalOpen={setPlaybookModalOpen}
-                    />
-                ) : (
-                    <div className="text-center p-8 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                        <h3 className="text-3xl font-display">Draft Complete!</h3>
-                        <p className="text-slate-500 dark:text-slate-400 my-4">Ready for the Oracle's in-depth analysis?</p>
-                        <button onClick={handleGetFullAnalysis} disabled={isAiLoading} className="px-6 py-4 bg-primary-gradient text-white rounded-lg transition-all duration-200 flex items-center justify-center mx-auto disabled:opacity-50 text-lg font-semibold active:scale-95 transform shadow-lg hover:shadow-xl">
-                            {isAiLoading ? <Spinner size="h-6 w-6 mr-3" /> : <Icon name="brain" className="h-6 w-6 mr-3" />}
-                            {isAiLoading ? 'Analyzing...' : 'Generate In-Depth Analysis'}
-                        </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-2 space-y-4">
+                <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                    <TeamColumn team="BLUE" draftState={draftState} version={ddragonData.version} />
+                    <TeamColumn team="RED" draftState={draftState} version={ddragonData.version} />
+                </div>
+                 {!isDraftComplete && (
+                    <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+                        <ChampionGrid
+                            ddragonData={ddragonData}
+                            onChampionSelect={handleChampionSelect}
+                            pickedChampionIds={draftState.pickedChampions}
+                            iconClassName="w-full aspect-square"
+                        />
                     </div>
+                 )}
+            </div>
+
+            <div className="lg:col-span-1 sticky top-24">
+                {isDraftComplete ? (
+                    fullAnalysis ? (
+                        <PostDraftAnalysisPanel
+                            analysis={fullAnalysis}
+                            draftState={draftState}
+                            chat={chat}
+                            ddragonData={ddragonData}
+                            draftNotes={draftNotes}
+                            isChatLoading={isChatLoading}
+                            isExporting={isExporting}
+                            copied={copied}
+                            onKeywordClick={handleKeywordClick}
+                            handleExportImage={handleExportImage}
+                            handleSaveToHistory={handleSaveToHistory}
+                            handleSendChatMessage={handleSendChatMessage}
+                            handleShare={handleShare}
+                            setDraftNotes={setDraftNotes}
+                            setPlaybookModalOpen={setPlaybookModalOpen}
+                        />
+                    ) : (
+                         <div className="text-center p-8 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                            <h3 className="text-3xl font-display">Draft Complete!</h3>
+                            <p className="text-slate-500 dark:text-slate-400 my-4">Ready for the Oracle's in-depth analysis?</p>
+                            <button onClick={handleGetFullAnalysis} disabled={isAiLoading} className="px-6 py-4 bg-primary-gradient text-white rounded-lg transition-all duration-200 flex items-center justify-center mx-auto disabled:opacity-50 text-lg font-semibold active:scale-95 transform shadow-lg hover:shadow-xl">
+                                {isAiLoading ? <Spinner size="h-6 w-6 mr-3" /> : <Icon name="brain" className="h-6 w-6 mr-3" />}
+                                {isAiLoading ? 'Analyzing...' : 'Generate Analysis'}
+                            </button>
+                        </div>
+                    )
+                ) : (
+                    <DraftingRightPanel
+                        isAiLoading={isAiLoading}
+                        bluePicks={blueTeamPicks}
+                        redPicks={redTeamPicks}
+                        handleGetSuggestion={handleGetSuggestion}
+                        aiSuggestions={aiSuggestions}
+                        ddragonData={ddragonData}
+                        handleUseSuggestion={handleUseSuggestion}
+                    />
                 )}
             </div>
-        ) : (
-            <div className="space-y-6">
-                <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-                    <h3 className="font-display text-2xl mb-2">Champion Roster</h3>
-                    <ChampionGrid
-                        ddragonData={ddragonData}
-                        onChampionSelect={handleChampionSelect}
-                        onChampionHover={handleChampionHover}
-                        onChampionLeave={handleChampionLeave}
-                        pickedChampionIds={draftState.pickedChampions}
-                        highlightArchetypes={counterIntel?.data.counterArchetypes ?? null}
-                        iconClassName="w-full aspect-square"
-                    />
-                </div>
-                <MidDraftAnalysisPanel
-                    isAiLoading={isAiLoading}
-                    bluePicks={blueTeamPicks.filter(isChampion)}
-                    redPicks={redTeamPicks.filter(isChampion)}
-                    handleGetSuggestion={handleGetSuggestion}
-                    aiSuggestions={aiSuggestions}
-                    ddragonData={ddragonData}
-                    onKeywordClick={handleKeywordClick}
-                    handleUseSuggestion={handleUseSuggestion}
-                />
-            </div>
-        )}
-
+        </div>
+        
         <SaveToPlaybookModal
             isOpen={isPlaybookModalOpen}
             onClose={() => setPlaybookModalOpen(false)}

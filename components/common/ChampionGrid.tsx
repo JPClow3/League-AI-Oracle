@@ -12,6 +12,7 @@ interface ChampionGridProps {
     pickedChampionIds: Set<string>;
     iconClassName?: string;
     highlightArchetypes?: string[] | null;
+    onChampionDragStart?: (event: React.DragEvent<HTMLDivElement>, champion: Champion) => void;
 }
 
 const roleOrder: Role[] = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'];
@@ -24,6 +25,7 @@ export const ChampionGrid: React.FC<ChampionGridProps> = ({
     pickedChampionIds,
     iconClassName = 'w-16 h-16',
     highlightArchetypes,
+    onChampionDragStart
 }) => {
     const { activeProfile } = useProfile();
     const { settings } = activeProfile!;
@@ -91,6 +93,7 @@ export const ChampionGrid: React.FC<ChampionGridProps> = ({
                                         onClick={onChampionSelect} 
                                         className={iconClassName}
                                         isHighlighted={highlightArchetypes?.some(arch => champ.teamArchetypes?.includes(arch))}
+                                        onDragStart={onChampionDragStart}
                                     />
                                 </div>
                             ))}

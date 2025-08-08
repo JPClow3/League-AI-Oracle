@@ -49,7 +49,7 @@ class RiotService {
 
         try {
             const response = await fetch(url, {
-                headers: { "X-Riot-Token": RIOT_API_KEY }
+                headers: { "X-Riot-Token": RIOT_API_KEY! }
             });
 
             if (!response.ok) {

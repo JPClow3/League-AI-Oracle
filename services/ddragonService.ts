@@ -1,7 +1,6 @@
-
-
 import { Champion, DDragonData, Item } from '../types';
 import { STATIC_CHAMPION_DATA } from '../data/gameData';
+import { dbService } from './dbService';
 
 const DDRAGON_BASE_URL = 'https://ddragon.leagueoflegends.com';
 
@@ -27,6 +26,18 @@ class DDragonService {
 
   public async getAllData(): Promise<DDragonData> {
     const version = await this.getLatestVersion();
+    
+    try {
+        const cached = await dbService.getDDragonData();
+        if (cached && cached.version === version) {
+            console.log('Using cached DDragon data.');
+            return cached.data;
+        }
+    } catch (e) {
+        console.error("Cache read failed, fetching from network.", e);
+    }
+    
+    console.log('Fetching new DDragon data from network.');
     const [rawChampions, items] = await Promise.all([
       this.fetchDataFile<Record<string, Champion>>(version, 'champion.json'),
       this.fetchDataFile<Record<string, Item>>(version, 'item.json')
@@ -51,8 +62,15 @@ class DDragonService {
         }
     }
 
+    const processedData = { version, champions, items: filteredItems };
+    try {
+        await dbService.setDDragonData(version, processedData);
+        console.log('DDragon data cached successfully.');
+    } catch(e) {
+        console.error("Failed to cache DDragon data.", e);
+    }
 
-    return { version, champions, items: filteredItems };
+    return processedData;
   }
 }
 

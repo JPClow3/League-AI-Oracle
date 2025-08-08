@@ -94,7 +94,6 @@ export enum View {
   DRAFTING = 'DRAFTING',
   DRAFT_LAB = 'DRAFT_LAB',
   SCOUT = 'SCOUT',
-  VAULT = 'VAULT',
   ARMORY = 'ARMORY',
   LESSONS = 'LESSONS',
   TRIALS = 'TRIALS',
@@ -120,6 +119,7 @@ export interface PlaybookEntry {
   description: string;
   draftState: DraftState;
   analysis: AIAnalysis;
+  deconstruction?: CompositionDeconstruction;
 }
 
 export interface Profile {
@@ -361,6 +361,7 @@ export interface AIChat {
     history: {
         isUser: boolean;
         text: string;
+        isStreaming?: boolean;
     }[];
 }
 
@@ -463,14 +464,13 @@ export interface CompositionDeconstruction {
     }[];
 }
 
-
-// Data for Champion Vault
 export interface ChampionAbilityAnalysis {
-  key: 'P' | 'Q' | 'W' | 'E' | 'R';
-  name: string;
-  proTip: string;
+    key: 'P' | 'Q' | 'W' | 'E' | 'R';
+    name: string;
+    proTip: string;
 }
 
+// Data for Champion Vault
 export interface ChampionVaultEntry {
     championId: string; // e.g., 'Aatrox'
     overview: string;
@@ -481,14 +481,6 @@ export interface ChampionVaultEntry {
     build: {
         coreItems: { name: string, description: string }[];
         explanation: string;
-    };
-    matchups: {
-        strongAgainst: { championName: string; tip: string; }[];
-        weakAgainst: { championName: string; tip: string; }[];
-    };
-    synergies: {
-        partners: { championName: string; reason: string; }[];
-        idealComps: string[];
     };
 }
 

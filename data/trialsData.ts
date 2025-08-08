@@ -2,8 +2,8 @@ import { Trial } from '../types';
 
 export const TRIALS_DATA: Trial[] = [
     {
-        id: 'trial-comp-201-1',
-        lessonId: 'df-103', // Updated to correct lesson ID
+        id: 'trial-df-103-1',
+        lessonId: 'df-103',
         title: 'Balancing Damage',
         scenario: 'Your team has already picked Zed (Mid) and Jhin (Bot). Both are AD champions. It is your turn to pick a Jungler.',
         question: 'Which champion would be the best choice to balance your team\'s damage profile?',
@@ -14,7 +14,7 @@ export const TRIALS_DATA: Trial[] = [
         ]
     },
     {
-        id: 'trial-df-101-1', // Updated ID to match lesson
+        id: 'trial-df-101-1',
         lessonId: 'df-101',
         title: 'Identifying Missing Pieces',
         scenario: 'Your team composition consists of Ezreal, Lux, Jayce, and Teemo. The enemy team has strong engage champions like Malphite and Jarvan IV.',

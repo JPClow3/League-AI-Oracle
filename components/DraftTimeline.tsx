@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { DraftTurn } from '../data/draftRules';
+import { DraftTurn } from '../data/gameplayConstants';
+import { Team, DraftActionType } from '../types';
 
 interface DraftTimelineProps {
   sequence: DraftTurn[];

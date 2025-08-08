@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Champion, DDragonData } from '../types';
 import TeamAnalyticsDashboard from './TeamAnalyticsDashboard';
@@ -44,7 +45,7 @@ const DraftingRightPanel: React.FC<DraftingRightPanelProps> = ({
     const validRedPicks = redPicks.filter((c): c is Champion => c !== null);
 
     return (
-        <div className="bg-white dark:bg-slate-800/80 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 flex flex-col h-full">
+        <div className="bg-white dark:bg-slate-800/80 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 flex flex-col h-full lg:h-[calc(100vh-7.5rem)]">
             <div className="flex border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
                 <TabButton name="Team Analysis" isActive={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} />
                 <TabButton name="AI Suggestions" isActive={activeTab === 'suggestions'} onClick={() => setActiveTab('suggestions')} />

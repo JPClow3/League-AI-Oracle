@@ -95,10 +95,8 @@ const NAV_LINKS: { view: View; label: string; iconName: React.ComponentProps<typ
     { view: View.HOME, label: "Home", iconName: "home" },
     { view: View.DRAFTING, label: "Arena", iconName: "draft" },
     { view: View.DRAFT_LAB, label: "Forge", iconName: "lab" },
-    { view: View.SCOUT, label: "Scout", iconName: "binoculars" },
     { view: View.PLAYBOOK, label: "Playbook", iconName: "target" },
-    { view: View.VAULT, label: "Vault", iconName: "vault" },
-    { view: View.ARMORY, label: "Armory", iconName: "book-open" },
+    { view: View.ARMORY, label: "Armory", iconName: "shield" },
     { view: View.LESSONS, label: "Academy", iconName: "lessons" },
     { view: View.HISTORY, label: "History", iconName: "history" },
 ];
@@ -128,7 +126,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, theme, setTheme, 
               <h1 className="text-3xl font-bold font-display text-gradient-primary cursor-pointer" onClick={() => setView(View.HOME)}>
                 DraftWise AI
               </h1>
-              <nav className="hidden md:flex items-center space-x-1 bg-slate-200/50 dark:bg-slate-900/30 p-1 rounded-lg border border-slate-300/50 dark:border-slate-700/50">
+              <nav className="hidden md:flex items-center space-x-2">
                 {NAV_LINKS.map(link => (
                     <NavItem key={link.view} view={link.view} currentView={currentView} setView={setView} iconName={link.iconName}>
                         {link.label}

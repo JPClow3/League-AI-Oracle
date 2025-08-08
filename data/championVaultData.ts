@@ -1,3 +1,4 @@
+
 import { ChampionVaultEntry } from '../types';
 
 export const CHAMPION_VAULT_DATA: Record<string, ChampionVaultEntry> = {
@@ -21,25 +22,6 @@ export const CHAMPION_VAULT_DATA: Record<string, ChampionVaultEntry> = {
             { name: "Sundered Sky", description: "Gives Aatrox a guaranteed critical strike and heal on his first attack against a champion, amplifying his trading and all-in potential." },
         ],
         explanation: "Aatrox's build focuses on a blend of Attack Damage, Health, and Ability Haste. This combination allows him to be both a significant damage threat and a durable frontline drain tank."
-    },
-    matchups: {
-        strongAgainst: [
-            { championName: "Irelia", tip: "Aatrox can interrupt Irelia's Q dashes with his own Q knockups, preventing her from resetting and controlling the fight." },
-            { championName: "Yasuo", tip: "Your knockups disrupt Yasuo's flow, and he is squishy enough to be bursted down if you land your full combo." },
-            { championName: "Garen", tip: "You can kite Garen with your Qs and E, preventing him from reaching you to use his silence and ultimate." }
-        ],
-        weakAgainst: [
-            { championName: "Fiora", tip: "Fiora's Riposte can parry your critical third Q, stunning you and turning the fight. Her high mobility and true damage make her a nightmare to deal with." },
-            { championName: "Kled", tip: "Kled's built-in Grievous Wounds on his Q heavily reduces your healing, and his high aggression can overwhelm you early." },
-            { championName: "Renekton", tip: "Renekton's mobility and point-and-click stun can interrupt your Q combo and allow him to win short trades easily." }
-        ]
-    },
-    synergies: {
-        partners: [
-            { championName: "Jarvan IV", reason: "Jarvan's Cataclysm ultimate traps enemies in a small area, creating a perfect setup for Aatrox to land his entire Q combo on multiple targets." },
-            { championName: "Orianna", reason: "Orianna's Shockwave can pull enemies into Aatrox's Q sweet spots, and her speed-up helps him stick to targets." }
-        ],
-        idealComps: ["Teamfight", "Dive", "Front-to-Back"]
     }
   },
   Ahri: {
@@ -62,25 +44,6 @@ export const CHAMPION_VAULT_DATA: Record<string, ChampionVaultEntry> = {
             { name: 'Zhonya\'s Hourglass', description: 'An essential defensive item. It allows Ahri to make aggressive plays with her ultimate and then use the stasis to wait for her cooldowns or for her team to follow up.' }
         ],
         explanation: 'Ahri\'s build prioritizes Ability Power and Magic Penetration to maximize her burst damage potential. A key defensive item like Zhonya\'s or Banshee\'s Veil is almost always necessary to allow her to use her mobility offensively without being instantly punished.'
-    },
-    matchups: {
-        strongAgainst: [
-            { championName: 'Twisted Fate', tip: 'You can dodge his Gold Card with your ultimate and have superior burst damage and waveclear.' },
-            { championName: 'Lux', tip: 'Your mobility allows you to easily dodge her Light Binding and Final Spark. You can all-in her once her Q is on cooldown.' },
-            { championName: 'Veigar', tip: 'You can use Spirit Rush to escape his Event Horizon cage and all-in him before he can scale.' }
-        ],
-        weakAgainst: [
-            { championName: 'Yasuo', tip: 'His Wind Wall can block your entire kit (Q and E), and his mobility makes him difficult to hit with skillshots.' },
-            { championName: 'Fizz', tip: 'Fizz can use his Playful / Trickster to dodge your Charm and ultimate, then retaliate with his own high-damage combo.' },
-            { championName: 'Kassadin', tip: 'Pre-6, the lane is fine. Post-6, his Riftwalk and magic damage shield make it nearly impossible for you to kill him, and he will outscale you hard.' }
-        ]
-    },
-    synergies: {
-        partners: [
-            { championName: 'Jarvan IV', reason: 'Jarvan IV\'s engage and lockdown provide a perfect setup for Ahri to land her Charm and full combo.' },
-            { championName: 'Vi', reason: 'Vi\'s point-and-click ultimate guarantees a lockdown on a priority target, making it easy for Ahri to follow up.' }
-        ],
-        idealComps: ['Pick', 'Skirmish', 'Kite']
     }
   }
 };

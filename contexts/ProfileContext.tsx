@@ -16,6 +16,7 @@ interface ProfileContextType {
   updateHistory: (history: DraftHistoryEntry[]) => void;
   saveToPlaybook: (entryData: Omit<PlaybookEntry, 'id'>) => void;
   deleteFromPlaybook: (id: string) => void;
+  updatePlaybookEntry: (id: string, updates: Partial<PlaybookEntry>) => void;
   onProgressUpdate: (type: 'lesson' | 'trial', id: string, xpGain: number) => void;
   deleteProfile: (id: string) => void;
   markOnboardingComplete: () => void;
@@ -217,6 +218,20 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({ children })
     }));
   };
 
+  const updatePlaybookEntry = (id: string, updates: Partial<PlaybookEntry>) => {
+    if (!activeProfileId) return;
+    updateProfileData(activeProfileId, profile => {
+      const playbook = profile.playbook || [];
+      const entryIndex = playbook.findIndex(p => p.id === id);
+      if (entryIndex === -1) return profile;
+      
+      const newPlaybook = [...playbook];
+      newPlaybook[entryIndex] = { ...newPlaybook[entryIndex], ...updates };
+      
+      return { ...profile, playbook: newPlaybook };
+    });
+  };
+
   const onProgressUpdate = (type: 'lesson' | 'trial', id: string, xpGain: number) => {
     if (!activeProfileId) return;
     updateProfileData(activeProfileId, profile => {
@@ -273,6 +288,7 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({ children })
     updateHistory,
     saveToPlaybook,
     deleteFromPlaybook,
+    updatePlaybookEntry,
     onProgressUpdate,
     deleteProfile,
     markOnboardingComplete,

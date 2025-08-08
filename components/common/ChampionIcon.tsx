@@ -15,6 +15,7 @@ interface ChampionIconProps {
   onContextMenuAction?: (action: ContextMenuItemAction, championId: string) => void;
   showName?: boolean;
   isHighlighted?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>, champion: Champion) => void;
 }
 
 export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({ 
@@ -26,6 +27,7 @@ export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({
     onContextMenuAction,
     showName = true,
     isHighlighted = false,
+    onDragStart,
 }) => {
   const { activeProfile, toggleChampionInPool } = useProfile();
 
@@ -55,6 +57,12 @@ export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({
     }
   };
   
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+      if (onDragStart && champion) {
+          onDragStart(e, champion);
+      }
+  }
+
   if (!champion) return <div className={`bg-slate-200 dark:bg-slate-800 rounded-md ${className}`} />;
 
   const imageUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${champion.image.full}`;
@@ -75,7 +83,9 @@ export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({
         onMouseEnter={showPopover}
         onMouseLeave={hidePopover}
         onContextMenu={handleContextMenu}
-        className={`relative group ${className} ${isClickable ? 'cursor-pointer' : ''} transition-transform duration-200 hover:scale-110`}
+        draggable={!!onDragStart}
+        onDragStart={handleDragStart}
+        className={`relative group ${className} ${isClickable ? 'cursor-pointer' : ''} ${onDragStart ? 'cursor-grab' : ''} transition-transform duration-200 hover:scale-110`}
         title={champion.name}
       >
         <img
@@ -84,6 +94,10 @@ export const ChampionIcon: React.FC<ChampionIconProps> = React.memo(({
           className={`w-full h-full object-cover border-2 transition-all duration-200 rounded-md 
             ${isHighlighted ? 'border-teal-400 ring-2 ring-teal-400' : 'border-slate-400 dark:border-slate-600 group-hover:border-indigo-500'}
         `}
+          loading="lazy"
+          decoding="async"
+          width="120"
+          height="120"
         />
         {showName && (
           <div className="absolute bottom-0 w-full bg-black bg-opacity-70 text-white text-xs text-center p-0.5 rounded-b-md truncate">

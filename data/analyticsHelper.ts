@@ -1,6 +1,8 @@
 import { Champion, TeamAnalytics } from '../types';
 import { isChampion } from '../utils/typeGuards';
 
+export type { TeamAnalytics };
+
 const SCORE_MAP: Record<string, number> = { 'Low': 1, 'Medium': 2, 'High': 3 };
 
 const DNA_CATEGORIES: Record<string, string[]> = {

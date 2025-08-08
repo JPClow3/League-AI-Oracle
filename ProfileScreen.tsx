@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useProfile } from '../contexts/ProfileContext';
 import { Champion, DDragonData, Role, View, SummonerDTO, LeagueEntryDTO, ChampionMasteryDTO, StrategicBlindSpot, ChampionPerformance } from '../types';
@@ -30,15 +31,15 @@ const ProfileHeader: React.FC<{
     return (
         <div className="flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-slate-800/80 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
             <div className="relative">
-                <div className="text-8xl p-4 bg-slate-200 dark:bg-slate-700 rounded-full w-40 h-40 flex items-center justify-center">
+                <div className="text-6xl sm:text-8xl p-4 bg-slate-200 dark:bg-slate-700 rounded-full w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
                     {avatar}
                 </div>
                 {summonerIconUrl &&
-                    <img src={summonerIconUrl} alt="Summoner Icon" className="absolute -bottom-2 -right-2 w-16 h-16 rounded-full border-4 border-white dark:border-slate-800" decoding="async" width="64" height="64" />
+                    <img src={summonerIconUrl} alt="Summoner Icon" className="absolute -bottom-2 -right-2 w-12 h-12 sm:w-16 sm:h-16 rounded-full border-4 border-white dark:border-slate-800" decoding="async" width="64" height="64" />
                 }
             </div>
             <div className="flex-1 text-center md:text-left">
-                <h1 className="text-5xl font-display font-bold text-slate-800 dark:text-slate-100">{name}</h1>
+                <h1 className="text-4xl sm:text-5xl font-display font-bold text-slate-800 dark:text-slate-100">{name}</h1>
                 <p className="text-lg text-indigo-600 dark:text-indigo-400 font-semibold">
                     {summonerData ? `${summonerData.name} - Level ${summonerData.summonerLevel}` : 'Player Profile'}
                 </p>

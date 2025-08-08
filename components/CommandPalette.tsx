@@ -10,7 +10,7 @@ interface CommandPaletteProps {
   setView: (view: View) => void;
   champions: Champion[];
   items: Item[];
-  onNavigateToVault: (champion: Champion) => void;
+  onNavigateToArmory: (champion: Champion) => void;
 }
 
 interface Command {
@@ -21,7 +21,7 @@ interface Command {
   icon: React.ReactNode;
 }
 
-const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, setView, champions, items, onNavigateToVault }) => {
+const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, setView, champions, items, onNavigateToArmory }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 150);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -33,10 +33,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, setVie
       { type: 'navigation', id: 'home', name: 'Go to Home', action: () => setView(View.HOME), icon: <Icon name="home" className="w-5 h-5"/> },
       { type: 'navigation', id: 'drafting', name: 'Go to Arena', action: () => setView(View.DRAFTING), icon: <Icon name="draft" className="w-5 h-5"/> },
       { type: 'navigation', id: 'lab', name: 'Go to The Forge', action: () => setView(View.DRAFT_LAB), icon: <Icon name="lab" className="w-5 h-5"/> },
-      { type: 'navigation', id: 'scout', name: 'Go to Live Game Scout', action: () => setView(View.SCOUT), icon: <Icon name="binoculars" className="w-5 h-5"/> },
+      // { type: 'navigation', id: 'scout', name: 'Go to Live Game Scout', action: () => setView(View.SCOUT), icon: <Icon name="binoculars" className="w-5 h-5"/> },
       { type: 'navigation', id: 'playbook', name: 'Go to Playbook', action: () => setView(View.PLAYBOOK), icon: <Icon name="target" className="w-5 h-5"/> },
-      { type: 'navigation', id: 'vault', name: 'Go to Champion Vault', action: () => setView(View.VAULT), icon: <Icon name="vault" className="w-5 h-5"/> },
-      { type: 'navigation', id: 'armory', name: 'Go to Oracle\'s Armory', action: () => setView(View.ARMORY), icon: <Icon name="book-open" className="w-5 h-5"/> },
+      { type: 'navigation', id: 'armory', name: 'Go to Armory', action: () => setView(View.ARMORY), icon: <Icon name="shield" className="w-5 h-5"/> },
       { type: 'navigation', id: 'lessons', name: 'Go to The Academy', action: () => setView(View.LESSONS), icon: <Icon name="lessons" className="w-5 h-5"/> },
       { type: 'navigation', id: 'history', name: 'Go to History', action: () => setView(View.HISTORY), icon: <Icon name="history" className="w-5 h-5"/> },
     ];
@@ -58,15 +57,15 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, setVie
         type: 'champion', 
         id: c.id, 
         name: `Analyze: ${c.name}`, 
-        action: () => onNavigateToVault(c), 
+        action: () => onNavigateToArmory(c), 
         icon: <Icon name="profile" className="w-5 h-5" /> 
     }));
 
     // For now, let's keep items out to reduce noise, can be added later.
-    // const itemCommands: Command[] = items.map(i => ({ type: 'item', id: i.name, name: `Item: ${i.name}`, action: () => { setView(View.VAULT); }, icon: <Icon name="shield" className="w-5 h-5" /> }));
+    // const itemCommands: Command[] = items.map(i => ({ type: 'item', id: i.name, name: `Item: ${i.name}`, action: () => { setView(View.ARMORY); }, icon: <Icon name="shield" className="w-5 h-5" /> }));
 
     return [...actionCommands, ...navCommands, ...championCommands];
-  }, [setView, champions, onNavigateToVault]);
+  }, [setView, champions, onNavigateToArmory]);
 
   const filteredCommands = useMemo(() => {
     if (!debouncedSearchTerm) {

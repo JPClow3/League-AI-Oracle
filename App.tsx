@@ -5,10 +5,10 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { useProfile } from './contexts/ProfileContext';
 import { useDraftStore } from './store/draftStore';
 
-import Home from './components/Home';
+import Home from './Home';
 import DraftingScreen from './components/DraftingScreen';
 import DraftLab from './components/DraftLab';
-import ChampionVault from './components/ChampionVault';
+import ArmoryScreen from './components/ArmoryScreen';
 import HistoryScreen from './components/HistoryScreen';
 import LessonsScreen from './components/LessonsScreen';
 import TrialsScreen from './components/TrialsScreen';
@@ -16,7 +16,6 @@ import Header from './components/Header';
 import CommandPalette from './components/CommandPalette';
 import ProfileSelectionScreen from './components/ProfileSelectionScreen';
 import OnboardingScreen from './components/OnboardingScreen';
-import { Spinner } from './components/common/Spinner';
 import { ErrorCard } from './components/common/ErrorCard';
 import PlaybookScreen from './components/PlaybookScreen';
 import ProfileScreen from './components/ProfileScreen';
@@ -24,8 +23,10 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import { shareService } from './utils/shareService';
 import SharedDraftScreen from './components/SharedDraftScreen';
 import { NotificationHub } from './components/common/NotificationHub';
-import OraclesArmory from './components/OraclesArmory';
 import ScoutScreen from './components/ScoutScreen';
+import { riotService } from './services/riotService';
+import { InitialLoadingScreen } from './components/common/InitialLoadingScreen';
+import { FeatureDisabledScreen } from './components/common/FeatureDisabledScreen';
 
 const App: React.FC = () => {
   const { activeProfile, loading: profileLoading } = useProfile();
@@ -45,7 +46,7 @@ const App: React.FC = () => {
   
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [selectedTrialId, setSelectedTrialId] = useState<string | null>(null);
-  const [initialVaultChampion, setInitialVaultChampion] = useState<Champion | null>(null);
+  const [initialArmoryChampion, setInitialArmoryChampion] = useState<Champion | null>(null);
 
 
   useEffect(() => {
@@ -128,9 +129,9 @@ const App: React.FC = () => {
     setView(View.TRIALS);
   }, []);
   
-  const handleNavigateToVault = useCallback((champion: Champion) => {
-    setInitialVaultChampion(champion);
-    setView(View.VAULT);
+  const handleNavigateToArmory = useCallback((champion: Champion) => {
+    setInitialArmoryChampion(champion);
+    setView(View.ARMORY);
   }, []);
 
 
@@ -143,14 +144,12 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (isParsingShare || profileLoading || isLoadingData) {
-      return (
-        <div className="flex flex-col justify-center items-center h-screen bg-slate-50 dark:bg-slate-900">
-          <Spinner size="h-12 w-12" />
-          <p className="ml-4 text-lg mt-4 text-slate-500 dark:text-slate-400">
-            {isParsingShare ? 'Checking for shared draft...' : profileLoading ? 'Loading Profiles...' : 'Loading Game Data...'}
-          </p>
-        </div>
-      );
+        let message = 'Initializing...';
+        if (isParsingShare) message = 'Decoding shared draft...';
+        else if (profileLoading) message = 'Loading Commander profiles...';
+        else if (isLoadingData) message = 'Calibrating strategic matrices...';
+        
+      return <InitialLoadingScreen message={message} />;
     }
     
     if (error) {
@@ -191,15 +190,18 @@ const App: React.FC = () => {
       case View.DRAFT_LAB:
         return <DraftLab ddragonData={ddragonData} setAura={setAura} setView={setView} setHoverAura={setHoverAura} />;
       case View.SCOUT:
-        return <ScoutScreen ddragonData={ddragonData} />;
-      case View.VAULT:
-        return <ChampionVault 
-                    ddragonData={ddragonData}
-                    initialChampion={initialVaultChampion}
-                    onInitialChampionConsumed={() => setInitialVaultChampion(null)} 
-                />;
+        return riotService.isConfigured() 
+            ? <ScoutScreen ddragonData={ddragonData} /> 
+            : <FeatureDisabledScreen 
+                featureName="Live Game Scout" 
+                reason="This feature is disabled. Please provide a RIOT_API_KEY in the app's environment settings to enable it." 
+              />;
       case View.ARMORY:
-        return <OraclesArmory ddragonData={ddragonData} />;
+        return <ArmoryScreen 
+                    ddragonData={ddragonData}
+                    initialChampion={initialArmoryChampion}
+                    onInitialChampionConsumed={() => setInitialArmoryChampion(null)} 
+                />;
       case View.HISTORY:
         return <HistoryScreen ddragonData={ddragonData} setView={setView} onNavigateToLesson={handleNavigateToLesson} />;
       case View.PLAYBOOK:
@@ -243,7 +245,7 @@ const App: React.FC = () => {
           setView={setView}
           champions={allChampions}
           items={allItems}
-          onNavigateToVault={handleNavigateToVault}
+          onNavigateToArmory={handleNavigateToArmory}
         />
       )}
       <NotificationHub onNavigateToLesson={handleNavigateToLesson} />

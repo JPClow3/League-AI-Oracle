@@ -73,8 +73,8 @@ const TrialsScreen: React.FC<TrialsScreenProps> = ({ ddragonData, setView, selec
     return (
         <div className="animate-fade-in">
              <div className="text-center mb-12">
-                <h1 className="text-6xl font-display font-bold">Draft Puzzles</h1>
-                <p className="text-xl text-slate-500 mt-2">Apply your knowledge from the Hub in these practical challenges to earn XP.</p>
+                <h1 className="text-6xl font-display font-bold text-gradient-primary">Strategic Trials</h1>
+                <p className="text-xl text-slate-500 dark:text-slate-400 mt-2">Apply your knowledge from The Academy in these practical challenges to earn XP.</p>
             </div>
             <div className="max-w-4xl mx-auto space-y-4">
                 {TRIALS_DATA.map((trial, index) => (

@@ -15,7 +15,7 @@ const DNA_TO_LESSON_MAP: Record<string, { lessonId: string; threshold: number; i
     insight: 'drafting enough peel for your carries'
   },
 };
-const MIN_TOTAL_GAMES = 10;
+const MIN_TOTAL_GAMES = 5;
 const MIN_CATEGORY_GAMES = 3;
 
 export const analyzeChampionPerformance = (history: DraftHistoryEntry[]): ChampionPerformance[] => {
@@ -78,7 +78,7 @@ export const analyzeHistoryForBlindSpots = (history: DraftHistoryEntry[]): Strat
                         gamesAnalyzed: relevantGames.length,
                         suggestedLessonId: config.lessonId,
                         suggestedLessonTitle: lesson.title,
-                        insight: `Analysis of your ${relevantGames.length} games with low "${key}" scores shows a ${winRate.toFixed(0)}% win rate. Improving your ability to draft for ${config.insight} could be beneficial.`,
+                        insight: `Analysis of your ${relevantGames.length} games with low "${key}" scores shows a ${winRate.toFixed(0)}% win rate. You may be struggling with ${config.insight}.`,
                         priority: (50 - winRate) * relevantGames.length // Simple priority score
                     });
                 }

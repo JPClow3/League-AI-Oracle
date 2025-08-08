@@ -23,6 +23,7 @@ DraftWise AI is an advanced strategic analysis platform for League of Legends, d
 -   **Game History & Performance Analysis**: Review past drafts, get post-game AI debriefs, and see analysis of your strategic blind spots based on your play history.
 -   **Live Meta Snapshot**: Stay ahead of the curve with an AI-generated summary of the current patch's trending champions, powered by Google Search.
 -   **Shareable Drafts**: Export your completed draft and analysis as a shareable link or a downloadable image.
+-   **Offline Functionality & Caching**: The app loads instantly on subsequent visits and core features like the Forge and Playbook are available offline, thanks to service workers and IndexedDB caching.
 -   **Dynamic Aura System**: The app's UI subtly changes color to reflect the state of your draft, providing at-a-glance feedback on your team's damage profile or the AI's current "mood".
 
 
@@ -78,8 +79,6 @@ _Note: For a static project like this, a build tool (e.g., Vite, Parcel) or a cu
 
 ```
 /
-├── public/
-│   └── ... (Static assets if any)
 ├── src/
 │   ├── components/
 │   │   ├── common/             # Reusable components (Icon, Spinner, Modals)
@@ -93,9 +92,10 @@ _Note: For a static project like this, a build tool (e.g., Vite, Parcel) or a cu
 │   ├── data/
 │   │   ├── gameData.ts         # Static champion roles, classes, etc.
 │   │   ├── knowledgeBase.ts    # The AI's strategic "textbook"
-│   │   └── ... (Other static data)
+│   │   ├── aiConstants.ts      # Core knowledge for the Gemini service
+│   │   └── gameplayConstants.ts# Game rules, synergies, meta comps
 │   ├── hooks/
-│   │   └── useLocalStorage.ts  # Custom hook for persisting state
+│   │   └── ... (Custom hooks)
 │   ├── services/
 │   │   ├── ddragonService.ts   # Fetches data from Riot's DDragon API
 │   │   ├── riotService.ts      # Fetches live data from the Riot Games API
@@ -104,10 +104,9 @@ _Note: For a static project like this, a build tool (e.g., Vite, Parcel) or a cu
 │   ├── store/
 │   │   ├── draftStore.ts       # Zustand store for live draft state
 │   │   └── notificationStore.ts# Zustand store for UI notifications
-│   ├── types/
-│   │   └── types.ts            # Centralized TypeScript interfaces
+│   ├── types.ts                # Centralized TypeScript interfaces
 │   ├── utils/
-│   │   └── shareService.ts     # Logic for compressing/encoding drafts for URL sharing
+│   │   └── ... (Utility functions)
 │   ├── App.tsx                 # Main app component, handles routing
 │   └── index.tsx               # React root entry point
 ├── index.html                  # Main HTML file with importmap

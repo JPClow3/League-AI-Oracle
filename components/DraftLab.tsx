@@ -3,42 +3,30 @@ import { DDragonData, Champion, AIAnalysis, Aura, Role, View, DraftState, Team, 
 import { geminiService } from '../services/geminiService';
 import { ChampionIcon } from './common/ChampionIcon';
 import { Spinner } from './common/Spinner';
-import TeamAnalyticsDashboard from './TeamAnalyticsDashboard';
 import { useProfile } from '../contexts/ProfileContext';
 import SaveToPlaybookModal from './common/SaveToPlaybookModal';
 import FullAnalysisDisplay from './common/FullAnalysisDisplay';
 import { Icon } from './common/Icon';
 import { useDraftStore } from '../store/draftStore';
-import { calculateTeamAnalytics } from '../data/analyticsHelper';
-import CompositionAlert, { Alert } from './common/CompositionAlert';
-import { SYNERGY_DATA } from '../data/synergyData';
+import { SYNERGY_DATA, META_COMPOSITIONS } from '../data/gameplayConstants';
 import { ChampionGrid } from './common/ChampionGrid';
 import { isChampion } from '../utils/typeGuards';
-import { META_COMPOSITIONS } from '../data/metaComps';
+import CompositionAlert, { Alert } from './common/CompositionAlert';
 import CompositionDeconstructionDisplay from './common/CompositionDeconstructionDisplay';
+import TeamAnalyticsDashboard from './TeamAnalyticsDashboard';
+import { calculateTeamAnalytics } from '../data/analyticsHelper';
+
+// --- Sub Components ---
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'];
-
-interface DraftLabProps {
-    ddragonData: DDragonData;
-    setAura: (aura: Aura) => void;
-    setView: (view: View) => void;
-    setHoverAura: (aura: string | null) => void;
-}
 
 const checkSynergies = (team: Champion[]): Alert[] => {
     const alerts: Alert[] = [];
     if (team.length < 2) return alerts;
-
     const teamChampionNames = new Set(team.map(c => c.name));
-
     for (const synergy of SYNERGY_DATA) {
         if (synergy.champions.every(name => teamChampionNames.has(name))) {
-            alerts.push({
-                type: 'synergy',
-                title: synergy.name,
-                message: synergy.description
-            });
+            alerts.push({ type: 'synergy', title: synergy.name, message: synergy.description });
         }
     }
     return alerts;
@@ -47,37 +35,20 @@ const checkSynergies = (team: Champion[]): Alert[] => {
 const checkClashes = (team: Champion[]): Alert[] => {
     const alerts: Alert[] = [];
     if (team.length < 3) return alerts;
-
-    // Damage type clash
     const adCount = team.filter(c => c.damageType === 'AD').length;
     const apCount = team.filter(c => c.damageType === 'AP').length;
     if (team.length >= 4) {
         if (adCount >= 4) {
-            alerts.push({
-                type: 'clash',
-                title: 'Skewed Damage Profile',
-                message: 'Your team is heavily physical damage. Consider adding a magic damage source to be harder to itemize against.'
-            });
+            alerts.push({ type: 'clash', title: 'Skewed Damage Profile', message: 'Your team is heavily physical damage. Consider adding a magic damage source to be harder to itemize against.' });
         }
         if (apCount >= 4) {
-            alerts.push({
-                type: 'clash',
-                title: 'Skewed Damage Profile',
-                message: 'Your team is heavily magic damage. Consider adding a physical damage source.'
-            });
+            alerts.push({ type: 'clash', title: 'Skewed Damage Profile', message: 'Your team is heavily magic damage. Consider adding a physical damage source.' });
         }
     }
-    
-    // Frontline clash
     const frontlineCount = team.filter(c => c.championClass === 'Tank' || c.championClass === 'Fighter').length;
     if (team.length >= 4 && frontlineCount === 0) {
-        alerts.push({
-            type: 'clash',
-            title: 'No Frontline',
-            message: 'Your team lacks a tank or fighter. It will be vulnerable to enemy engage and have trouble protecting carries.'
-        });
+        alerts.push({ type: 'clash', title: 'No Frontline', message: 'Your team lacks a tank or fighter. It will be vulnerable to enemy engage and have trouble protecting carries.' });
     }
-
     return alerts;
 };
 
@@ -90,10 +61,29 @@ const LabTeamDisplay: React.FC<{
     alerts: Alert[],
     onDismissAlert: (team: Team, title: string) => void;
     onClearTeam: (team: Team) => void;
-    onSuggestFit: (team: Team, index: number) => void;
-}> = ({ team, draftState, ddragonData, onSlotSelect, activeSlot, alerts, onDismissAlert, onClearTeam, onSuggestFit }) => {
+    onChampionDrop: (team: Team, index: number, champion: Champion) => void;
+}> = ({ team, draftState, ddragonData, onSlotSelect, activeSlot, alerts, onDismissAlert, onClearTeam, onChampionDrop }) => {
     const teamData = team === 'BLUE' ? draftState.blueTeam : draftState.redTeam;
-    const teamChampions = teamData.picks.map(p => p.champion).filter(isChampion);
+    const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+        e.preventDefault();
+        setDragOverSlot(index);
+    };
+
+    const handleDragLeave = () => {
+        setDragOverSlot(null);
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+        e.preventDefault();
+        setDragOverSlot(null);
+        const championJSON = e.dataTransfer.getData('application/json');
+        if (championJSON) {
+            const champion = JSON.parse(championJSON);
+            onChampionDrop(team, index, champion);
+        }
+    };
     
     return (
         <div className={`flex-1 p-4 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 space-y-4`}>
@@ -105,15 +95,17 @@ const LabTeamDisplay: React.FC<{
                 {alerts.map((alert, i) => <CompositionAlert key={`${team}-${alert.title}-${i}`} {...alert} onDismiss={() => onDismissAlert(team, alert.title)} />)}
             </div>
             <div className="grid grid-cols-5 gap-2 mt-4">
-                {teamData.picks.map((pick, index) => {
-                    const canSuggest = teamChampions.length === 4 && pick.champion === null;
-                    return (
-                    <div className="relative group" key={index}>
+                {teamData.picks.map((pick, index) => (
+                    <div className="relative group" key={index} 
+                         onDragOver={(e) => handleDragOver(e, index)}
+                         onDragLeave={handleDragLeave}
+                         onDrop={(e) => handleDrop(e, index)}>
                         <div 
                             onClick={() => onSlotSelect(team, index)}
                             className={`w-full aspect-square bg-slate-100 dark:bg-slate-900/50 rounded flex items-center justify-center transition-all duration-200 cursor-pointer
                                 ${activeSlot?.team === team && activeSlot?.index === index ? 'ring-2 ring-amber-500 scale-105' : 'hover:ring-2 hover:ring-indigo-500/50'}
                                 ${pick.champion ? 'animate-pop-in' : ''}
+                                ${dragOverSlot === index ? 'ring-2 ring-teal-400 bg-teal-500/20' : ''}
                             `}
                         >
                             {pick.champion ? (
@@ -125,13 +117,8 @@ const LabTeamDisplay: React.FC<{
                                 <Icon name="edit" className="w-6 h-6 text-white"/>
                             </div>
                         </div>
-                        {canSuggest && (
-                            <button onClick={() => onSuggestFit(team, index)} className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 z-10 text-xs px-2 py-0.5 rounded-full bg-amber-500 text-black font-semibold shadow-lg animate-pop-in">
-                                Suggest
-                            </button>
-                        )}
                     </div>
-                )})}
+                ))}
             </div>
             <TeamAnalyticsDashboard teamName={team} champions={teamData.picks.map(p => p.champion)} />
         </div>
@@ -184,6 +171,81 @@ const MetaCompLoader: React.FC<{onSelect: (comp: MetaComposition) => void}> = ({
     );
 };
 
+const CompositionAssistant: React.FC<{
+    teamPicks: (Champion | null)[];
+    onSuggest: () => void;
+    isSuggestionLoading: boolean;
+}> = ({ teamPicks, onSuggest, isSuggestionLoading }) => {
+    const { activeProfile } = useProfile();
+    const [analysis, setAnalysis] = useState<{ strengths: string[]; weaknesses: string[] } | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const validPicks = useMemo(() => teamPicks.filter(isChampion), [teamPicks]);
+
+    useEffect(() => {
+        const fetchAnalysis = async () => {
+            if (validPicks.length > 0 && validPicks.length < 5 && activeProfile) {
+                setIsLoading(true);
+                const result = await geminiService.getCompositionStrengthsWeaknesses(validPicks, activeProfile.settings);
+                setAnalysis(result);
+                setIsLoading(false);
+            } else {
+                setAnalysis(null);
+            }
+        };
+        fetchAnalysis();
+    }, [validPicks, activeProfile]);
+
+    const canSuggest = validPicks.length > 0 && validPicks.length < 5;
+
+    return (
+        <div className="p-4 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg space-y-3 h-full flex flex-col">
+            <h3 className="font-display text-2xl flex items-center gap-2">
+                <Icon name="brain" className="w-6 h-6 text-indigo-500"/>
+                Composition Assistant
+            </h3>
+            {isLoading ? (
+                <div className="flex-grow flex items-center justify-center">
+                    <Spinner />
+                    <p className="ml-3 text-slate-500">Analyzing composition...</p>
+                </div>
+            ) : analysis ? (
+                <div className="flex-grow space-y-3">
+                    <div>
+                        <h4 className="font-semibold text-teal-600 dark:text-teal-400">Strengths</h4>
+                        <ul className="list-disc list-inside text-sm text-slate-600 dark:text-slate-300">
+                            {analysis.strengths.map(s => <li key={s}>{s}</li>)}
+                        </ul>
+                    </div>
+                     <div>
+                        <h4 className="font-semibold text-rose-500 dark:text-rose-400">Weaknesses</h4>
+                        <ul className="list-disc list-inside text-sm text-slate-600 dark:text-slate-300">
+                             {analysis.weaknesses.map(s => <li key={s}>{s}</li>)}
+                        </ul>
+                    </div>
+                </div>
+            ) : (
+                 <div className="flex-grow flex flex-col items-center justify-center text-center text-slate-500">
+                    <Icon name="plus" className="w-10 h-10 mb-2"/>
+                    <p>Add 1-4 champions to the Blue Team to get live feedback.</p>
+                </div>
+            )}
+            <button onClick={onSuggest} disabled={!canSuggest || isSuggestionLoading} className="w-full py-2 bg-amber-500 text-slate-900 font-semibold rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                {isSuggestionLoading ? <Spinner size="h-5 w-5 mr-2"/> : <Icon name="lab" className="w-5 h-5 mr-2"/>}
+                {isSuggestionLoading ? "Thinking..." : "Suggest Next Pick"}
+            </button>
+        </div>
+    );
+};
+
+// --- Main Component ---
+
+interface DraftLabProps {
+  ddragonData: DDragonData;
+  setAura: (aura: Aura) => void;
+  setView: (view: View) => void;
+  setHoverAura: (aura: string | null) => void;
+}
 
 const DraftLab: React.FC<DraftLabProps> = ({ ddragonData, setAura, setView, setHoverAura }) => {
     const { activeProfile, saveToPlaybook } = useProfile();
@@ -256,6 +318,20 @@ const DraftLab: React.FC<DraftLabProps> = ({ ddragonData, setAura, setView, setH
         setActiveSlot(null);
     }, [activeSlot, setChampionInLab]);
     
+    const handleChampionDrop = useCallback((team: Team, index: number, champion: Champion) => {
+        setChampionInLab(team, index, champion);
+        setAiAnalysis(null);
+        setAISuggestion(null);
+        setDeconstruction(null);
+        setLoadedMetaComp(null);
+        setActiveSlot(null);
+    }, [setChampionInLab]);
+
+    const handleChampionDragStart = (event: React.DragEvent<HTMLDivElement>, champion: Champion) => {
+        event.dataTransfer.setData('application/json', JSON.stringify(champion));
+        event.dataTransfer.effectAllowed = 'move';
+    };
+
     const handleGetAnalysis = useCallback(async () => {
       const isComplete = draftState.blueTeam.picks.every(c => c.champion) && draftState.redTeam.picks.every(c => c.champion);
       if (!isComplete) {
@@ -276,22 +352,28 @@ const DraftLab: React.FC<DraftLabProps> = ({ ddragonData, setAura, setView, setH
 
     }, [draftState, settings, setAura]);
 
-    const handleSuggestFit = useCallback(async (team: Team, index: number) => {
-        setActiveSlot({ team, index });
+    const handleSuggestFit = useCallback(async () => {
+        const blueTeamChamps = blueTeamPicks.filter(isChampion);
+        const nextEmptyIndex = draftState.blueTeam.picks.findIndex(p => p.champion === null);
+        
+        if (blueTeamChamps.length === 0 || blueTeamChamps.length >= 5 || nextEmptyIndex === -1) {
+            return;
+        }
+
+        setActiveSlot({ team: 'BLUE', index: nextEmptyIndex });
         setIsSuggestionLoading(true);
         setAISuggestion(null);
         
-        const teamPicks = (team === 'BLUE' ? blueTeamPicks : redTeamPicks).filter(isChampion);
-        const roleToFill = draftState.blueTeam.picks[index].role;
+        const roleToFill = draftState.blueTeam.picks[nextEmptyIndex].role;
+        const suggestion = await geminiService.getCompositionSuggestion(blueTeamChamps, roleToFill, settings);
 
-        const suggestion = await geminiService.getCompositionSuggestion(teamPicks, roleToFill, settings);
         if (suggestion) {
             setAISuggestion(suggestion);
         } else {
             alert("The Oracle could not think of a suggestion right now. Please try again.");
         }
         setIsSuggestionLoading(false);
-    }, [blueTeamPicks, redTeamPicks, draftState, settings]);
+    }, [blueTeamPicks, draftState, settings]);
 
     const handleLoadMetaComp = useCallback((comp: MetaComposition) => {
         handleFullReset();
@@ -331,7 +413,15 @@ const DraftLab: React.FC<DraftLabProps> = ({ ddragonData, setAura, setView, setH
 
     const handleSaveToPlaybook = (name: string, description: string) => {
         if (!aiAnalysis) return;
-        const stateToSave = { ...draftState, analysis: aiAnalysis, pickedChampions: new Set(Array.from(draftState.pickedChampions)) };
+        const stateToSave: DraftState = {
+            mode: draftState.mode,
+            blueTeam: draftState.blueTeam,
+            redTeam: draftState.redTeam,
+            currentTurn: draftState.currentTurn,
+            pickedChampions: new Set(Array.from(draftState.pickedChampions)),
+            history: [],
+            analysis: undefined,
+        };
         saveToPlaybook({ name, description, analysis: aiAnalysis, draftState: stateToSave });
         setPlaybookModalOpen(false);
         alert("Strategy saved to Playbook!");
@@ -372,7 +462,7 @@ const DraftLab: React.FC<DraftLabProps> = ({ ddragonData, setAura, setView, setH
                     alerts={blueAlerts}
                     onDismissAlert={(_, title) => setBlueAlerts(a => a.filter(al => al.title !== title))}
                     onClearTeam={handleClearTeam}
-                    onSuggestFit={handleSuggestFit}
+                    onChampionDrop={handleChampionDrop}
                 />
                 <LabTeamDisplay 
                     team="RED"
@@ -383,35 +473,28 @@ const DraftLab: React.FC<DraftLabProps> = ({ ddragonData, setAura, setView, setH
                     alerts={redAlerts}
                     onDismissAlert={(_, title) => setRedAlerts(a => a.filter(al => al.title !== title))}
                     onClearTeam={handleClearTeam}
-                    onSuggestFit={handleSuggestFit}
+                    onChampionDrop={handleChampionDrop}
                 />
             </div>
             
             <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="lg:col-span-2 space-y-3">
                          <h3 className="font-display text-2xl mb-2">Champion Roster</h3>
                          <ChampionGrid
                             ddragonData={ddragonData}
                             onChampionSelect={handleChampionSelect}
+                            onChampionDragStart={handleChampionDragStart}
                             pickedChampionIds={draftState.pickedChampions}
                             iconClassName="w-full aspect-square"
                         />
                     </div>
                     <div className="space-y-3">
-                        <h3 className="font-display text-2xl mb-2">Actions & Analysis</h3>
-                        {isSuggestionLoading ? (
-                             <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-center h-40">
-                                <Spinner />
-                                <p className="ml-4 text-amber-500">Oracle is searching for the perfect fit...</p>
-                            </div>
-                        ) : aiSuggestion ? (
+                         <h3 className="font-display text-2xl mb-2 invisible">Actions</h3>
+                         {aiSuggestion ? (
                             <AISuggestionCard suggestion={aiSuggestion} ddragonData={ddragonData} onUse={handleChampionSelect} onClose={() => setAISuggestion(null)} />
                         ) : (
-                            <div className="p-4 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col items-center justify-center text-center h-40">
-                                <Icon name="brain" className="w-10 h-10 text-slate-400 mb-2"/>
-                                <p className="text-sm text-slate-500">Build a team of 4 and select the last slot to get an AI suggestion.</p>
-                            </div>
+                            <CompositionAssistant teamPicks={blueTeamPicks} onSuggest={handleSuggestFit} isSuggestionLoading={isSuggestionLoading} />
                         )}
                         <div className="flex flex-wrap gap-2">
                             {loadedMetaComp && !deconstruction ? (
