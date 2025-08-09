@@ -210,6 +210,79 @@
         40%, 60% { transform: translate3d(2px, 0, 0) rotate(2deg); }
       }
 
+      /* Split Text Reveal */
+      .reveal-text {
+        --char-index: 0;
+        display: inline-block;
+        opacity: 0;
+        animation: slide-in-char 0.5s calc(var(--char-index) * 0.03s) cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      }
+
+      @keyframes slide-in-char {
+        from {
+          transform: translateY(20px) scale(0.8);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* 3D Tilt Effect */
+      .card-3d-wrap {
+        perspective: 1000px;
+      }
+
+      .card-3d {
+        transform-style: preserve-3d;
+        transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+
+      .card-3d-wrap:hover .card-3d {
+        transform: rotateY(var(--rotate-y, 0)) rotateX(var(--rotate-x, 0)) translateZ(20px);
+      }
+      
+      /* Text Reveal */
+      .text-reveal-container {
+        position: relative;
+        display: inline-block;
+        overflow: hidden;
+      }
+
+      .text-reveal {
+        opacity: 0;
+        animation: fade-in-text 0.1s 0.4s forwards;
+      }
+
+      .text-reveal-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: var(--text-reveal-color, rgb(var(--accent-primary-light)));
+        transform-origin: left;
+        animation: reveal 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+      }
+      .dark .text-reveal-container::after {
+          background: var(--text-reveal-color-dark, rgb(var(--accent-primary-dark)));
+      }
+
+      @keyframes reveal {
+        0% { transform: scaleX(0); transform-origin: left; }
+        45% { transform: scaleX(1); transform-origin: left; }
+        55% { transform: scaleX(1); transform-origin: right; }
+        100% { transform: scaleX(0); transform-origin: right; }
+      }
+
+      @keyframes fade-in-text {
+          from { opacity: 0; }
+          to { opacity: 1; }
+      }
+
+
       /* Layout Animations */
       .collapsible {
         display: grid;

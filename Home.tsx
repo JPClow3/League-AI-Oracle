@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, DDragonData, KnowledgeConcept, MetaSnapshot, GroundingSource, Champion, DraftPuzzle, PuzzleOption } from './types';
 import { KNOWLEDGE_BASE } from './data/knowledgeBase';
 import { useProfile } from './contexts/ProfileContext';
@@ -8,6 +8,67 @@ import { Icon } from './components/common/Icon';
 import { geminiService } from './services/geminiService';
 import { Spinner } from './components/common/Spinner';
 import { getChampionStaticInfoById } from './data/gameData';
+
+const SplitText: React.FC<{ children: string; className?: string }> = ({ children, className }) => {
+    return (
+        <span aria-label={children} className="inline-block">
+        {children.split('').map((char, index) => (
+            <span
+            key={index}
+            className={`reveal-text ${className}`}
+            style={{ '--char-index': index } as React.CSSProperties}
+            >
+            {char === ' ' ? '\u00A0' : char}
+            </span>
+        ))}
+        </span>
+    );
+};
+
+const use3DTilt = (ref: React.RefObject<HTMLElement>) => {
+    useEffect(() => {
+        const element = ref.current;
+        if (!element) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const rect = element.getBoundingClientRect();
+            const width = element.offsetWidth;
+            const height = element.offsetHeight;
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const rotateY = (mouseX - width / 2) / (width / 2) * -8; // -8 to 8 deg
+            const rotateX = (mouseY - height / 2) / (height / 2) * 8; // -8 to 8 deg
+
+            element.style.setProperty('--rotate-x', `${rotateX}deg`);
+            element.style.setProperty('--rotate-y', `${rotateY}deg`);
+        };
+
+        const handleMouseLeave = () => {
+             element.style.setProperty('--rotate-x', `0deg`);
+             element.style.setProperty('--rotate-y', `0deg`);
+        }
+
+        element.addEventListener('mousemove', handleMouseMove);
+        element.addEventListener('mouseleave', handleMouseLeave);
+
+        return () => {
+            element.removeEventListener('mousemove', handleMouseMove);
+            element.removeEventListener('mouseleave', handleMouseLeave);
+        };
+    }, [ref]);
+};
+
+const Tiltable: React.FC<{children: React.ReactNode, className?: string}> = ({ children, className }) => {
+    const tiltRef = React.useRef<HTMLDivElement>(null);
+    use3DTilt(tiltRef);
+    return (
+        <div ref={tiltRef} className={`card-3d-wrap ${className}`}>
+            {children}
+        </div>
+    );
+}
+
 
 const PrimaryActions: React.FC<{ setView: (view: View) => void }> = ({ setView }) => {
     const secondaryActions = [
@@ -20,29 +81,32 @@ const PrimaryActions: React.FC<{ setView: (view: View) => void }> = ({ setView }
         <section aria-labelledby="primary-actions-title">
             <h2 id="primary-actions-title" className="sr-only">Primary Actions</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <button 
-                    onClick={() => setView(View.DRAFTING)}
-                    className="group p-8 text-left bg-primary-gradient text-white rounded-2xl shadow-2xl shadow-indigo-500/20 transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
-                >
-                    <Icon name="draft" className="w-12 h-12 mb-4 text-indigo-300 transition-transform duration-300 group-hover:scale-110" />
-                    <h3 className="font-display text-4xl font-semibold">Live Draft Arena</h3>
-                    <p className="text-indigo-200 mt-1 flex-grow">Enter a live draft for real-time AI suggestions and analysis.</p>
-                </button>
+                <Tiltable>
+                    <button 
+                        onClick={() => setView(View.DRAFTING)}
+                        className="card-3d group p-8 text-left bg-primary-gradient text-white rounded-2xl shadow-2xl shadow-indigo-500/20 w-full h-full flex flex-col"
+                    >
+                        <Icon name="draft" className="w-12 h-12 mb-4 text-indigo-300 transition-transform duration-300 group-hover:scale-110" />
+                        <h3 className="font-display text-4xl font-semibold">Live Draft Arena</h3>
+                        <p className="text-indigo-200 mt-1 flex-grow">Enter a live draft for real-time AI suggestions and analysis.</p>
+                    </button>
+                </Tiltable>
                 <div className="space-y-4">
                     {secondaryActions.map(action => (
-                         <button 
-                            key={action.view}
-                            onClick={() => setView(action.view)}
-                            className="w-full group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1"
-                        >
-                            <div className="flex items-center gap-4">
-                                <Icon name={action.icon} className="w-8 h-8 text-indigo-500"/>
-                                <div>
-                                    <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">{action.title}</h3>
-                                    <p className="text-slate-500 dark:text-slate-400 text-sm">{action.description}</p>
+                        <Tiltable key={action.view}>
+                             <button 
+                                onClick={() => setView(action.view)}
+                                className="card-3d w-full group p-6 text-left bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-600 dark:hover:border-indigo-500"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <Icon name={action.icon} className="w-8 h-8 text-indigo-500"/>
+                                    <div>
+                                        <h3 className="font-display text-2xl font-semibold text-slate-800 dark:text-slate-200">{action.title}</h3>
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm">{action.description}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </button>
+                            </button>
+                        </Tiltable>
                     ))}
                 </div>
             </div>
@@ -107,7 +171,11 @@ const DailyPuzzleWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonData
 
     return (
         <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col h-full">
-             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">Daily Puzzle</h3>
+             <h3 className="font-display text-2xl text-amber-500 dark:text-amber-400">
+                <div className="text-reveal-container" style={{'--text-reveal-color': '#f59e0b', '--text-reveal-color-dark': '#facc15'} as React.CSSProperties}>
+                    <span className="text-reveal">Daily Puzzle</span>
+                </div>
+             </h3>
              <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{puzzle.scenario}</p>
              <p className="p-3 mb-4 text-center font-semibold bg-slate-200 dark:bg-slate-900/70 rounded-md border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">"{puzzle.problem}"</p>
              
@@ -161,7 +229,11 @@ const LearningPathWidget: React.FC<{ setView: (view: View) => void }> = ({ setVi
 
     return (
         <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col h-full">
-            <h3 className="font-display text-2xl text-slate-800 dark:text-slate-200">Your Learning Path</h3>
+            <h3 className="font-display text-2xl text-slate-800 dark:text-slate-200">
+                <div className="text-reveal-container">
+                    <span className="text-reveal">Your Learning Path</span>
+                </div>
+            </h3>
             <div className="flex-grow flex flex-col items-center justify-center text-center">
                  <Icon name="lessons" className="w-16 h-16 text-indigo-600 dark:text-indigo-500 mb-2" />
                 {nextLesson ? (
@@ -262,7 +334,11 @@ const MetaSnapshotWidget: React.FC<{ ddragonData: DDragonData }> = ({ ddragonDat
 
     return (
         <section aria-labelledby="meta-snapshot-title" className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
-            <h2 id="meta-snapshot-title" className="font-display text-3xl mb-4 text-slate-800 dark:text-slate-200">Live Meta Snapshot</h2>
+            <h2 id="meta-snapshot-title" className="font-display text-3xl mb-4 text-slate-800 dark:text-slate-200">
+                <div className="text-reveal-container">
+                    <span className="text-reveal">Live Meta Snapshot</span>
+                </div>
+            </h2>
             <div className="mb-4">
                 <p className="text-sm text-slate-800 dark:text-slate-300 font-semibold mb-2">Patch Summary:</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{snapshot.patchSummary}</p>
@@ -296,7 +372,7 @@ const Home: React.FC<{ setView: (view: View) => void, ddragonData: DDragonData }
     <div className="space-y-8">
         <div className="text-left pt-4 pb-2">
             <h1 className="text-5xl md:text-6xl font-display tracking-tight text-gradient-primary">
-                Dashboard
+                <SplitText>Commander's Hub</SplitText>
             </h1>
             <p className="mt-2 text-lg md:text-xl text-slate-500 dark:text-slate-400">
                 Welcome back, {activeProfile?.name}. Let's get started.
