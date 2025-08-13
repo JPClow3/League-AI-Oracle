@@ -1,7 +1,6 @@
 # DraftWise AI
 
 <div align="center">
-  <img src="https://storage.googleapis.com/maker-suite-project-files-prod/15b53a0f-f90a-473c-b2b9-e4d6d9d43525/icon.png" alt="DraftWise AI Logo" width="150">
   <p><strong>Your Personal AI-Powered Strategic Analyst for League of Legends</strong></p>
   <p><em>Elevate your draft, master the meta, and outthink your opponents.</em></p>
 </div>
