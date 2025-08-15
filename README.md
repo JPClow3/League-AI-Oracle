@@ -1,145 +1,195 @@
-# DraftWise AI
 
 <div align="center">
-  <p><strong>Your Personal AI-Powered Strategic Analyst for League of Legends</strong></p>
-  <p><em>Elevate your draft, master the meta, and outthink your opponents.</em></p>
+
+# DraftWise AI: The Hextech Co-Pilot
+
+**A strategic dossier for the modern League of Legends tactician.**
+
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75B1?style=for-the-badge&logo=google-gemini&logoColor=white)
+
 </div>
 
 ---
 
-DraftWise AI is an advanced strategic analysis platform for League of Legends, designed to feel like you have a professional esports analyst by your side. Powered by Google's Gemini API, it provides data-driven insights, real-time draft optimization, and personalized tactical guidance to help players of all levels elevate their in-game performance and strategic mastery.
+## `1.0` | Transmission Log: Project Philosophy
 
-## ✨ Key Features
+DraftWise AI is not merely an application; it is an advanced piece of Hextech engineering, a strategic co-pilot designed to augment the tactical mind of a League of Legends player. Our core philosophy is built upon the **"Holographic Hextech"** design paradigm—a dark, professional, and immersive interface that resonates with the high-tech aesthetic of modern esports.
 
--   **Live Drafting Arena**: Get real-time AI suggestions, counter-intel on enemy picks, and contextual tips during a live draft simulation.
--   **The Forge (Draft Lab)**: An experimental sandbox to theory-craft compositions. Load meta blueprints, get live analytics on team DNA, and use AI to find the perfect final pick or deconstruct a composition's strategy.
--   **Commander's Playbook**: Save your best strategies and team compositions from the Lab or Arena for future reference and analysis.
--   **Live Game Scout**: Enter any player's Riot ID to get a live scouting report of their current game, including AI-generated player profiles for all participants.
--   **Riot Account Sync**: Link your Riot account to automatically import your top champions, track your ranked stats, and analyze your match history.
--   **In-Depth AI Analysis**: Receive comprehensive breakdowns of drafts, including team identities, power spike timelines, win conditions, and matchup-specific threats.
--   **The Armory**: Explore a complete champion database with detailed strategic guides, builds, and ability pro-tips. Use the AI to instantly find synergies and counters for any champion.
--   **Personalized Learning & Daily Challenges**: A full learning Academy with lessons and trials. Test your knowledge with a unique, AI-generated draft puzzle every day.
--   **Game History & Performance Analysis**: Review past drafts, import recent matches, get post-game AI debriefs, and receive AI-powered analysis of your strategic blind spots based on your play history.
--   **Live Meta Snapshot**: Stay ahead of the curve with an AI-generated summary of the current patch's trending champions, powered by Google Search.
--   **Shareable Drafts**: Export your completed draft and analysis as a shareable link or a downloadable image.
--   **Offline Functionality & Caching**: The app loads instantly on subsequent visits, and core features like the Armory and Playbook are available offline, thanks to service workers and IndexedDB caching.
--   **Dynamic Aura System**: The app's UI subtly changes color to reflect the state of your draft, providing at-a-glance feedback on your team's damage profile or the AI's current "mood".
+Our design and engineering efforts are guided by three core principles:
 
+*   **Clarity:** Data must be presented with absolute precision. Every piece of advice, every champion statistic, must be instantly legible and understandable.
+*   **Responsiveness:** The interface must feel alive and tactile. Interactions should provide meaningful feedback, making the user feel connected to the system.
+*   **Immersion:** The user should feel like a professional strategist. From the subtle hex-grid background to the frosted glass panels and cyan glows, every element is crafted to create a premium, focused experience.
 
-## 🛠️ Tech Stack
+## `2.0` | System Schematics: Core Features
 
--   **Frontend**: React, TypeScript, Tailwind CSS
--   **AI Engine**: Google Gemini API (`@google/genai`)
--   **State Management**: Zustand (global state) & React Context (profile state)
--   **Game Data**: Riot Games Data Dragon (DDragon) for static assets & Riot Games API for live player/game data.
--   **Utilities**: `html2canvas` for image exports, `import-maps` for dependency management.
+The DraftWise AI system is composed of several interconnected modules, each designed for a specific strategic function.
 
+| Module                    | Designation               | Function                                                                                                 |
+| ------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Draft Lab**             | `The Forge`               | A sandbox environment for theory-crafting team compositions with instant, AI-powered strategic analysis.     |
+| **Drafting Arena**        | `The Proving Grounds`     | A simulated environment to practice drafting against an adaptive AI bot in a real-time, competitive format.  |
+| **Playbook**              | `The Codex`               | A personal, persistent library of saved strategies, complete with AI analysis and user-penned notes.       |
+| **Strategy Hub**          | `The Archives`            | A central database of strategic knowledge, containing the Champion Armory and the AI Intel Hub.            |
+| &nbsp;&nbsp;↳ Champion Armory | `Dossier Catalog`       | In-depth champion data, including abilities, AI-generated builds, synergies, counters, and matchup tips.   |
+| &nbsp;&nbsp;↳ AI Intel Hub    | `Oracle Matrix`         | Real-time meta insights, featuring AI-generated tier lists and concise patch note summaries via Google Search. |
+| **Academy**               | `The Athenaeum`           | An educational module with in-depth lessons on drafting fundamentals, macro-play, and game theory.         |
+| **Profile**               | `Strategist's Dossier`    | A gamified progression system tracking user level, rank, missions, and champion mastery.                 |
 
-## 🚀 Getting Started
+## `3.0` | Technology Matrix: The Tech Stack
 
-### Prerequisites
+The co-pilot is constructed from a curated set of modern, high-performance technologies.
 
-You will need a local web server to run the project. A simple option is the `serve` package:
-```bash
-# Install serve globally if you don't have it
-npm install -g serve
-```
+-   **Core Framework:** [React](https://react.dev/) (v19) with [TypeScript](https://www.typescriptlang.org/) for a robust, type-safe component architecture.
+-   **AI Integration:** [Google Gemini API (`@google/genai`)](https://ai.google.dev/) for all strategic analysis, content generation, and real-time data synthesis.
+-   **Styling Engine:** [Tailwind CSS](https://tailwindcss.com/) for a utility-first approach to implementing the custom Holographic Hextech design system.
+-   **Performance Optimization:** [React Window](https://react-window.vercel.app/) is utilized for virtualizing large lists (e.g., champion grids) to ensure a smooth, high-framerate experience.
+-   **State Management:** React Context API, encapsulated within custom hooks (`useSettings`, `useUserProfile`, `usePlaybook`) for clean, decoupled state logic.
+-   **Data Persistence:** Browser `localStorage` is used to maintain user settings, profile progress, and playbook entries across sessions.
 
-### Environment Variables
+## `4.0` | Directory Blueprints: Project Structure
 
-The application requires API keys to function. These are expected to be available as environment variables in the execution context where the app is served.
-
-For local development, create a `.env` file in the root of the project and add your keys. A build tool (e.g., Vite, Parcel) or a custom server would be required to inject these variables for browser access.
-
-```
-# Required for all AI features (draft analysis, suggestions, puzzles, etc.)
-# Get one from Google AI Studio: https://ai.google.dev/
-API_KEY=YOUR_GEMINI_API_KEY_HERE
-
-# Optional, but required for Live Game Scout, Riot Account Sync, and Match History Import
-# Get one from the Riot Developer Portal: https://developer.riotgames.com/
-RIOT_API_KEY=YOUR_RIOT_API_KEY_HERE
-```
-
-### Running the Application
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-username/draftwise-ai.git
-    cd draftwise-ai
-    ```
-
-2.  **Serve the project:**
-    ```bash
-    serve -s .
-    ```
-    This will start a server, typically on `http://localhost:3000`. Open this URL in your browser to use the application.
-
-
-## 📁 Project Structure
-
-This project follows a feature-oriented structure, organizing code by its function within the application.
+The project's file system is organized for logical separation of concerns and scalability.
 
 ```
 /
+├── public/
 ├── src/
 │   ├── components/
-│   │   ├── common/             # Reusable, stateless UI components (Icon, Spinner, Modals)
-│   │   ├── ArmoryScreen.tsx    # Champion browser and detail view
-│   │   ├── DraftingScreen.tsx  # The live drafting arena view
-│   │   ├── DraftLab.tsx        # The composition sandbox/theory-crafting view
-│   │   ├── ScoutScreen.tsx     # Live game scouting view
-│   │   ├── Home.tsx            # The main dashboard/hub
-│   │   └── ... (Other screen and feature components)
-│   ├── contexts/
-│   │   └── ProfileContext.tsx  # Manages user profiles, settings, history, and Riot account data
+│   │   ├── Academy/         # UI for the Academy lessons
+│   │   ├── Arena/           # UI for the Drafting Arena
+│   │   ├── Armory/          # UI for the Champion Armory
+│   │   ├── common/          # Reusable components (Modal, Button, Loader, etc.)
+│   │   ├── DraftLab/        # UI for the Draft Lab
+│   │   ├── Feedback/        # UI for the feedback system
+│   │   ├── Home/            # The main landing page dashboard
+│   │   ├── Intel/           # UI for the AI Intel Hub
+│   │   ├── Layout/          # Header and Footer components
+│   │   ├── Onboarding/      # Profile setup and guided tour components
+│   │   ├── Playbook/        # UI for the Playbook
+│   │   ├── Profile/         # UI for the user's profile and progression
+│   │   ├── Settings/        # UI for the user settings modal
+│   │   └── StrategyHub/     # Container for Armory and Intel tabs
+│   │
 │   ├── data/
-│   │   ├── aiConstants.ts      # Core persona, strategic principles for the Gemini service
-│   │   ├── championVaultData.ts# Curated strategic guides for individual champions
-│   │   ├── gameData.ts         # Static champion metadata (roles, classes, etc.)
-│   │   ├── gameplayConstants.ts# Game rules (draft order), defined synergies, and meta comps
-│   │   ├── knowledgeBase.ts    # The AI's strategic "textbook" for lessons and interactive text
-│   │   └── trialsData.ts       # Scenarios and questions for the Trials feature
+│   │   ├── championData.ts  # Static, detailed data for all champions
+│   │   └── strategyInsights.ts # The core strategic primer for the Gemini API
+│   │
 │   ├── hooks/
-│   │   └── ... (Custom hooks like useDebounce, useLocalStorage)
+│   │   ├── usePlaybook.ts   # State logic for the Playbook (localStorage)
+│   │   ├── useSettings.ts   # State logic for user preferences (localStorage)
+│   │   └── useUserProfile.ts # State logic for gamification and profile (localStorage)
+│   │
+│   ├── lib/
+│   │   └── draftUtils.ts    # Utilities for draft state serialization
+│   │
 │   ├── services/
-│   │   ├── ddragonService.ts   # Fetches and caches static game data from Riot's DDragon
-│   │   ├── geminiService.ts    # Centralized service for all calls to the Gemini API, with structured schemas
-│   │   ├── riotService.ts      # Fetches live data from the Riot Games API (live games, player stats)
-│   │   ├── historyAnalyzer.ts  # Analyzes user game history to find strategic blind spots
-│   │   └── dbService.ts        # IndexedDB service for caching DDragon data
-│   ├── store/
-│   │   ├── draftStore.ts       # Zustand store for the live draft state, accessible across components
-│   │   └── notificationStore.ts# Zustand store for managing transient UI notifications
-│   ├── types.ts                # Centralized TypeScript interfaces for the entire application
-│   ├── utils/
-│   │   └── ... (Utility functions like type guards and the share service)
-│   ├── App.tsx                 # Main app component, handles view routing and global state
-│   └── index.tsx               # React root entry point and service worker registration
-├── public/
-│   └── fonts/                  # Local font files for performance and offline availability
-├── index.html                  # Main HTML file with importmap for CDN dependencies
-├── sw.js                       # Service worker logic for caching and offline functionality
-├── README.md                   # You are here!
-└── metadata.json               # Application metadata
+│   │   └── geminiService.ts # Centralized module for all Gemini API interactions
+│   │
+│   ├── types.ts             # Global TypeScript type definitions
+│   ├── App.tsx              # Main application component and router
+│   └── index.tsx            # Application entry point
+│
+├── index.html               # The HTML shell, including theme styles and import maps
+├── metadata.json            # Application metadata
+└── README.md                # This file
 ```
 
-## 🤝 Contributing
+## `5.0` | The Holographic Hextech Design System
 
-Contributions are welcome! If you have suggestions for new features, bug fixes, or improvements, please feel free to open an issue or submit a pull request.
+All visual components adhere to a strict, pre-defined design system to ensure aesthetic cohesion and a premium user experience.
 
-1.  Fork the repository.
-2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4.  Push to the branch (`git push origin feature/AmazingFeature`).
-5.  Open a Pull Request.
+### `5.1` Color Palette
 
-## 📄 License
+-   **Primary Brand (DraftWise Cyan):**
+    -   Text/Accent: `#67E8F9` (cyan-300)
+    -   Interactive/Buttons: `#0891B2` (cyan-600)
+    -   Glows/Hovers: `#0E7490` (cyan-700)
+-   **Neutral Palette (Deep Space):**
+    -   Primary Background: `#0A0F1F`
+    -   Panel/Card Background: `#141A33`
+    -   Borders/Dividers: `#334155` (slate-700)
+-   **Semantic Colors:**
+    -   Success/Buffs: `#4ADE80` (green-400)
+    -   Warning: `#FACC15` (yellow-400)
+    -   Danger/Nerfs: `#F87171` (red-400)
 
-This project is licensed under the MIT License.
+### `5.2` Typography
 
-## 🙏 Acknowledgements
+-   **Headings Font (`font-display`):** `Rajdhani` - A futuristic, squared sans-serif for personality.
+-   **UI & Body Font:** `Inter` - A highly legible variable sans-serif for clarity at all sizes.
 
--   **Riot Games** for the [Data Dragon API](https://developer.riotgames.com/docs/lol#data-dragon) and the [Riot Games API](https://developer.riotgames.com/).
--   **Google** for the powerful and flexible [Gemini API](https://ai.google.dev/).
--   The creators of all the open-source libraries used in this project.
+### `5.3` Core Effects & Animations
+
+-   **Subtle Hex Grid:** A low-opacity hexagonal grid pattern is applied to the main body background for texture and thematic reinforcement.
+-   **Frosted Glass Effect:** Key UI surfaces like the header and modals use `backdrop-blur` to create a sense of depth and focus.
+-   **Cyan Glows:** Primary buttons and active states use soft `box-shadow` glows instead of hard borders for a more modern, energetic feel.
+-   **Tactile Interactions:** Buttons subtly scale down (`transform: scale(0.97)`) on click for satisfying feedback. Cards lift on hover (`transform: translateY(-4px)`).
+
+## `6.0` | The Gemini Core: AI Integration
+
+The soul of DraftWise AI is its connection to the **Google Gemini API**, orchestrated through `src/services/geminiService.ts`.
+
+### `6.1` The Strategic Primer
+
+The most critical component of our AI is the **`STRATEGIC_PRIMER`** found in `src/data/strategyInsights.ts`. This is a hand-curated knowledge base synthesized from expert-level game theory. It is injected into relevant prompts to provide the Gemini model with a consistent, high-quality strategic framework. This ensures that all AI advice is grounded in established concepts like composition archetypes (Poke, Dive, etc.), win conditions, and power spikes.
+
+### `6.2` Key Service Functions
+
+-   **`getDraftAdvice`:** The primary analysis engine for the Draft Lab. It formats the current draft state, injects the `STRATEGIC_PRIMER`, and requests a structured JSON response by defining a `responseSchema`.
+-   **`getChampionAnalysis` & `getMatchupAnalysis`:** Power the Champion Armory by requesting deep, structured data on a specific champion, including builds, runes, playstyle, and matchup-specific tips.
+-   **`getTierList` & `getPatchNotesSummary`:** These functions leverage Gemini's **Google Search grounding tool** (`tools: [{googleSearch: {}}]`) to fetch and synthesize real-time information about the current game meta. The raw sources are always extracted and displayed to the user for transparency.
+-   **`getChampionSuggestions`:** A low-latency function (`thinkingConfig: { thinkingBudget: 0 }`) that provides quick, context-aware champion recommendations for the active draft slot.
+
+## `7.0` | Powering Up: Local Development Setup
+
+Follow these steps to initialize your local development environment.
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone <repository_url>
+    cd draftwise-ai
+    ```
+
+2.  **Install Dependencies:**
+    This project uses `npm` as its package manager.
+    ```bash
+    npm install
+    ```
+
+3.  **Configure API Key:**
+    The Gemini API key is required for all AI features. It **must** be provided via an environment variable.
+    -   Create a file named `.env` in the project root.
+    -   Add the following line, replacing `YOUR_API_KEY_HERE` with your actual key:
+        ```
+        API_KEY=YOUR_API_KEY_HERE
+        ```
+    -   The `.env` file is listed in `.gitignore` and should never be committed to version control.
+
+4.  **Launch Development Server:**
+    ```bash
+    npm run dev
+    ```
+    The application will now be running on your local machine, typically at `http://localhost:5173`.
+
+## `8.0` | Joining the Forge: Contribution Guidelines
+
+Contributions to enhance the Hextech Co-Pilot are welcome. Please adhere to the following protocols.
+
+-   **Code Style:** Maintain the existing code style. Use TypeScript, write clean and readable components, and adhere to the established project structure.
+-   **Commit Messages:** Use clear and descriptive commit messages that explain the "what" and "why" of your changes.
+-   **UI/UX Cohesion:** All new or modified UI components **must** adhere to the "Holographic Hextech" design system. Use the established color palette, typography, and effects.
+-   **Pull Requests:**
+    -   Create a new branch for your feature or bugfix.
+    -   Ensure your code is free of linting errors and builds successfully.
+    -   Submit a pull request with a detailed description of the changes you have made.
+
+---
+<div align="center">
+
+**End of Transmission.**
+
+</div>

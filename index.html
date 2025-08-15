@@ -2,387 +2,147 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://esm.sh">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
     <title>DraftWise AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- NOTE: The font files preloaded and referenced in CSS must be downloaded (e.g., from google-webfonts-helper) and placed in a public /fonts/ directory. -->
-    <link rel="preload" href="/fonts/inter-v13-latin-regular.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/fonts/inter-v13-latin-700.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/fonts/teko-v20-latin-600.woff2" as="font" type="font/woff2" crossorigin>
-
-    <style>
-      /* FONT FACES - Requires font files in /fonts/ */
-      /* inter-regular - 400 */
-      @font-face {
-        font-display: swap;
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 400;
-        src: url('/fonts/inter-v13-latin-regular.woff2') format('woff2');
-      }
-      /* inter-500 */
-      @font-face {
-        font-display: swap;
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 500;
-        src: url('/fonts/inter-v13-latin-500.woff2') format('woff2');
-      }
-      /* inter-600 */
-      @font-face {
-        font-display: swap;
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 600;
-        src: url('/fonts/inter-v13-latin-600.woff2') format('woff2');
-      }
-      /* inter-700 */
-      @font-face {
-        font-display: swap;
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 700;
-        src: url('/fonts/inter-v13-latin-700.woff2') format('woff2');
-      }
-      /* teko-regular - 400 */
-      @font-face {
-        font-display: swap;
-        font-family: 'Teko';
-        font-style: normal;
-        font-weight: 400;
-        src: url('/fonts/teko-v20-latin-regular.woff2') format('woff2');
-      }
-      /* teko-600 */
-      @font-face {
-        font-display: swap;
-        font-family: 'Teko';
-        font-style: normal;
-        font-weight: 600;
-        src: url('/fonts/teko-v20-latin-600.woff2') format('woff2');
-      }
-
-      :root {
-        --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        --font-display: 'Teko', Impact, "Arial Black", sans-serif;
-        --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-
-        /* Light Theme */
-        --bg-light: 248 250 252; /* Slate 50 */
-        --bg-surface-light: 255 255 255; /* White */
-        --bg-muted-light: 248 250 252; /* Slate 50 */
-        --border-light: 226 232 240; /* Slate 200 */
-        --text-primary-light: 15 23 42; /* Slate 900 */
-        --text-secondary-light: 100 116 139; /* Slate 500 */
-        --accent-primary-light: 79 70 229; /* Indigo 600 */
-        --accent-secondary-light: 124 58 237; /* Purple 600 */
-        --accent-primary-hover-light: 67 56 202; /* Indigo 700 */
-        
-        /* Dark Theme */
-        --bg-dark: 15 23 42; /* Slate 900 */
-        --bg-surface-dark: 30 41 59; /* Slate 800 */
-        --bg-muted-dark: 51 65 85; /* Slate 700 */
-        --border-dark: 51 65 85; /* Slate 700 */
-        --text-primary-dark: 248 250 252; /* Slate 50 */
-        --text-secondary-dark: 148 163 184; /* Slate 400 */
-        --accent-primary-dark: 99 102 241; /* Indigo 500 */
-        --accent-secondary-dark: 167 139 250; /* Violet 400 */
-        --accent-primary-hover-dark: 129 140 248; /* Indigo 400 */
-      }
-      body {
-        font-family: var(--font-sans);
-        color: rgb(var(--text-primary-light));
-        background-color: rgb(var(--bg-light));
-        transition: background-color var(--transition-base), color var(--transition-base);
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-      .dark body {
-        color: rgb(var(--text-primary-dark));
-        background-color: rgb(var(--bg-dark));
-      }
-      h1, h2, h3, h4, h5, h6 {
-        font-family: var(--font-display);
-        letter-spacing: 0.025em;
-        font-weight: 600;
-      }
-
-      /* Data-driven aesthetics */
-      .bg-primary-gradient {
-        background-image: linear-gradient(to right, rgb(var(--accent-primary-light)) 0%, rgb(var(--accent-secondary-light)) 100%);
-        transition: background-position 0.5s ease, transform 0.2s ease;
-        background-size: 200% auto;
-      }
-      .bg-primary-gradient:hover {
-        background-position: right center;
-      }
-      .dark .bg-primary-gradient {
-        background-image: linear-gradient(to right, rgb(var(--accent-primary-dark)) 0%, rgb(var(--accent-secondary-dark)) 100%);
-      }
-
-      .text-gradient-primary {
-        background-image: linear-gradient(to right, rgb(var(--accent-primary-light)), rgb(var(--accent-secondary-light)));
-        -webkit-background-clip: text;
-        -moz-background-clip: text;
-        background-clip: text;
-        color: transparent;
-      }
-      .dark .text-gradient-primary {
-        background-image: linear-gradient(to right, rgb(var(--accent-primary-dark)), rgb(var(--accent-secondary-dark)));
-      }
-
-      .glass-effect {
-        background-color: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(16px) saturate(180%);
-        -webkit-backdrop-filter: blur(16px) saturate(180%);
-        border: 1px solid rgba(226, 232, 240, 0.5);
-      }
-      .dark .glass-effect {
-        background-color: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(51, 65, 85, 0.5);
-      }
-      
-      .prose { white-space: pre-wrap; }
-
-      body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        pointer-events: none;
-        z-index: -2; /* Pushed back */
-        background: radial-gradient(ellipse at top left, var(--aura-color, transparent) 0%, transparent 40%);
-        opacity: 0;
-        transition: opacity 1.5s ease-in-out, background 1.5s ease-in-out;
-      }
-       body::after {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        pointer-events: none;
-        z-index: -1; /* In front of main aura */
-        background: radial-gradient(ellipse at center, var(--hover-aura-color, transparent) 0%, transparent 50%);
-        opacity: 0;
-        transition: opacity 0.4s ease-out;
-      }
-      .aura-ad-focused body::before { --aura-color: rgba(225, 29, 72, 0.12); opacity: 1; } /* Rose 600 */
-      .aura-ap-focused body::before { --aura-color: rgba(79, 70, 229, 0.12); opacity: 1; } /* Indigo 600 */
-      .aura-positive body::before { --aura-color: rgba(13, 148, 136, 0.18); opacity: 1; } /* Teal 600 */
-      .aura-negative body::before { --aura-color: rgba(190, 18, 60, 0.15); opacity: 1; } /* Rose 700 */
-      .aura-thinking body::before { --aura-color: rgba(217, 119, 6, 0.18); opacity: 1; } /* Amber 600 */
-
-      .hover-aura-engage body::after { --hover-aura-color: rgba(99, 102, 241, 0.15); opacity: 1; } /* Indigo 500 */
-      .hover-aura-positive body::after { --hover-aura-color: rgba(16, 185, 129, 0.18); opacity: 1; } /* Emerald 500 */
-      .hover-aura-negative body::after { --hover-aura-color: rgba(220, 38, 38, 0.15); opacity: 1; } /* Red 600 */
-      
-      /* --- Animations --- */
-      @keyframes slide-fade-in {
-        from { opacity: 0; transform: translateY(20px) scale(0.99); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-      }
-      .animate-slide-fade-in { 
-        animation: slide-fade-in 500ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
-      }
-      
-      @keyframes pop-in {
-        from { opacity: 0; transform: scale(0.85); }
-        to { opacity: 1; transform: scale(1); }
-      }
-      .animate-pop-in { animation: pop-in 250ms ease-out forwards; }
-
-      @keyframes item-add {
-        from { opacity: 0; transform: scale(0.8); }
-        to { opacity: 1; transform: scale(1); }
-      }
-      .animate-item-add {
-        animation: item-add 300ms ease-out forwards;
-      }
-      
-      @keyframes shake {
-        10%, 90% { transform: translate3d(-1px, 0, 0) rotate(-1deg); }
-        20%, 80% { transform: translate3d(2px, 0, 0) rotate(2deg); }
-        30%, 50%, 70% { transform: translate3d(-2px, 0, 0) rotate(-2deg); }
-        40%, 60% { transform: translate3d(2px, 0, 0) rotate(2deg); }
-      }
-
-      /* Split Text Reveal */
-      .reveal-text {
-        --char-index: 0;
-        display: inline-block;
-        opacity: 0;
-        animation: slide-in-char 0.5s calc(var(--char-index) * 0.03s) cubic-bezier(0.25, 1, 0.5, 1) forwards;
-      }
-
-      @keyframes slide-in-char {
-        from {
-          transform: translateY(20px) scale(0.8);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0) scale(1);
-          opacity: 1;
-        }
-      }
-
-      /* 3D Tilt Effect */
-      .card-3d-wrap {
-        perspective: 1000px;
-      }
-
-      .card-3d {
-        transform-style: preserve-3d;
-        transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-      }
-
-      .card-3d-wrap:hover .card-3d {
-        transform: rotateY(var(--rotate-y, 0)) rotateX(var(--rotate-x, 0)) translateZ(20px);
-      }
-      
-      /* Text Reveal */
-      .text-reveal-container {
-        position: relative;
-        display: inline-block;
-        overflow: hidden;
-      }
-
-      .text-reveal {
-        opacity: 0;
-        animation: fade-in-text 0.1s 0.4s forwards;
-      }
-
-      .text-reveal-container::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 100%;
-        background: var(--text-reveal-color, rgb(var(--accent-primary-light)));
-        transform-origin: left;
-        animation: reveal 0.8s cubic-bezier(0.77, 0, 0.175, 1);
-      }
-      .dark .text-reveal-container::after {
-          background: var(--text-reveal-color-dark, rgb(var(--accent-primary-dark)));
-      }
-
-      @keyframes reveal {
-        0% { transform: scaleX(0); transform-origin: left; }
-        45% { transform: scaleX(1); transform-origin: left; }
-        55% { transform: scaleX(1); transform-origin: right; }
-        100% { transform: scaleX(0); transform-origin: right; }
-      }
-
-      @keyframes fade-in-text {
-          from { opacity: 0; }
-          to { opacity: 1; }
-      }
-
-
-      /* Layout Animations */
-      .collapsible {
-        display: grid;
-        grid-template-rows: 0fr;
-        transition: grid-template-rows 0.4s ease-in-out;
-      }
-      .collapsible > div {
-        overflow: hidden;
-      }
-      .collapsible.expanded {
-        grid-template-rows: 1fr;
-      }
-      
-      /* Mobile Nav */
-      .hamburger-line {
-        transition: transform 0.3s ease, opacity 0.3s ease;
-      }
-      .mobile-nav-open .hamburger-line-top {
-        transform: translateY(8px) rotate(45deg);
-      }
-      .mobile-nav-open .hamburger-line-middle {
-        opacity: 0;
-      }
-      .mobile-nav-open .hamburger-line-bottom {
-        transform: translateY(-8px) rotate(-45deg);
-      }
-      .mobile-menu {
-        transform: translateX(100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .mobile-menu.open {
-        transform: translateX(0);
-      }
-
-      /* Custom Details/Summary */
-      details > summary {
-        list-style: none;
-        cursor: pointer;
-      }
-      details > summary::-webkit-details-marker {
-        display: none;
-      }
-      details > summary {
-        position: relative;
-        padding-left: 1.25rem;
-      }
-      details > summary::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%) rotate(0);
-        width: 0.75rem;
-        height: 0.75rem;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='3' stroke='currentColor' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M9 5l7 7-7 7' /%3E%3C/svg%3E");
-        background-size: contain;
-        background-repeat: no-repeat;
-        transition: transform 0.2s;
-        opacity: 0.6;
-      }
-      details[open] > summary::before {
-        transform: translateY(-50%) rotate(90deg);
-      }
-
-
-      /* Icon Micro-animations */
-      .icon-settings, .icon-history, .icon-sun, .icon-moon, .icon-plus, .icon-logout, .icon-delete, .icon-edit, .icon-lab, .icon-brain, .icon-shield, .icon-map {
-        transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-      }
-      button:hover .icon-settings { transform: rotate(90deg); }
-      button:hover .icon-history { transform: rotate(-45deg) scale(1.1); }
-      button:hover .icon-sun { transform: rotate(45deg); }
-      button:hover .icon-moon { transform: rotate(15deg) scale(1.1); }
-      button:hover .icon-plus { transform: rotate(90deg) scale(1.2); }
-      button:hover .icon-logout { transform: translateX(2px); }
-      button:hover .icon-delete { animation: shake 0.6s; }
-      button:hover .icon-edit { transform: scale(1.2) rotate(5deg); }
-      button:hover .icon-lab { transform: rotate(10deg) scale(1.1); }
-      button:hover .icon-brain { transform: scale(1.1); }
-      button:hover .icon-shield { transform: scale(1.1); }
-      button:hover .icon-map { transform: scale(1.1); }
-
-    </style>
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.1.0/",
-    "react": "https://esm.sh/react@^19.1.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.8.0",
-    "zustand": "https://esm.sh/zustand@^5.0.6",
-    "html2canvas": "https://esm.sh/html2canvas@^1.4.1"
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.14.0",
+    "react-window": "https://esm.sh/react-window@^1.8.10",
+    "react-virtualized-auto-sizer": "https://esm.sh/react-virtualized-auto-sizer@^1.0.24",
+    "focus-trap-react": "https://esm.sh/focus-trap-react@^10.2.3",
+    "react-hot-toast": "https://esm.sh/react-hot-toast@^2.4.1",
+    "react-transition-group": "https://esm.sh/react-transition-group@^4.4.5",
+    "react-dom": "https://esm.sh/react-dom@^19.1.1"
   }
 }
 </script>
+<style>
+  /* Holographic Hextech Theme */
+  :root {
+    --color-accent-text: 103 232 249; /* cyan-300 */
+    --color-accent-bg: 8 145 178;    /* cyan-600 */
+    --color-accent-bg-hover: 14 116 144; /* cyan-700 */
+    --color-accent-logo: 34 211 238; /* cyan-400 */
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .font-display {
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  /* For react-transition-group modal animation */
+  .modal-enter {
+    opacity: 0;
+  }
+  .modal-enter-active {
+    opacity: 1;
+    transition: opacity 200ms;
+  }
+  .modal-exit {
+    opacity: 1;
+  }
+  .modal-exit-active {
+    opacity: 0;
+    transition: opacity 200ms;
+  }
+
+  .modal-content-enter {
+      transform: scale(0.95);
+      opacity: 0;
+  }
+  .modal-content-enter-active {
+      transform: scale(1);
+      opacity: 1;
+      transition: transform 300ms, opacity 300ms;
+  }
+  .modal-content-exit {
+      transform: scale(1);
+      opacity: 1;
+  }
+  .modal-content-exit-active {
+      transform: scale(0.95);
+      opacity: 0;
+      transition: transform 300ms, opacity 300ms;
+  }
+
+  /* For gamification micro-interactions */
+  @keyframes pulse-once {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--color-accent-text), 0.5); }
+    50% { transform: scale(1.1); box-shadow: 0 0 10px 5px rgba(var(--color-accent-text), 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--color-accent-text), 0); }
+  }
+  .animate-pulse-once {
+      animation: pulse-once 0.75s ease-out;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 5px rgba(var(--color-accent-bg), 0.2);
+    }
+    50% {
+      box-shadow: 0 0 20px 5px rgba(var(--color-accent-bg), 0.5);
+    }
+  }
+  .animate-pulse-glow {
+      animation: pulse-glow 2s infinite ease-in-out;
+  }
+
+  /* For Onboarding Guided Tour */
+  .tour-spotlight {
+    position: absolute;
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+    transition: all 0.3s ease-in-out;
+    pointer-events: all; /* Allows clicks on the highlighted element */
+  }
+
+  .tour-step-content {
+    position: absolute;
+    background-color: #1f2937; /* slate-800 */
+    color: #d1d5db; /* gray-300 */
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #374151; /* slate-700 */
+    max-width: 350px;
+    z-index: 1001;
+    transition: all 0.3s ease-in-out;
+  }
+
+  /* For Onboarding Progress Bar */
+  .progress-bar {
+      position: relative;
+      height: 8px;
+      width: 100%;
+      background-color: #374151; /* slate-700 */
+      border-radius: 9999px;
+      overflow: hidden;
+  }
+
+  .progress-bar-inner {
+      height: 100%;
+      background-color: rgb(var(--color-accent-bg));
+      border-radius: 9999px;
+      transition: width 0.3s ease-in-out;
+  }
+</style>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
+  <body class="bg-[#0A0F1F]">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-    <!-- NOTE: For production, CSS and JS should be minified via a build tool or hosting platform settings to reduce file size. -->
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>

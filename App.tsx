@@ -1,254 +1,300 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, DDragonData, DraftState, Aura, SharePayload, Champion } from './types';
-import { ddragonService } from './services/ddragonService';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { useProfile } from './contexts/ProfileContext';
-import { useDraftStore } from './store/draftStore';
 
-import Home from './Home';
-import DraftingScreen from './components/DraftingScreen';
-import DraftLab from './components/DraftLab';
-import ArmoryScreen from './components/ArmoryScreen';
-import HistoryScreen from './components/HistoryScreen';
-import LessonsScreen from './components/LessonsScreen';
-import TrialsScreen from './components/TrialsScreen';
-import Header from './components/Header';
-import CommandPalette from './components/CommandPalette';
-import ProfileSelectionScreen from './components/ProfileSelectionScreen';
-import OnboardingScreen from './components/OnboardingScreen';
-import { ErrorCard } from './components/common/ErrorCard';
-import PlaybookScreen from './components/PlaybookScreen';
-import ProfileScreen from './components/ProfileScreen';
-import ErrorBoundary from './components/common/ErrorBoundary';
-import { shareService } from './utils/shareService';
-import SharedDraftScreen from './components/SharedDraftScreen';
-import { NotificationHub } from './components/common/NotificationHub';
-import ScoutScreen from './components/ScoutScreen';
-import { riotService } from './services/riotService';
-import { InitialLoadingScreen } from './components/common/InitialLoadingScreen';
-import { FeatureDisabledScreen } from './components/common/FeatureDisabledScreen';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { DraftLab } from './components/DraftLab/DraftLab';
+import { Playbook } from './components/Playbook/Playbook';
+import { Academy } from './components/Academy/Academy';
+import { LiveArena } from './components/Arena/LiveArena';
+import { Header } from './components/Layout/Header';
+import { Footer } from './components/Layout/Footer';
+import { Toaster } from 'react-hot-toast';
+import { Home } from './components/Home/Home';
+import { StrategyHub } from './components/StrategyHub/StrategyHub';
+import { DailyTrial } from './components/Trials/DailyTrial';
+import { Profile } from './components/Profile/Profile';
+import type { Page, DraftState, Settings, Champion } from './types';
+import { Command, CommandPalette } from './components/common/CommandPalette';
+import { CHAMPIONS, CHAMPIONS_LITE } from './constants';
+import { useSettings } from './hooks/useSettings';
+import { useUserProfile } from './hooks/useUserProfile';
+import { SettingsModal } from './components/Settings/SettingsModal';
+import { ConfirmationModal, ConfirmationState } from './components/common/ConfirmationModal';
+import { FeedbackModal } from './components/Feedback/FeedbackModal';
+import { ProfileSetupModal } from './components/Onboarding/ProfileSetupModal';
+import toast from 'react-hot-toast';
+
+const createInitialSlot = () => ({ champion: null, isActive: false });
+const createInitialTeamState = () => ({
+  picks: Array(5).fill(null).map(createInitialSlot),
+  bans: Array(5).fill(null).map(createInitialSlot),
+});
+
+export const getInitialDraftState = (): DraftState => ({
+  blue: createInitialTeamState(),
+  red: createInitialTeamState(),
+  turn: 'blue',
+  phase: 'ban1',
+});
+
+interface OnboardingData {
+    username: string;
+    primaryRole: string;
+    favoriteChampions: string[];
+    skillLevel: 'Beginner' | 'Intermediate' | 'Advanced';
+    goals: string[];
+    avatar: string;
+    theme: Settings['theme'];
+}
 
 const App: React.FC = () => {
-  const { activeProfile, loading: profileLoading } = useProfile();
-  const [view, setView] = useState<View>(View.HOME);
-  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('draftwise_theme', 'dark');
-  
-  const [ddragonData, setDdragonData] = useState<DDragonData | null>(null);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [aura, setAura] = useState<Aura>('neutral');
-  const [hoverAura, setHoverAura] = useState<string | null>(null);
-  const loadDraft = useDraftStore(state => state.actions.loadDraft);
-  
-  const [sharedDraft, setSharedDraft] = useState<SharePayload | null>(null);
-  const [isParsingShare, setIsParsingShare] = useState(true);
-  
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-  const [selectedTrialId, setSelectedTrialId] = useState<string | null>(null);
-  const [initialArmoryChampion, setInitialArmoryChampion] = useState<Champion | null>(null);
+  const [currentPage, setCurrentPage] = useState<Page>('Home');
+  const [draftState, setDraftState] = useState<DraftState>(getInitialDraftState());
+  const [arenaDraftState, setArenaDraftState] = useState<DraftState>(getInitialDraftState());
+  const [confirmationState, setConfirmationState] = useState<ConfirmationState | null>(null);
 
+  // State for Command Palette
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [strategyHubInitialTab, setStrategyHubInitialTab] = useState<'champions' | 'intel'>('champions');
+  const [strategyHubInitialSearch, setStrategyHubInitialSearch] = useState<string | null>(null);
+  const [academyInitialLessonId, setAcademyInitialLessonId] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    document.documentElement.classList.toggle('light', theme === 'light');
-  }, [theme]);
-  
-  useEffect(() => {
-    const auras: Aura[] = ['neutral', 'positive', 'negative', 'thinking', 'ad-focused', 'ap-focused'];
-    const classList = document.documentElement.classList;
-    auras.forEach(a => classList.remove(`aura-${a}`));
-    if (aura) {
-        classList.add(`aura-${aura}`);
-    }
-  }, [aura]);
+  // State for Modals
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const { setSettings } = useSettings();
+  const { checkStreak, initializeNewProfile } = useUserProfile();
+
+  // --- Onboarding State ---
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [startLabTour, setStartLabTour] = useState(false);
 
   useEffect(() => {
-    const hoverAuras = ['engage', 'positive', 'negative'];
-    const classList = document.documentElement.classList;
-    hoverAuras.forEach(a => classList.remove(`hover-aura-${a}`));
-    if (hoverAura) {
-        classList.add(`hover-aura-${hoverAura}`);
-    }
-  }, [hoverAura]);
-
-
-  const fetchDDragonData = useCallback(async () => {
-    try {
-      setError(null);
-      setIsLoadingData(true);
-      const data = await ddragonService.getAllData();
-      setDdragonData(data);
-    } catch (err) {
-      setError('Failed to load game data. The servers might be down or your connection is unstable.');
-      console.error(err);
-    } finally {
-      setIsLoadingData(false);
+    // Check if onboarding has been completed
+    const onboardingComplete = localStorage.getItem('onboardingComplete');
+    if (!onboardingComplete) {
+      setShowOnboardingModal(true);
     }
   }, []);
 
+  const handleProfileSetupComplete = useCallback((data: OnboardingData) => {
+    setShowOnboardingModal(false);
+    
+    // Set user profile data
+    initializeNewProfile({
+        username: data.username,
+        skillLevel: data.skillLevel,
+        avatar: data.avatar,
+        goals: data.goals,
+        favoriteChampions: data.favoriteChampions
+    });
+
+    // Set user settings
+    setSettings({
+        primaryRole: data.primaryRole,
+        favoriteChampions: data.favoriteChampions,
+        theme: data.theme,
+    });
+    
+    localStorage.setItem('onboardingComplete', 'true');
+    setCurrentPage('Draft Lab'); // Navigate to the lab for the tour
+    setStartLabTour(true);
+  }, [initializeNewProfile, setSettings]);
+
+  const handleTourComplete = useCallback(() => {
+    setStartLabTour(false);
+  }, []);
+  // --- End Onboarding State ---
+
+  // Check daily streak on app load
   useEffect(() => {
-    const parseUrl = async () => {
-        const params = new URLSearchParams(window.location.search);
-        const shareData = params.get('share');
-        if (shareData) {
-            try {
-                const decoded = await shareService.decodeFromUrl(shareData);
-                setSharedDraft(decoded);
-            } catch (e) {
-                console.error("Failed to decode share link", e);
-                // Clear the invalid param so a refresh doesn't retry
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
+    checkStreak();
+  }, [checkStreak]);
+
+  // Keyboard listener for command palette
+  useEffect(() => {
+      const handler = (e: KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          // Ensure other modals are closed before opening the palette
+          setIsSettingsOpen(false);
+          setIsFeedbackModalOpen(false);
+          setConfirmationState(null);
+          setIsPaletteOpen(prev => !prev);
         }
-        setIsParsingShare(false);
+      };
+      window.addEventListener('keydown', handler);
+      return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const loadDraftAndNavigate = (draft: DraftState) => {
+    const isDraftDirty = JSON.stringify(draftState) !== JSON.stringify(getInitialDraftState());
+    
+    const performLoad = () => {
+        setDraftState(draft);
+        setCurrentPage('Draft Lab');
     };
-    parseUrl();
-    fetchDDragonData();
-  }, [fetchDDragonData]);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-      event.preventDefault();
-      setCommandPaletteOpen(prev => !prev);
-    }
-  }, []);
-  
-  const loadDraftInLab = useCallback((draft: DraftState) => {
-    loadDraft(draft);
-    setView(View.DRAFT_LAB);
-  }, [loadDraft, setView]);
-
-  const handleNavigateToLesson = useCallback((lessonId: string) => {
-    setSelectedLessonId(lessonId);
-    setView(View.LESSONS);
-  }, []);
-
-  const handleNavigateToTrial = useCallback((trialId: string) => {
-    setSelectedTrialId(trialId);
-    setView(View.TRIALS);
-  }, []);
-  
-  const handleNavigateToArmory = useCallback((champion: Champion) => {
-    setInitialArmoryChampion(champion);
-    setView(View.ARMORY);
-  }, []);
-
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleKeyDown]);
-
-  const renderContent = () => {
-    if (isParsingShare || profileLoading || isLoadingData) {
-        let message = 'Initializing...';
-        if (isParsingShare) message = 'Decoding shared draft...';
-        else if (profileLoading) message = 'Loading Commander profiles...';
-        else if (isLoadingData) message = 'Calibrating strategic matrices...';
-        
-      return <InitialLoadingScreen message={message} />;
-    }
-    
-    if (error) {
-       return (
-        <div className="flex justify-center items-center h-screen bg-slate-50 dark:bg-slate-900">
-          <ErrorCard
-            title="Data Fetch Error"
-            message={error}
-            onRetry={fetchDDragonData}
-          />
-        </div>
-      );
-    }
-    
-     if (!ddragonData) {
-        return <div className="flex justify-center items-center h-screen">Something went wrong. Please refresh the page.</div>;
-    }
-
-    if(sharedDraft) {
-      return <SharedDraftScreen sharedData={sharedDraft} ddragonData={ddragonData} />;
-    }
-    
-    if (!activeProfile) {
-        return <ProfileSelectionScreen />;
-    }
-
-    if (activeProfile.isNew && !activeProfile.isOnboarded) {
-        return <OnboardingScreen ddragonData={ddragonData} />;
-    }
-
-    switch (view) {
-      case View.HOME:
-        return <Home setView={setView} ddragonData={ddragonData} />;
-      case View.PROFILE:
-        return <ProfileScreen ddragonData={ddragonData} setView={setView} onNavigateToLesson={handleNavigateToLesson} />;
-      case View.DRAFTING:
-        return <DraftingScreen ddragonData={ddragonData} setAura={setAura} setView={setView} setHoverAura={setHoverAura} onNavigateToLesson={handleNavigateToLesson} />;
-      case View.DRAFT_LAB:
-        return <DraftLab ddragonData={ddragonData} setAura={setAura} setView={setView} setHoverAura={setHoverAura} />;
-      case View.SCOUT:
-        return riotService.isConfigured() 
-            ? <ScoutScreen ddragonData={ddragonData} /> 
-            : <FeatureDisabledScreen 
-                featureName="Live Game Scout" 
-                reason="This feature is disabled. Please provide a RIOT_API_KEY in the app's environment settings to enable it." 
-              />;
-      case View.ARMORY:
-        return <ArmoryScreen 
-                    ddragonData={ddragonData}
-                    initialChampion={initialArmoryChampion}
-                    onInitialChampionConsumed={() => setInitialArmoryChampion(null)} 
-                />;
-      case View.HISTORY:
-        return <HistoryScreen ddragonData={ddragonData} setView={setView} onNavigateToLesson={handleNavigateToLesson} />;
-      case View.PLAYBOOK:
-        return <PlaybookScreen ddragonData={ddragonData} setView={setView} loadDraftInLab={loadDraftInLab} />;
-      case View.LESSONS:
-        return <LessonsScreen ddragonData={ddragonData} setView={setView} selectedLessonId={selectedLessonId} onClearSelectedLesson={() => setSelectedLessonId(null)} onNavigateToTrial={handleNavigateToTrial} />;
-       case View.TRIALS:
-        return <TrialsScreen ddragonData={ddragonData} setView={setView} selectedTrialId={selectedTrialId} onClearSelectedTrial={() => setSelectedTrialId(null)} />;
-      default:
-        return <Home setView={setView} ddragonData={ddragonData} />;
+    if (isDraftDirty) {
+        setConfirmationState({
+            title: "Overwrite Draft?",
+            message: "Loading this draft will overwrite your current session in the Draft Lab. Are you sure you want to continue?",
+            onConfirm: performLoad,
+        });
+    } else {
+        performLoad();
     }
   };
 
-  const allChampions = useMemo(() => (ddragonData ? Object.values(ddragonData.champions) : []), [ddragonData]);
-  const allItems = useMemo(() => (ddragonData ? Object.values(ddragonData.items) : []), [ddragonData]);
+    const loadChampionToLab = (championId: string) => {
+        const champion = CHAMPIONS.find(c => c.id === championId);
+        if (!champion) {
+            toast.error("Champion not found.");
+            return;
+        }
+
+        setDraftState(prev => {
+            const bluePicks = [...prev.blue.picks];
+            let placed = false;
+            for (let i = 0; i < bluePicks.length; i++) {
+                if (!bluePicks[i].champion) {
+                    bluePicks[i] = { champion, isActive: false };
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) {
+                toast.error("Blue team is full. Clear a slot to add the champion.");
+                return prev; // Return original state if no space
+            }
+            toast.success(`${champion.name} added to Draft Lab!`);
+            return {
+                ...prev,
+                blue: {
+                    ...prev.blue,
+                    picks: bluePicks
+                }
+            };
+        });
+        setCurrentPage('Draft Lab');
+    };
   
-  const showHeader = !isParsingShare && !sharedDraft && activeProfile && !(activeProfile.isNew && !activeProfile.isOnboarded);
-  
+  const resetDraft = useCallback(() => {
+    setDraftState(getInitialDraftState());
+  }, []);
+
+  const resetArena = useCallback(() => {
+    setArenaDraftState(getInitialDraftState());
+  }, []);
+
+  const navigateToAcademy = useCallback((lessonId: string) => {
+    setAcademyInitialLessonId(lessonId);
+    setCurrentPage('Academy');
+  }, []);
+
+  const commands: Command[] = useMemo(() => {
+    const pageCommands: Command[] = [
+        { id: 'nav-home', title: 'Go to Home', section: 'Navigation', action: () => setCurrentPage('Home') },
+        { id: 'nav-draft-lab', title: 'Go to Draft Lab', section: 'Navigation', action: () => setCurrentPage('Draft Lab') },
+        { id: 'nav-arena', title: 'Go to Arena', section: 'Navigation', action: () => setCurrentPage('Arena') },
+        { id: 'nav-playbook', title: 'Go to Playbook', section: 'Navigation', action: () => setCurrentPage('Playbook') },
+        { id: 'nav-strategy-hub', title: 'Go to Strategy Hub', section: 'Navigation', action: () => setCurrentPage('Strategy Hub') },
+        { id: 'nav-academy', title: 'Go to Academy', section: 'Navigation', action: () => setCurrentPage('Academy') },
+        { id: 'nav-trial', title: 'Go to Daily Trial', section: 'Navigation', action: () => setCurrentPage('Daily Trial') },
+        { id: 'nav-profile', title: 'Go to Profile', section: 'Navigation', action: () => setCurrentPage('Profile') },
+    ];
+    
+    const actionCommands: Command[] = [
+        { id: 'action-reset-lab', title: 'Reset Draft Lab', section: 'Actions', action: resetDraft },
+        { id: 'action-reset-arena', title: 'Reset Arena', section: 'Actions', action: resetArena },
+        { id: 'action-open-settings', title: 'Open Settings', section: 'Actions', action: () => setIsSettingsOpen(true) },
+        { id: 'action-give-feedback', title: 'Give Feedback', section: 'Actions', action: () => setIsFeedbackModalOpen(true) },
+    ];
+
+    const championSearchCommands: Command[] = CHAMPIONS_LITE.map(champ => ({
+        id: `search-champ-${champ.id}`,
+        title: `Find Champion: ${champ.name}`,
+        section: 'Champion Search',
+        action: () => {
+            setStrategyHubInitialTab('champions');
+            setStrategyHubInitialSearch(champ.name);
+            setCurrentPage('Strategy Hub');
+        }
+    }));
+
+    return [...pageCommands, ...actionCommands, ...championSearchCommands];
+  }, [resetDraft, resetArena]);
+
+  const navigateToStrategyHub = (tab: 'champions' | 'intel') => {
+    setStrategyHubInitialTab(tab);
+    setCurrentPage('Strategy Hub');
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'Home':
+        return <Home setCurrentPage={setCurrentPage} navigateToStrategyHub={navigateToStrategyHub} />;
+      case 'Draft Lab':
+        return <DraftLab draftState={draftState} setDraftState={setDraftState} onReset={resetDraft} startTour={startLabTour} onTourComplete={handleTourComplete} navigateToAcademy={navigateToAcademy} />;
+      case 'Arena':
+        return <LiveArena 
+          draftState={arenaDraftState}
+          setDraftState={setArenaDraftState}
+          onReset={resetArena}
+          onNavigateToForge={loadDraftAndNavigate} 
+        />;
+      case 'Playbook':
+        return <Playbook onLoadDraft={loadDraftAndNavigate} setCurrentPage={setCurrentPage} navigateToAcademy={navigateToAcademy} />;
+      case 'Academy':
+        return <Academy initialLessonId={academyInitialLessonId} onHandled={() => setAcademyInitialLessonId(undefined)} />;
+      case 'Strategy Hub':
+        return <StrategyHub 
+            initialTab={strategyHubInitialTab} 
+            initialSearchTerm={strategyHubInitialSearch}
+            onLoadChampionInLab={loadChampionToLab}
+            onHandled={() => {
+                setStrategyHubInitialTab('champions');
+                setStrategyHubInitialSearch(null);
+            }} 
+        />;
+      case 'Daily Trial':
+        return <DailyTrial navigateToAcademy={navigateToAcademy} />;
+      case 'Profile':
+        return <Profile setCurrentPage={setCurrentPage} navigateToAcademy={navigateToAcademy} />;
+      default:
+        return <Home setCurrentPage={setCurrentPage} navigateToStrategyHub={navigateToStrategyHub} />;
+    }
+  };
+
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-200`}>
-      {showHeader && (
-        <Header
-          currentView={view}
-          setView={setView}
-          theme={theme}
-          setTheme={setTheme}
-          onCommandPaletteOpen={() => setCommandPaletteOpen(true)}
-        />
-      )}
-      <main className={`container mx-auto px-4 ${showHeader ? 'py-8' : 'py-0'}`}>
-        <ErrorBoundary>
-            <div key={view} className="animate-slide-fade-in">
-                {renderContent()}
-            </div>
-        </ErrorBoundary>
+    <div className="min-h-screen flex flex-col font-sans bg-gradient-to-b from-[#0A0F1F] to-[#141A33]">
+      <ProfileSetupModal isOpen={showOnboardingModal} onComplete={handleProfileSetupComplete} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} draftState={draftState} />
+      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} commands={commands} />
+      <ConfirmationModal
+        isOpen={!!confirmationState}
+        onClose={() => setConfirmationState(null)}
+        state={confirmationState}
+      />
+      <Toaster 
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#141A33', // New Panel Background
+            color: '#E2E8F0', // Off-white
+            border: '1px solid #334155' // slate-700
+          }
+        }}
+      />
+      <Header 
+        currentPage={currentPage} 
+        setCurrentPage={setCurrentPage} 
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+      />
+      <main className="flex-grow container mx-auto p-4 md:p-6">
+        {renderPage()}
       </main>
-      {isCommandPaletteOpen && ddragonData && (
-        <CommandPalette
-          isOpen={isCommandPaletteOpen}
-          onClose={() => setCommandPaletteOpen(false)}
-          setView={setView}
-          champions={allChampions}
-          items={allItems}
-          onNavigateToArmory={handleNavigateToArmory}
-        />
-      )}
-      <NotificationHub onNavigateToLesson={handleNavigateToLesson} />
+      <Footer />
     </div>
   );
 };
