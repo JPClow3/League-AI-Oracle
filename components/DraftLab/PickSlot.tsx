@@ -18,7 +18,7 @@ export const PickSlot: React.FC<PickSlotProps> = ({ champion, role, onClick, isA
       onClick={onClick}
       className={`relative flex items-center bg-gradient-to-r from-slate-800 to-slate-900 p-2 rounded-lg cursor-pointer group transition-all duration-200 hover:ring-blue-500/70 hover:from-slate-700 ${activeClasses}`}
     >
-      <div className="w-14 h-14 flex-shrink-0 bg-slate-900 rounded-md flex items-center justify-center border border-slate-700">
+      <div className="w-14 h-14 flex-shrink-0 bg-slate-900 rounded-md flex items-center justify-center border border-slate-700/50">
         {champion ? (
           <img src={champion.image} alt={champion.name} className="w-full h-full object-cover rounded-md" />
         ) : (
@@ -28,8 +28,8 @@ export const PickSlot: React.FC<PickSlotProps> = ({ champion, role, onClick, isA
         )}
       </div>
       <div className="ml-4 flex-grow">
-        <p className="font-bold text-white text-lg">{champion ? champion.name : 'Select Pick'}</p>
-        <p className="text-sm text-gray-400">{role}</p>
+        <p className="font-bold text-slate-200 text-lg">{champion ? champion.name : 'Select Pick'}</p>
+        <p className="text-xs uppercase font-medium tracking-wider text-slate-400">{role}</p>
       </div>
     </div>
   );

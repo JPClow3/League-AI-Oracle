@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type { Champion, Ability, ChampionAnalysis, MatchupAnalysis } from '../../types';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import type { Champion, Ability, ChampionAnalysis, MatchupAnalysis, DraftState } from '../../types';
 import { getChampionAnalysis, getMatchupAnalysis } from '../../services/geminiService';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
+import { ROLES } from '../../constants';
 
 // --- Helper & Display Components ---
 
@@ -181,7 +182,7 @@ const MatchupsDisplay: React.FC<{ analysis: MatchupAnalysis, championName: strin
 
 // --- Main Modal Component ---
 
-export const ChampionDetailModal: React.FC<{ champion: Champion; isOpen: boolean; onClose: () => void; onLoadInLab: (championId: string) => void; }> = ({ champion, isOpen, onClose, onLoadInLab }) => {
+export const ChampionDetailModal: React.FC<{ champion: Champion; isOpen: boolean; onClose: () => void; onLoadInLab: (championId: string, role?: string) => void; draftState: DraftState; }> = ({ champion, isOpen, onClose, onLoadInLab, draftState }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'abilities' | 'strategy' | 'matchups'>('overview');
   
   const [aiAnalysis, setAiAnalysis] = useState<ChampionAnalysis | null>(null);
@@ -193,6 +194,22 @@ export const ChampionDetailModal: React.FC<{ champion: Champion; isOpen: boolean
   const [matchupsError, setMatchupsError] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const smartAction = useMemo(() => {
+    for (const role of champion.roles) {
+      const roleIndex = ROLES.indexOf(role);
+      if (roleIndex !== -1 && !draftState.blue.picks[roleIndex].champion) {
+        return {
+          text: `Add to ${role} Slot`,
+          action: () => onLoadInLab(champion.id, role),
+        };
+      }
+    }
+    return {
+      text: 'Try in Lab',
+      action: () => onLoadInLab(champion.id),
+    };
+  }, [champion, draftState, onLoadInLab]);
 
   useEffect(() => {
     setActiveTab('overview');
@@ -268,7 +285,7 @@ export const ChampionDetailModal: React.FC<{ champion: Champion; isOpen: boolean
 
         <div className="p-4 mt-4 border-t border-slate-700 flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Close</Button>
-          <Button variant="primary" onClick={() => onLoadInLab(champion.id)}>Try in Lab</Button>
+          <Button variant="primary" onClick={smartAction.action}>{smartAction.text}</Button>
         </div>
       </div>
     </Modal>

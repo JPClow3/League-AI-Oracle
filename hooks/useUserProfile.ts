@@ -24,6 +24,7 @@ const getInitialMissions = (): UserProfile['missions'] => ({
 const defaultProfile: UserProfile = {
     username: 'Rookie',
     avatar: 'garen', // Default avatar
+    skillLevel: 'Beginner',
     goals: [],
     sp: 0,
     level: 1,
@@ -67,6 +68,8 @@ const STARTER_MASTERY_POINTS = 50;
 interface UserProfileContextType {
     profile: UserProfile;
     spForNextLevel: number;
+    lastCompletedMissionId: string | null;
+    clearLastCompletedMissionId: () => void;
     setProfile: (profile: Partial<UserProfile>) => void;
     addSP: (amount: number, reason?: string) => void;
     completeMission: (missionId: string) => boolean; // Returns true if mission was completed
@@ -86,6 +89,7 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(und
 
 export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [profile, setProfileState] = useState<UserProfile>(defaultProfile);
+    const [lastCompletedMissionId, setLastCompletedMissionId] = useState<string | null>(null);
 
     const loadProfile = useCallback(() => {
         try {
@@ -184,6 +188,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
             ...prev,
             username: data.username,
             avatar: data.avatar,
+            skillLevel: data.skillLevel,
             goals: data.goals,
             sp: initialSP,
             badges: [initialBadge],
@@ -230,6 +235,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
             // If a mission was completed, calculate and apply SP and level changes atomically.
             if (missionJustCompleted && missionReward > 0) {
+                setLastCompletedMissionId(missionId);
                 toast.success(`+${missionReward} SP: Mission Complete: ${missionTitle}`, { icon: '⭐' });
                 
                 let newSP = finalProfile.sp + missionReward;
@@ -322,9 +328,15 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     const spForNextLevel = getSPForNextLevel(profile.level);
 
+    const clearLastCompletedMissionId = useCallback(() => {
+        setLastCompletedMissionId(null);
+    }, []);
+
     const contextValue = useMemo(() => ({
         profile,
         spForNextLevel,
+        lastCompletedMissionId,
+        clearLastCompletedMissionId,
         setProfile,
         addSP,
         completeMission,
@@ -332,7 +344,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         addRecentFeedback,
         checkStreak,
         initializeNewProfile,
-    }), [profile, spForNextLevel, addSP, completeMission, addChampionMastery, addRecentFeedback, checkStreak, initializeNewProfile]);
+    }), [profile, spForNextLevel, lastCompletedMissionId, clearLastCompletedMissionId, addSP, completeMission, addChampionMastery, addRecentFeedback, checkStreak, initializeNewProfile]);
 
     return React.createElement(
         UserProfileContext.Provider,

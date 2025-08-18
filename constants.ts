@@ -9,6 +9,7 @@ export interface Blueprint {
 
 // Centralize the Data Dragon version for easy updates when a new patch is released.
 export const DATA_DRAGON_VERSION = '14.14.1';
+export const DATA_DRAGON_SPLASH_URL_BASE = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/`;
 
 // Centralized array of roles for consistency across the application.
 export const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];

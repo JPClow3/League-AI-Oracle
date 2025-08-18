@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { DraftState, Champion, AIAdvice, TeamSide, ChampionLite, ChampionSuggestion } from '../../types';
-import { CHAMPIONS, CHAMPIONS_LITE, ROLES } from '../../constants';
-import { getDraftAdvice, getChampionSuggestions } from '../../services/geminiService';
+import { CHAMPIONS, CHAMPIONS_LITE, ROLES, DATA_DRAGON_VERSION } from '../../constants';
+import { getDraftAdvice, getChampionSuggestions, generateDraftName, getTierList, getPatchNotesSummary } from '../../services/geminiService';
 import { TeamPanel } from './TeamPanel';
 import { AdvicePanel } from './AdvicePanel';
 import { ChampionGrid } from './ChampionGrid';
@@ -13,6 +13,8 @@ import { useUserProfile } from '../../hooks/useUserProfile';
 import { useSettings } from '../../hooks/useSettings';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { GuidedTour, TourStep } from '../Onboarding/GuidedTour';
+import { QuickLookPanel } from './QuickLookPanel';
+import { KEYWORDS } from '../Academy/lessons';
 
 interface DraftLabProps {
   draftState: DraftState;
@@ -24,6 +26,7 @@ interface DraftLabProps {
 }
 
 type EnrichedChampionSuggestion = ChampionSuggestion & { champion: ChampionLite };
+type IntelData = { sTier: string[], buffs: string[], nerfs: string[] };
 
 const GRADE_SCORES: Record<string, number> = { S: 150, A: 100, B: 50, C: 25, D: 10, F: 0 };
 const getScoreValue = (score: string | undefined): number => {
@@ -35,7 +38,7 @@ const getScoreValue = (score: string | undefined): number => {
 const tourSteps: TourStep[] = [
     {
         selector: '#draftlab-welcome',
-        title: 'Welcome to the Draft Lab!',
+        title: 'Welcome to the Strategy Forge!',
         content: 'This is your sandbox for theory-crafting. You can build team compositions for both sides and get instant AI-powered analysis.',
     },
     {
@@ -62,6 +65,7 @@ const tourSteps: TourStep[] = [
 
 export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, onReset, startTour, onTourComplete, navigateToAcademy }) => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [draftNotes, setDraftNotes] = useState('');
   const [selectionContext, setSelectionContext] = useState<{ team: TeamSide; type: 'pick' | 'ban'; index: number } | null>(null);
@@ -69,6 +73,8 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [counterMetaMode, setCounterMetaMode] = useState(false);
+  const [quickLookChampion, setQuickLookChampion] = useState<ChampionLite | null>(null);
   
   const { profile, addSP, completeMission, addChampionMastery, addRecentFeedback } = useUserProfile();
   const { settings } = useSettings();
@@ -78,13 +84,47 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
 
   const [recommendations, setRecommendations] = useState<EnrichedChampionSuggestion[]>([]);
   const [isRecsLoading, setIsRecsLoading] = useState(false);
+
+  const [intelData, setIntelData] = useState<IntelData | null>(null);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const previousDraftState = useRef(JSON.stringify(draftState));
   
-  // Create a stable string representation of draftState for useEffect dependencies
   const draftStateString = useMemo(() => JSON.stringify(draftState), [draftState]);
 
+  // Fetch contextual intel data on load
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const fetchIntel = async () => {
+        try {
+            const [tierList, patchNotes] = await Promise.all([
+                getTierList(signal),
+                getPatchNotesSummary(signal)
+            ]);
+            
+            if (signal.aborted) return;
+            
+            const sTier = tierList.tierList.flatMap(role => role.champions.map(c => c.championName));
+            const buffs = patchNotes.buffs.map(b => b.name);
+            const nerfs = patchNotes.nerfs.map(n => n.name);
+
+            setIntelData({ sTier, buffs, nerfs });
+        } catch (err) {
+            // Silently ignore abort errors, as they are expected on unmount or in Strict Mode.
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                return;
+            }
+            console.error("Failed to fetch intel data:", err);
+            // Don't show toast, it's a background task.
+        }
+    };
+    
+    fetchIntel();
+    
+    return () => controller.abort();
+  }, []);
 
   const isDraftEmpty = useMemo(() => {
     const allSlots = [
@@ -130,7 +170,7 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
             .map(m => CHAMPIONS_LITE.find(c => c.id === m.championId)?.name)
             .filter((name): name is string => !!name);
 
-        const suggestions = await getChampionSuggestions(draftState, selectionContext, settings.primaryRole, topMasteryChamps, signal);
+        const suggestions = await getChampionSuggestions(draftState, selectionContext, settings.primaryRole, profile.skillLevel, topMasteryChamps, counterMetaMode ? 'counter-meta' : 'standard', signal);
         if (signal.aborted) return;
         
         const enrichedSuggestions = suggestions
@@ -159,7 +199,7 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
     return () => {
       controller.abort();
     };
-  }, [selectionContext, draftStateString, settings.primaryRole, profile.championMastery]);
+  }, [selectionContext, draftStateString, settings.primaryRole, profile.skillLevel, profile.championMastery, counterMetaMode]);
 
   useEffect(() => {
     return () => {
@@ -171,11 +211,10 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
     setIsLoading(true);
     setError(null);
     try {
-      const advice = await getDraftAdvice(draftState, settings.primaryRole, signal);
+      const advice = await getDraftAdvice(draftState, settings.primaryRole, profile.skillLevel, signal);
       if (!signal.aborted) {
         setAiAdvice(advice);
         
-        // --- Gamification & Contextual Feedback Logic ---
         const score = advice.teamAnalysis.blue.draftScore;
         const weaknesses = advice.teamAnalysis.blue.weaknesses;
 
@@ -186,7 +225,29 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
             });
         }
         
-        completeMission('gs1'); // Onboarding mission
+        // Proactive feedback toast, as per audit
+        if (score && ['C', 'D', 'F'].some(g => score.startsWith(g))) {
+            const hasActionableWeakness = weaknesses.some(w => KEYWORDS.some(k => w.toLowerCase().includes(k.term.toLowerCase())));
+            if(hasActionableWeakness) {
+                toast.custom((t) => (
+                    <div className={`${ t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-slate-800 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border border-yellow-500/50`}>
+                        <div className="flex-1 w-0 p-4">
+                            <div className="flex items-start">
+                                <div className="ml-3 flex-1">
+                                    <p className="text-sm font-semibold text-yellow-300">Pro Tip Available!</p>
+                                    <p className="mt-1 text-sm text-slate-400">Tough draft! We've added a Pro Tip to your profile to help with that.</p>
+                                </div>
+                            </div>
+                        </div>
+                         <div className="flex border-l border-slate-700/50">
+                             <button onClick={() => {toast.dismiss(t.id);}} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-400 hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500">Close</button>
+                        </div>
+                    </div>
+                ), { id: 'pro-tip-toast' });
+            }
+        }
+        
+        completeMission('gs1');
         
         const today = new Date().toISOString().split('T')[0];
         if (profile.lastLabAnalysisDate !== today) {
@@ -226,7 +287,7 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
         setIsLoading(false);
       }
     }
-  }, [draftState, addSP, completeMission, addChampionMastery, addRecentFeedback, profile.lastLabAnalysisDate, settings.primaryRole]);
+  }, [draftState, addSP, completeMission, addChampionMastery, addRecentFeedback, profile.lastLabAnalysisDate, settings.primaryRole, profile.skillLevel]);
   
   const isDraftComplete = useMemo(() => {
       const bluePicks = draftState.blue.picks.filter(p => p.champion).length;
@@ -282,8 +343,8 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
       };
     });
 
-    setAiAdvice(null); // Invalidate old advice on change
-    setSelectionContext(null); // Deselect slot after picking
+    setAiAdvice(null);
+    setSelectionContext(null);
   }, [selectionContext, setDraftState]);
 
   const handleReset = () => {
@@ -295,23 +356,28 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
     setShouldGlowSaveButton(false);
   };
   
-  const handleSaveToPlaybook = () => {
+  const handleSaveToPlaybook = async () => {
     let initialNotes = '';
     if (aiAdvice) {
         const { blue, red } = aiAdvice.teamAnalysis;
         initialNotes = `AI Analysis Summary:\n- Blue Score: ${blue.draftScore} (${blue.draftScoreReasoning})\n- Blue Strengths: ${blue.strengths.join(', ')}\n- Red Score: ${red.draftScore}\n- Red Strengths: ${red.strengths.join(', ')}`;
     }
     setDraftNotes(initialNotes);
-    setDraftName('');
+    
+    // Auto-generate a name
+    const tempName = await generateDraftName(draftState);
+    setDraftName(tempName || '');
+    
     setIsSaveModalOpen(true);
   };
 
-  const confirmSaveToPlaybook = () => {
-    if (draftName.trim()) {
-        if (addPlaybookEntry(draftName.trim(), draftState, aiAdvice, draftNotes)) {
+  const confirmSaveToPlaybook = async () => {
+    if (draftName.trim() && !isSaving) {
+        setIsSaving(true);
+        const success = await addPlaybookEntry(draftName.trim(), draftState, aiAdvice, draftNotes);
+        setIsSaving(false);
+        if (success) {
             setIsSaveModalOpen(false);
-            completeMission('gs3'); // Onboarding
-            completeMission('w2');
         }
     }
   };
@@ -356,19 +422,10 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
             }
         };
     });
-    setSelectionContext(null); // Clear selection context to prevent side-effects
+    setSelectionContext(null);
     setAiAdvice(null);
     setError(null);
   };
-
-  const availableChampions = useMemo(() => {
-    const allPicksAndBans = [
-      ...draftState.blue.picks, ...draftState.red.picks,
-      ...draftState.blue.bans, ...draftState.red.bans
-    ];
-    const pickedIds = new Set(allPicksAndBans.filter(s => s.champion).map(s => s.champion!.id));
-    return CHAMPIONS_LITE.filter(c => !pickedIds.has(c.id));
-  }, [draftState]);
 
   const getActiveSlotForTeam = (team: TeamSide) => {
     if (selectionContext?.team === team) {
@@ -394,13 +451,13 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
                     <p className="text-sm font-semibold text-yellow-300">
                       Pro Tip
                     </p>
-                    <p className="mt-1 text-sm text-gray-300">
+                    <p className="mt-1 text-sm text-slate-400">
                       Your team has a lot of one damage type! Consider adding a different threat to make it harder for the enemy to itemize.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="flex border-l border-slate-700">
+              <div className="flex border-l border-slate-700/50">
                 <button
                   onClick={() => toast.dismiss(t.id)}
                   className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-400 hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -424,17 +481,25 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
             onClose={onTourComplete!}
             steps={tourSteps}
         />
-      <div id="draftlab-welcome" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-4 rounded-xl shadow-lg">
+        <QuickLookPanel champion={quickLookChampion} onClose={() => setQuickLookChampion(null)} />
+      <div id="draftlab-welcome" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 p-4 rounded-xl shadow-lg">
         <div className="flex items-center gap-4">
             <div className="bg-slate-700/50 text-blue-300 w-12 h-12 rounded-lg flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
             </div>
             <div>
-                <h1 className="font-display text-3xl font-bold text-white">Draft Lab</h1>
-                <p className="text-sm text-gray-400">Theory-craft compositions with live AI analysis.</p>
+                <h1 className="font-display text-4xl font-bold text-slate-200 tracking-wide">Strategy Forge</h1>
+                <p className="text-sm text-slate-400">Forge and test team compositions with instant, AI-powered strategic feedback.</p>
+                <p className="text-xs text-slate-500 mt-1">AI analysis based on patch {DATA_DRAGON_VERSION}</p>
             </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-full">
+                <label htmlFor="counter-meta-toggle" className="text-xs font-semibold text-slate-400 pl-2">Counter-Meta</label>
+                <button onClick={() => setCounterMetaMode(!counterMetaMode)} id="counter-meta-toggle" role="switch" aria-checked={counterMetaMode} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-500 focus:ring-opacity-75 ${counterMetaMode ? 'bg-blue-600' : 'bg-slate-700'}`}>
+                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${counterMetaMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+            </div>
             <Button onClick={handleShare} variant="secondary" disabled={isDraftEmpty}>Share Draft</Button>
             <Button 
                 onClick={handleSaveToPlaybook} 
@@ -442,7 +507,7 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
                 disabled={isDraftEmpty}
                 className={shouldGlowSaveButton ? 'animate-pulse-glow' : ''}
             >
-                Save to Playbook
+                Save to The Archives
             </Button>
             <Button onClick={handleReset} variant="danger">Reset</Button>
         </div>
@@ -476,7 +541,7 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
 
       <div id="champion-grid-container" className="bg-slate-800/50 rounded-lg shadow-lg">
           <div className="p-4">
-            <h2 className="font-display text-2xl font-bold text-white">
+            <h2 className="font-display text-2xl font-bold text-slate-200">
                 {selectionContext 
                     ? <span className="text-yellow-300">Selecting for {selectionContext.team} team's {selectionContext.type} #{selectionContext.index + 1}</span>
                     : 'Champion Pool'
@@ -485,11 +550,13 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
           </div>
           <div className="h-[650px]">
               <ChampionGrid 
-                champions={availableChampions} 
                 onSelect={handleChampionSelect}
+                onQuickLook={setQuickLookChampion}
                 recommendations={recommendations}
                 isRecsLoading={isRecsLoading}
                 activeRole={activeRole}
+                draftState={draftState}
+                intelData={intelData}
               />
           </div>
       </div>
@@ -497,38 +564,41 @@ export const DraftLab: React.FC<DraftLabProps> = ({ draftState, setDraftState, o
       <Modal 
         isOpen={isSaveModalOpen} 
         onClose={() => {
+            if (isSaving) return;
             setIsSaveModalOpen(false);
             setDraftName('');
             setDraftNotes('');
         }} 
-        title="Save Draft to Playbook"
+        title="Archive Strategy in The Archives"
       >
         <div className="p-4 space-y-4">
             <div>
-                <label htmlFor="draftName" className="block text-sm font-medium text-gray-300">Draft Name</label>
+                <label htmlFor="draftName" className="block text-sm font-medium text-slate-400">Draft Name</label>
                 <input
                     id="draftName"
                     type="text"
                     value={draftName}
                     onChange={(e) => setDraftName(e.target.value)}
                     placeholder="e.g., Anti-Dive Comp"
-                    className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-700/50 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
             <div>
-                <label htmlFor="draftNotes" className="block text-sm font-medium text-gray-300">Notes (auto-filled from AI)</label>
+                <label htmlFor="draftNotes" className="block text-sm font-medium text-slate-400">Notes (auto-filled from AI)</label>
                  <textarea
                     id="draftNotes"
                     value={draftNotes}
                     onChange={(e) => setDraftNotes(e.target.value)}
                     rows={4}
                     placeholder="Add personal notes here..."
-                    className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-700/50 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
             <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={() => { setIsSaveModalOpen(false); setDraftName(''); setDraftNotes(''); }}>Cancel</Button>
-                <Button variant="primary" onClick={confirmSaveToPlaybook} disabled={!draftName.trim()}>Save</Button>
+                <Button variant="secondary" onClick={() => { setIsSaveModalOpen(false); setDraftName(''); setDraftNotes(''); }} disabled={isSaving}>Cancel</Button>
+                <Button variant="primary" onClick={confirmSaveToPlaybook} disabled={!draftName.trim() || isSaving}>
+                    {isSaving ? 'Saving...' : 'Save to Archives'}
+                </Button>
             </div>
         </div>
       </Modal>

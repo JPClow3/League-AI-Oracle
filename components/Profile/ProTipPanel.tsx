@@ -1,8 +1,8 @@
-
 import React, { useMemo } from 'react';
 import type { Page, UserProfile } from '../../types';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { Button } from '../common/Button';
+import { CHAMPIONS_LITE } from '../../constants';
 
 interface ProTipPanelProps {
     profile: UserProfile;
@@ -22,42 +22,65 @@ interface ProTip {
 export const ProTipPanel: React.FC<ProTipPanelProps> = ({ profile, setCurrentPage, navigateToAcademy }) => {
     const { entries } = usePlaybook();
 
-    const tips: ProTip[] = useMemo(() => [
-        {
-            id: 'getting-started-missions',
-            condition: (profile) => profile.missions.gettingStarted.some(m => !m.completed),
-            title: "Complete Your First Missions",
-            description: "Your 'Getting Started' missions are a great way to learn the ropes and earn a big SP bonus.",
-            actionText: 'View Missions',
-            action: () => {
-                document.getElementById('missions-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const tips: ProTip[] = useMemo(() => {
+        const lastFeedback = profile.recentFeedback[0];
+        const highMasteryNoS = profile.championMastery
+            .sort((a,b) => b.points - a.points)
+            .find(m => m.points > 200 && !m.highestGrade.startsWith('S'));
+            
+        return [
+            {
+                id: 'getting-started-missions',
+                condition: (p) => p.missions.gettingStarted.some(m => !m.completed),
+                title: "Complete Your First Missions",
+                description: "Your 'Getting Started' missions are a great way to learn the ropes and earn a big SP bonus.",
+                actionText: 'View Missions',
+                action: () => {
+                    document.getElementById('missions-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            },
+            {
+                id: 'identified-weakness',
+                condition: () => lastFeedback && lastFeedback.type === 'lesson' && lastFeedback.message.includes('weakness'),
+                title: "Address a Weakness",
+                description: `The AI noted a potential weakness in a recent draft: "${lastFeedback?.message.split('"')[1]}". Reviewing related lessons can help.`,
+                actionText: 'Go to Academy',
+                action: () => setCurrentPage('Academy')
+            },
+            {
+                id: 'high-mastery-no-s',
+                condition: () => !!highMasteryNoS,
+                title: `Reach for the S-Rank!`,
+                description: `You have high mastery on ${CHAMPIONS_LITE.find(c => c.id === highMasteryNoS?.championId)?.name}, but haven't hit an S-rank yet. Review their AI Strategy guide to perfect your drafts.`,
+                actionText: 'Go to The Armory',
+                action: () => setCurrentPage('The Armory')
+            },
+            {
+                id: 'low-arena-score',
+                condition: (p) => p.level > 3 && p.arenaStats.averageScore > 0 && p.arenaStats.averageScore < 60,
+                title: "Improve Your Fundamentals",
+                description: "Your Arena scores suggest there's room to grow! Mastering team composition archetypes is a great place to start.",
+                actionText: 'Go to Academy',
+                action: () => navigateToAcademy('team-comp-archetypes')
+            },
+            {
+                id: 'empty-playbook',
+                condition: (p, playbookSize) => p.level > 2 && playbookSize === 0,
+                title: "Build Your Playbook",
+                description: "Saving successful drafts to your Playbook is key to building a strategic library you can rely on.",
+                actionText: 'Go to Forge',
+                action: () => setCurrentPage('Strategy Forge')
+            },
+            {
+                id: 'low-mastery-diversity',
+                condition: (p) => p.level > 5 && p.championMastery.length > 0 && p.championMastery.length < 5,
+                title: "Expand Your Champion Pool",
+                description: "Try analyzing drafts with different champions in the Strategy Forge to increase your mastery and strategic flexibility.",
+                actionText: 'Go to Forge',
+                action: () => setCurrentPage('Strategy Forge')
             }
-        },
-        {
-            id: 'low-arena-score',
-            condition: (profile) => profile.level > 3 && profile.arenaStats.averageScore > 0 && profile.arenaStats.averageScore < 60,
-            title: "Improve Your Fundamentals",
-            description: "Your Arena scores suggest there's room to grow! Mastering team composition archetypes is a great place to start.",
-            actionText: 'Go to Academy',
-            action: () => navigateToAcademy('team-comp-archetypes')
-        },
-        {
-            id: 'empty-playbook',
-            condition: (profile, playbookSize) => profile.level > 2 && playbookSize === 0,
-            title: "Build Your Playbook",
-            description: "Saving successful drafts to your Playbook is key to building a strategic library you can rely on.",
-            actionText: 'Go to Lab',
-            action: () => setCurrentPage('Draft Lab')
-        },
-        {
-            id: 'low-mastery-diversity',
-            condition: (profile) => profile.level > 5 && profile.championMastery.length > 0 && profile.championMastery.length < 5,
-            title: "Expand Your Champion Pool",
-            description: "Try analyzing drafts with different champions in the Draft Lab to increase your mastery and strategic flexibility.",
-            actionText: 'Go to Lab',
-            action: () => setCurrentPage('Draft Lab')
-        }
-    ], [navigateToAcademy, setCurrentPage]);
+        ];
+    }, [navigateToAcademy, setCurrentPage, profile]);
 
     const tip = useMemo(() => {
         return tips.find(tip => tip.condition(profile, entries.length)) || null;

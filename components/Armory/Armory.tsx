@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import type { Champion, ChampionLite } from '../../types';
-import { CHAMPIONS, CHAMPIONS_LITE } from '../../constants';
+import type { Champion, ChampionLite, DraftState } from '../../types';
+import { CHAMPIONS, CHAMPIONS_LITE, DATA_DRAGON_VERSION } from '../../constants';
 import { ChampionDetailModal } from './ChampionDetailModal';
 import { FixedSizeGrid as Grid } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -52,10 +52,11 @@ const Cell = ({ columnIndex, rowIndex, style, data }: {
 interface ArmoryProps {
     initialSearchTerm?: string | null;
     onSearchHandled?: () => void;
-    onLoadChampionInLab: (championId: string) => void;
+    onLoadChampionInLab: (championId: string, role?: string) => void;
+    draftState: DraftState;
 }
 
-export const Armory: React.FC<ArmoryProps> = ({ initialSearchTerm, onSearchHandled, onLoadChampionInLab }) => {
+export const Armory: React.FC<ArmoryProps> = ({ initialSearchTerm, onSearchHandled, onLoadChampionInLab, draftState }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
@@ -98,8 +99,8 @@ export const Armory: React.FC<ArmoryProps> = ({ initialSearchTerm, onSearchHandl
     }
   }, []);
   
-  const handleLoadInLab = (championId: string) => {
-    onLoadChampionInLab(championId);
+  const handleLoadInLab = (championId: string, role?: string) => {
+    onLoadChampionInLab(championId, role);
     setSelectedChampion(null); // Close modal after action
   };
 
@@ -129,33 +130,42 @@ export const Armory: React.FC<ArmoryProps> = ({ initialSearchTerm, onSearchHandl
             </button>
           ))}
         </div>
+        <div className="flex-grow text-right">
+            <p className="text-xs text-gray-500">Champion data based on patch {DATA_DRAGON_VERSION}</p>
+        </div>
       </div>
 
       <div className="flex-grow">
-         <AutoSizer>
-            {({ height, width }) => {
-                const columnCount = Math.max(1, Math.floor(width / cardWidth));
-                const rowCount = Math.ceil(filteredChampions.length / columnCount);
-                return (
-                    <Grid
-                        className="w-full"
-                        columnCount={columnCount}
-                        rowCount={rowCount}
-                        columnWidth={cardWidth}
-                        rowHeight={cardHeight}
-                        width={width}
-                        height={height}
-                        itemData={{
-                            champions: filteredChampions,
-                            onClick: handleChampionClick,
-                            columnCount,
-                        }}
-                    >
-                        {Cell}
-                    </Grid>
-                );
-            }}
-         </AutoSizer>
+        {filteredChampions.length > 0 ? (
+            <AutoSizer>
+                {({ height, width }) => {
+                    const columnCount = Math.max(1, Math.floor(width / cardWidth));
+                    const rowCount = Math.ceil(filteredChampions.length / columnCount);
+                    return (
+                        <Grid
+                            className="w-full"
+                            columnCount={columnCount}
+                            rowCount={rowCount}
+                            columnWidth={cardWidth}
+                            rowHeight={cardHeight}
+                            width={width}
+                            height={height}
+                            itemData={{
+                                champions: filteredChampions,
+                                onClick: handleChampionClick,
+                                columnCount,
+                            }}
+                        >
+                            {Cell}
+                        </Grid>
+                    );
+                }}
+            </AutoSizer>
+        ) : (
+             <div className="flex items-center justify-center h-full text-gray-500">
+                <p>No champions found for "{debouncedSearchTerm}" with the selected filters.</p>
+            </div>
+        )}
       </div>
 
       {selectedChampion && (
@@ -164,6 +174,7 @@ export const Armory: React.FC<ArmoryProps> = ({ initialSearchTerm, onSearchHandl
           isOpen={!!selectedChampion}
           onClose={() => setSelectedChampion(null)}
           onLoadInLab={handleLoadInLab}
+          draftState={draftState}
         />
       )}
     </div>

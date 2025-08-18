@@ -1,4 +1,5 @@
-export type Page = 'Home' | 'Draft Lab' | 'Playbook' | 'Academy' | 'Arena' | 'Strategy Hub' | 'Daily Trial' | 'Profile';
+
+export type Page = 'Home' | 'Strategy Forge' | 'The Archives' | 'Academy' | 'Draft Arena' | 'The Armory' | 'Daily Challenge' | 'Profile' | 'The Oracle' | 'Live Co-Pilot';
 
 export type Theme = 'cyan' | 'crimson' | 'gold' | 'teal';
 
@@ -7,6 +8,7 @@ export interface Settings {
     secondaryRole: string;
     favoriteChampions: string[]; // Champion IDs
     theme: Theme;
+    enableSound: boolean;
 }
 
 export interface Ability {
@@ -66,6 +68,8 @@ export interface TeamAnalysis {
   keyThreats: string;
   draftScore?: string; // e.g., "A-", "B+"
   draftScoreReasoning?: string;
+  draftHighlight?: { championName: string; reasoning: string; };
+  powerSpikeTimeline?: { time: string; bluePower: number; redPower: number; event: string; }[];
 }
 
 export interface PickSuggestion {
@@ -116,13 +120,22 @@ export interface SavedDraft {
     phase: 'ban1' | 'pick1' | 'ban2' | 'pick2';
 }
 
+export interface PlaybookPlusDossier {
+    winCondition: string;
+    earlyGame: string;
+    midGame: string;
+    teamfighting: string;
+}
+
 export interface HistoryEntry {
   id: string;
   name: string;
   draft: SavedDraft; // Use the lightweight draft structure
   analysis?: AIAdvice | null;
   userNotes?: string; // For Playbook+
+  dossier?: PlaybookPlusDossier;
   createdAt: string;
+  status?: 'pending' | 'saved' | 'error';
 }
 
 export interface MetaSource {
@@ -225,9 +238,11 @@ export interface ChampionMastery {
     highestGrade: string; // e.g., "S+", "A-"
 }
 
+export type ArenaBotPersona = 'The Aggressor' | 'The Strategist' | 'The Trickster';
 export interface ArenaStats {
     averageScore: number; // Stored as a percentile, e.g., 85.5
     difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+    preferredPersona?: ArenaBotPersona;
 }
 
 export interface RecentFeedback {
@@ -240,6 +255,7 @@ export interface RecentFeedback {
 export interface UserProfile {
     username: string;
     avatar: string; // Champion ID
+    skillLevel: 'Beginner' | 'Intermediate' | 'Advanced';
     goals: string[];
     sp: number; // Strategic Points
     level: number;

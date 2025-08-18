@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { UserProfile } from '../../types';
 import { ProgressBar } from '../common/ProgressBar';
 import { Tooltip } from '../common/Tooltip';
 import { CHAMPIONS_LITE } from '../../constants';
+import { CHAMPION_THEME_COLORS } from '../../data/championThemeColors';
 
 interface StrategistJourneyPanelProps {
     profile: UserProfile;
@@ -36,6 +37,17 @@ export const StrategistJourneyPanel: React.FC<StrategistJourneyPanelProps> = ({ 
     const rankTheme = getRankTheme(profile.rank);
     const avatarChampion = CHAMPIONS_LITE.find(c => c.id === profile.avatar);
     
+    const avatarThemeStyle = useMemo(() => {
+        const color = CHAMPION_THEME_COLORS[profile.avatar];
+        if (color) {
+            return {
+                borderColor: color,
+                boxShadow: `0 0 15px 0px ${color}55`, // Add a subtle glow
+            };
+        }
+        return { borderColor: '#334155' }; // default slate-700
+    }, [profile.avatar]);
+
     return (
         <div className={`bg-slate-800 p-6 rounded-xl shadow-lg border ${rankTheme.borderClass} transition-colors duration-500`}>
             <div className="flex flex-col items-center text-center mb-4">
@@ -43,7 +55,8 @@ export const StrategistJourneyPanel: React.FC<StrategistJourneyPanelProps> = ({ 
                     <img
                         src={avatarChampion.image}
                         alt="User Avatar"
-                        className="w-24 h-24 rounded-full border-4 border-slate-700 mb-3"
+                        className="w-24 h-24 rounded-full border-4 mb-3 transition-all duration-300"
+                        style={avatarThemeStyle}
                     />
                 )}
                 <div className="flex justify-center items-center gap-2">

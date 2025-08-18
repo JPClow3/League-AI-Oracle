@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -28,21 +29,47 @@
 }
 </script>
 <style>
-  /* Holographic Hextech Theme */
-  :root {
-    --color-accent-text: 103 232 249; /* cyan-300 */
-    --color-accent-bg: 8 145 178;    /* cyan-600 */
-    --color-accent-bg-hover: 14 116 144; /* cyan-700 */
-    --color-accent-logo: 34 211 238; /* cyan-400 */
-  }
+  /* Holographic Hextech Theme Variables are now applied via JS in App.tsx */
 
   body {
     font-family: 'Inter', sans-serif;
+    /* New: Add subtle noise/lighting texture for a "Strategic Dossier" feel */
+    background-image: radial-gradient(circle at 50% 0, rgba(var(--color-accent-bg), 0.05), transparent 40%),
+                      radial-gradient(circle at 50% 100%, rgba(51, 65, 85, 0.1), transparent 60%);
+    background-attachment: fixed;
   }
 
   .font-display {
     font-family: 'Rajdhani', sans-serif;
   }
+  
+  /* --- New Page Transitions (Fade & Slide Up) --- */
+  .page-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  .page-enter {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  .page-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+  }
+  .page-exit {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .page-exit-active {
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 300ms ease-in, transform 300ms ease-in;
+  }
+  /* --- End Page Transitions --- */
 
   /* For react-transition-group modal animation */
   .modal-enter {
@@ -88,6 +115,17 @@
   .animate-pulse-once {
       animation: pulse-once 0.75s ease-out;
   }
+  
+  /* --- New Mission Completion Animation --- */
+  @keyframes mission-complete-glow {
+    0% { box-shadow: 0 0 0px rgba(var(--color-accent-text), 0); }
+    50% { box-shadow: 0 0 20px 5px rgba(var(--color-accent-text), 0.5); transform: scale(1.02); }
+    100% { box-shadow: 0 0 0px rgba(var(--color-accent-text), 0); }
+  }
+  .animate-mission-complete {
+      animation: mission-complete-glow 1.5s ease-out;
+  }
+  /* --- End Mission Completion Animation --- */
 
   @keyframes pulse-glow {
     0%, 100% {
@@ -138,10 +176,43 @@
       border-radius: 9999px;
       transition: width 0.3s ease-in-out;
   }
+
+  /* For Hextech Loader */
+  @keyframes hex-scan {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100%);
+    }
+  }
+
+  @keyframes pulse-text {
+    0%, 100% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* For Power Spike Timeline */
+  @keyframes bar-grow {
+      from {
+          transform: scaleY(0);
+      }
+      to {
+          transform: scaleY(1);
+      }
+  }
+  .bar-grow {
+      transform-origin: bottom;
+      animation: bar-grow 0.5s ease-out forwards;
+  }
 </style>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-[#0A0F1F]">
+  <body class="bg-slate-900 text-slate-300">
     <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

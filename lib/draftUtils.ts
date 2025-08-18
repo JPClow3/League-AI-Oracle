@@ -1,5 +1,5 @@
-import type { DraftState, SavedDraft, Champion, DraftSlot, SavedTeamState } from '../types';
-import { CHAMPIONS } from '../constants';
+import type { DraftState, SavedDraft, Champion, DraftSlot, SavedTeamState, ChampionLite } from '../types';
+import { CHAMPIONS, CHAMPIONS_LITE } from '../constants';
 
 /**
  * Converts a full DraftState object into a lightweight SavedDraft object containing only champion IDs.
@@ -45,4 +45,17 @@ export const fromSavedDraft = (savedDraft: SavedDraft): DraftState => {
         turn: savedDraft.turn,
         phase: savedDraft.phase,
     };
+};
+
+/**
+ * Calculates the list of available champions based on the current draft state.
+ * @param draftState The current DraftState object.
+ * @returns An array of ChampionLite objects that have not been picked or banned.
+ */
+export const getAvailableChampions = (draftState: DraftState): ChampionLite[] => {
+    const allPicksAndBans = [
+        ...draftState.blue.picks, ...draftState.red.picks, ...draftState.blue.bans, ...draftState.red.bans
+    ];
+    const pickedIds = new Set(allPicksAndBans.filter(s => s.champion).map(s => s.champion!.id));
+    return CHAMPIONS_LITE.filter(c => !pickedIds.has(c.id));
 };

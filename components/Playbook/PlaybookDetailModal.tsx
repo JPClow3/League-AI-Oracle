@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import type { HistoryEntry, DraftState } from '../../types';
+import type { HistoryEntry, DraftState, PlaybookPlusDossier } from '../../types';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { AdvicePanel } from '../DraftLab/AdvicePanel';
@@ -16,6 +15,31 @@ interface PlaybookDetailModalProps {
     onSaveNotes: (id: string, notes: string) => void;
     navigateToAcademy: (lessonId: string) => void;
 }
+
+const DossierDisplay: React.FC<{ dossier: PlaybookPlusDossier }> = ({ dossier }) => (
+    <div className="space-y-4">
+        <h3 className="text-xl font-bold text-yellow-300 mb-2">Strategic Dossier</h3>
+        <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 space-y-3 text-sm">
+            <div>
+                <h4 className="font-semibold text-cyan-300">Win Condition</h4>
+                <p className="text-gray-300">{dossier.winCondition}</p>
+            </div>
+             <div>
+                <h4 className="font-semibold text-cyan-300">Early Game (0-15m)</h4>
+                <p className="text-gray-300">{dossier.earlyGame}</p>
+            </div>
+             <div>
+                <h4 className="font-semibold text-cyan-300">Mid Game (15-25m)</h4>
+                <p className="text-gray-300">{dossier.midGame}</p>
+            </div>
+             <div>
+                <h4 className="font-semibold text-cyan-300">Teamfighting</h4>
+                <p className="text-gray-300">{dossier.teamfighting}</p>
+            </div>
+        </div>
+    </div>
+);
+
 
 const DraftDisplay: React.FC<{ draft: DraftState, analysis: HistoryEntry['analysis'] }> = ({ draft, analysis }) => {
     const TeamDisplay: React.FC<{ side: 'blue' | 'red' }> = ({ side }) => {
@@ -57,10 +81,13 @@ const DraftDisplay: React.FC<{ draft: DraftState, analysis: HistoryEntry['analys
 
 export const PlaybookDetailModal: React.FC<PlaybookDetailModalProps> = ({ isOpen, onClose, entry, onLoad, onDelete, onSaveNotes, navigateToAcademy }) => {
     const [userNotes, setUserNotes] = useState('');
+    const [activeTab, setActiveTab] = useState<'analysis' | 'dossier'>('analysis');
 
     useEffect(() => {
         if (entry) {
             setUserNotes(entry.userNotes || '');
+            // Prioritize dossier view if available
+            setActiveTab(entry.dossier ? 'dossier' : 'analysis');
         }
     }, [entry]);
 
@@ -86,15 +113,17 @@ export const PlaybookDetailModal: React.FC<PlaybookDetailModalProps> = ({ isOpen
             toast.success("Notes saved!");
         }
     };
+    
+    const TabButton: React.FC<{ tab: 'analysis' | 'dossier', children: React.ReactNode, disabled?: boolean }> = ({ tab, children, disabled }) => (
+        <button onClick={() => !disabled && setActiveTab(tab)} disabled={disabled} className={`px-3 py-1 text-sm font-semibold rounded-md ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'} disabled:opacity-50 disabled:cursor-not-allowed`}>
+            {children}
+        </button>
+    );
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={entry ? `Playbook: ${entry.name}` : 'Playbook Entry'}>
-            {/* We render content only if entry and fullDraft exist to prevent errors, 
-                but we don't return null for the whole component to allow graceful exit animations. 
-                The Modal wrapper with its close button will always exist when isOpen is true. */}
+        <Modal isOpen={isOpen} onClose={onClose} title={entry ? `Archives: ${entry.name}` : 'Archived Entry'}>
             {entry && fullDraft && (
                  <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Left Side: Draft & Notes */}
                     <div className="space-y-4 flex flex-col">
                         <DraftDisplay draft={fullDraft} analysis={entry.analysis} />
                         <div className="flex-grow flex flex-col">
@@ -109,14 +138,20 @@ export const PlaybookDetailModal: React.FC<PlaybookDetailModalProps> = ({ isOpen
                              <Button onClick={handleSaveNotes} className="mt-2 w-full sm:w-auto">Save Notes</Button>
                         </div>
                         <div className="pt-4 border-t border-slate-700 flex flex-wrap gap-2">
-                            <Button variant="primary" onClick={handleLoad}>Load to Lab</Button>
-                            <Button variant="danger" onClick={handleDelete}>Delete Draft</Button>
+                            <Button variant="primary" onClick={handleLoad}>Load to Forge</Button>
+                            <Button variant="danger" onClick={handleDelete}>Delete Strategy</Button>
                         </div>
                     </div>
     
-                    {/* Right Side: AI Analysis */}
                     <div className="max-h-[70vh] overflow-y-auto">
-                        <AdvicePanel advice={entry.analysis || null} isLoading={false} error={null} navigateToAcademy={navigateToAcademy} />
+                        <div className="flex gap-2 mb-4 p-1 bg-slate-800 rounded-lg">
+                            <TabButton tab="dossier" disabled={!entry.dossier}>Strategic Dossier</TabButton>
+                            <TabButton tab="analysis" disabled={!entry.analysis}>Original Analysis</TabButton>
+                        </div>
+                        
+                        {activeTab === 'dossier' && entry.dossier && <DossierDisplay dossier={entry.dossier} />}
+                        
+                        {activeTab === 'analysis' && <AdvicePanel advice={entry.analysis || null} isLoading={false} error={null} navigateToAcademy={navigateToAcademy} />}
                     </div>
                 </div>
             )}

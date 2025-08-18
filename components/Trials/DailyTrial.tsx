@@ -89,7 +89,7 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
         setIsAnswered(true);
         if (option === question?.correctAnswer) {
             // Gamification logic for correct answer
-            addSP(75, "Daily Trial Correct");
+            addSP(75, "Daily Challenge Correct");
             if(completeMission('d2')) {
                 // Toast is handled by completeMission
             }
@@ -127,8 +127,8 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
     return (
         <div className="space-y-6">
             <div className="bg-slate-800/50 p-4 rounded-lg shadow-lg text-center">
-                <h1 className="text-2xl font-bold text-white">Daily Trial</h1>
-                <p className="text-sm text-gray-400">Test your strategic knowledge. A new trial appears each day.</p>
+                <h1 className="font-display text-3xl font-bold text-white">Daily Challenge</h1>
+                <p className="text-sm text-gray-400">Test your strategic knowledge. A new challenge appears each day.</p>
             </div>
 
             <div className="bg-slate-800 p-6 rounded-lg shadow-lg max-w-2xl mx-auto min-h-[300px] flex flex-col justify-center">

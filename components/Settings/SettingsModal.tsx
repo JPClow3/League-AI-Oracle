@@ -50,24 +50,24 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                      <h3 className="font-semibold text-lg text-white">Role Preferences</h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="primary-role" className="block text-sm text-gray-400 mb-1">Primary Role</label>
+                            <label htmlFor="primary-role" className="block text-sm text-gray-300 mb-1">Primary Role</label>
                             <select
                                 id="primary-role"
                                 value={settings.primaryRole}
                                 onChange={e => setSettings({ primaryRole: e.target.value })}
-                                className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-bg))]"
+                                className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-opacity-75 focus:ring-[rgb(var(--color-accent-bg))]"
                             >
                                 <option value="All">All</option>
                                 {ROLES.map(role => <option key={role} value={role}>{role}</option>)}
                             </select>
                         </div>
                         <div>
-                             <label htmlFor="secondary-role" className="block text-sm text-gray-400 mb-1">Secondary Role</label>
+                             <label htmlFor="secondary-role" className="block text-sm text-gray-300 mb-1">Secondary Role</label>
                              <select
                                 id="secondary-role"
                                 value={settings.secondaryRole}
                                 onChange={e => setSettings({ secondaryRole: e.target.value })}
-                                className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-bg))]"
+                                className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-opacity-75 focus:ring-[rgb(var(--color-accent-bg))]"
                             >
                                 <option value="All">All</option>
                                 {ROLES.map(role => <option key={role} value={role}>{role}</option>)}
@@ -75,11 +75,23 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                         </div>
                      </div>
                 </div>
+                
+                {/* Audio Settings */}
+                <div className="space-y-2">
+                    <h3 className="font-semibold text-lg text-white">Audio</h3>
+                    <div className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg">
+                        <label htmlFor="enable-sound-toggle" className="text-sm text-gray-300">Enable UI Sound Effects</label>
+                        <button onClick={() => setSettings({ enableSound: !settings.enableSound })} id="enable-sound-toggle" role="switch" aria-checked={settings.enableSound} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-blue-500 focus:ring-opacity-75 ${settings.enableSound ? 'bg-blue-600' : 'bg-slate-600'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${settings.enableSound ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+                </div>
+
 
                 {/* Favorite Champions */}
                  <div className="space-y-2">
                     <h3 className="font-semibold text-lg text-white">Favorite Champions</h3>
-                    <p className="text-sm text-gray-400">Select your favorite champions to have them appear at the top of the Champion Grid.</p>
+                    <p className="text-sm text-gray-300">Select your favorite champions to have them appear at the top of the Champion Grid.</p>
                     <div className="max-h-60 overflow-y-auto bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex flex-wrap gap-2">
                         {CHAMPIONS_LITE.map(champ => (
                             <button

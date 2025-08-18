@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { HistoryEntry, DraftState, AIAdvice } from '../types';
 import { toSavedDraft } from '../lib/draftUtils';
+import { generatePlaybookPlusDossier, generateDraftName } from '../services/geminiService';
 import toast from 'react-hot-toast';
+import { useUserProfile } from './useUserProfile';
 
 // Type guard to ensure data from localStorage is valid.
 const isHistoryEntry = (obj: any): obj is HistoryEntry => {
@@ -17,13 +19,17 @@ const PLAYBOOK_STORAGE_KEY = 'history';
 export const usePlaybook = () => {
     const [entries, setEntries] = useState<HistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isAdding, setIsAdding] = useState(false); // State lock to prevent race conditions
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const { completeMission, addSP } = useUserProfile();
 
     const loadEntries = useCallback(() => {
         setIsLoading(true);
         try {
             const savedData = JSON.parse(localStorage.getItem(PLAYBOOK_STORAGE_KEY) || '[]');
             if (Array.isArray(savedData)) {
-                const validEntries = savedData.filter(isHistoryEntry);
+                // Clean up any stale pending entries from previous sessions
+                const validEntries = savedData.filter(isHistoryEntry).filter(e => e.status !== 'pending');
                 validEntries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
                 setEntries(validEntries);
             } else {
@@ -31,7 +37,7 @@ export const usePlaybook = () => {
             }
         } catch (error) {
             console.error("Failed to parse playbook from localStorage:", error);
-            toast.error("Could not load playbook data. It may be corrupted.");
+            toast.error("Could not load The Archives data. It may be corrupted.");
             localStorage.removeItem(PLAYBOOK_STORAGE_KEY);
             setEntries([]);
         } finally {
@@ -47,28 +53,95 @@ export const usePlaybook = () => {
             }
         };
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            abortControllerRef.current?.abort();
+        };
     }, [loadEntries]);
 
-    const addEntry = (name: string, draftState: DraftState, analysis: AIAdvice | null, userNotes?: string): boolean => {
+    const addEntry = async (name: string, draftState: DraftState, analysis: AIAdvice | null, userNotes?: string): Promise<boolean> => {
+        if (isAdding) {
+            toast.error("Please wait for the current save to complete.");
+            return false;
+        }
+        setIsAdding(true);
+
+        const tempId = `temp-${Date.now()}`;
         const newEntry: HistoryEntry = {
-            id: new Date().toISOString(),
+            id: tempId,
             name,
             draft: toSavedDraft(draftState),
             analysis: analysis,
             userNotes: userNotes || '',
             createdAt: new Date().toISOString(),
+            status: 'pending',
         };
+
+        // Optimistically update UI and save pending state
+        setEntries(prevEntries => {
+            const updatedEntries = [newEntry, ...prevEntries];
+            try {
+                localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updatedEntries));
+            } catch (e) { console.error(e); }
+            return updatedEntries;
+        });
+        toast.success(`Archiving "${name}"...`);
+        
+        // Generate dossier in the background
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         try {
-            const updatedEntries = [newEntry, ...entries];
-            localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updatedEntries));
-            setEntries(updatedEntries);
-            toast.success(`Draft "${name}" saved to Playbook!`);
+            const dossier = await generatePlaybookPlusDossier(draftState, controller.signal);
+            if (controller.signal.aborted) {
+                setIsAdding(false);
+                return false;
+            }
+            
+            const finalEntry: HistoryEntry = {
+                ...newEntry,
+                id: new Date().toISOString(), // Use final timestamp as ID
+                dossier,
+                status: 'saved',
+            };
+
+            setEntries(prev => {
+                const updated = prev.map(e => e.id === tempId ? finalEntry : e);
+                try {
+                    localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updated));
+                } catch (e) { console.error(e); }
+                return updated;
+            });
+            
+            toast.success('Strategic Dossier generated!');
+            completeMission('gs3');
+            completeMission('w2');
+            
+            if (analysis) { // It's a Draft Lab save
+                 // No SP reward here, it's tied to analysis
+            } else { // It's an Arena save
+                addSP(25, "Saved Arena Draft");
+            }
             return true;
         } catch (err) {
-            console.error("Failed to save draft to localStorage:", err);
-            toast.error("Could not save draft. Your browser's storage may be full.");
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                console.log("Dossier generation aborted.");
+                // Clean up the pending entry
+                setEntries(prev => prev.filter(e => e.id !== tempId));
+                return false;
+            }
+            console.error("Failed to generate dossier:", err);
+            toast.error("Failed to generate AI dossier for the draft.");
+            setEntries(prev => {
+                const updated = prev.map((e): HistoryEntry => e.id === tempId ? { ...e, status: 'error' } : e);
+                 try {
+                    localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updated));
+                } catch (e) { console.error(e); }
+                return updated;
+            });
             return false;
+        } finally {
+            setIsAdding(false);
         }
     };
     
@@ -80,7 +153,7 @@ export const usePlaybook = () => {
         try {
             localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updatedEntries));
             setEntries(updatedEntries);
-            toast.success(`Draft "${entryToDelete.name}" deleted.`);
+            toast.success(`Strategy "${entryToDelete.name}" deleted.`);
         } catch(err) {
             console.error("Failed to update playbook in localStorage:", err);
             toast.error("Could not delete draft. Your browser's storage may be full or disabled.");
@@ -94,7 +167,6 @@ export const usePlaybook = () => {
         try {
             localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updatedEntries));
             setEntries(updatedEntries);
-            // Don't toast here to avoid being too noisy, as it might be auto-saved.
         } catch(err) {
             console.error("Failed to update playbook notes in localStorage:", err);
             toast.error("Could not save notes. Your browser's storage may be full or disabled.");

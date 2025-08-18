@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { DraftState, AIAdvice, MetaSnapshot, MetaSource, StructuredTierList, StructuredPatchNotes, TrialQuestion, ChampionSuggestion, TeamSide, Lesson, ChampionAnalysis, MatchupAnalysis } from '../types';
+import type { DraftState, AIAdvice, MetaSnapshot, MetaSource, StructuredTierList, StructuredPatchNotes, TrialQuestion, ChampionSuggestion, TeamSide, Lesson, ChampionAnalysis, MatchupAnalysis, PlaybookPlusDossier, ArenaBotPersona, ChampionLite, UserProfile } from '../types';
 import { DATA_DRAGON_VERSION, ROLES } from '../constants';
 import toast from 'react-hot-toast';
 import { STRATEGIC_PRIMER } from '../data/strategyInsights';
@@ -56,6 +56,27 @@ const teamAnalysisSchema = {
         keyThreats: { type: Type.STRING },
         draftScore: { type: Type.STRING, description: "An overall letter grade score for the draft (e.g., A+, B, C-)." },
         draftScoreReasoning: { type: Type.STRING, description: "A brief, one-sentence reason for the assigned score." },
+        draftHighlight: {
+            type: Type.OBJECT,
+            properties: {
+                championName: { type: Type.STRING },
+                reasoning: { type: Type.STRING, description: "A one-sentence justification for why this champion is the highlight." }
+            },
+            description: "The single most important champion in the draft and why."
+        },
+        powerSpikeTimeline: {
+            type: Type.ARRAY,
+            description: "A timeline of projected power levels for both teams at key stages of the game.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    time: { type: Type.STRING, description: "Game phase, e.g., 'Early Game', 'Mid Game', '25 mins'." },
+                    bluePower: { type: Type.INTEGER, description: "Blue team's relative power on a scale of 1-10." },
+                    redPower: { type: Type.INTEGER, description: "Red team's relative power on a scale of 1-10." },
+                    event: { type: Type.STRING, description: "The key event happening at this time, e.g., 'Blue team hits 2-item spike'." }
+                }
+            }
+        }
     }
 };
 
@@ -123,10 +144,23 @@ It is currently ${draftState.turn.toUpperCase()} team's turn to act during the $
 }
 
 
-export async function getDraftAdvice(draftState: DraftState, userRole: string, signal?: AbortSignal): Promise<AIAdvice> {
+export async function getDraftAdvice(draftState: DraftState, userRole: string, userSkillLevel: UserProfile['skillLevel'], signal?: AbortSignal): Promise<AIAdvice> {
   const roleContext = userRole && userRole !== 'All' 
     ? `The user you are advising is a ${userRole} main. Keep this in mind and slightly prioritize analysis relevant to their role's impact on the game.`
     : '';
+
+  let skillLevelContext = '';
+    switch (userSkillLevel) {
+        case 'Beginner':
+            skillLevelContext = 'The user is a Beginner. Prioritize mechanically simple champions in suggestions and explain concepts clearly using strategic primer keywords.';
+            break;
+        case 'Intermediate':
+            skillLevelContext = 'The user is an Intermediate player. Provide standard, effective suggestions and balanced explanations.';
+            break;
+        case 'Advanced':
+            skillLevelContext = 'The user is an Advanced player. Suggest high-skill cap options and focus on complex macro-strategy and nuanced counter-picks.';
+            break;
+    }
 
   const prompt = `
 ${STRATEGIC_PRIMER}
@@ -134,14 +168,17 @@ ${STRATEGIC_PRIMER}
 Analyze the following draft based *only* on the principles and archetypes defined above. Your entire analysis must be framed using this strategic context.
 
 ${roleContext}
+${skillLevelContext}
 
 ${formatDraftStateForPrompt(draftState)}
 
 Provide your response in JSON format. Your analysis must include:
-1.  **Team Analysis**: For both teams, identify their core team identity (e.g., Poke, Dive), power spike timing, key threats, strengths, weaknesses, and win conditions.
+1.  **Team Analysis**: For both teams, identify their core team identity, power spike timing, key threats, strengths, weaknesses, and win conditions.
 2.  **Draft Score**: A letter grade (e.g., A+, B, C-) for each team's draft and a one-sentence reason for the score.
-3.  **Pick/Ban Suggestions**: Specific, reasoned suggestions for the next action.
-4.  **Item Suggestions**: Core and situational items for champions already picked.
+3.  **Power Spike Timeline**: Generate 4-5 key timeline points representing the projected flow of the game, including power levels for each team (1-10) and the key event (e.g., 'Blue Level 6 engage becomes critical').
+4.  **Draft Highlight**: Identify the single "MVP" champion of the draft (for either team) and a one-sentence justification.
+5.  **Pick/Ban Suggestions**: Specific, reasoned suggestions for the next action.
+6.  **Item Suggestions**: Core and situational items for champions already picked.
 `;
 
   try {
@@ -153,6 +190,7 @@ Provide your response in JSON format. Your analysis must include:
         model: "gemini-2.5-flash",
         contents: prompt,
         config: {
+          systemInstruction: "You are DraftWise AI, a world-class strategic co-pilot for League of Legends. Your tone is professional, analytical, and encouraging. Frame your responses as if you are directly advising a strategist.",
           responseMimeType: "application/json",
           responseSchema: draftAdviceSchema,
         },
@@ -174,6 +212,37 @@ Provide your response in JSON format. Your analysis must include:
   }
 }
 
+export async function generateDraftName(draftState: DraftState, signal?: AbortSignal): Promise<string> {
+    const prompt = `
+    Based on the following draft, generate a short, descriptive name (max 5 words) for the Blue Team's composition.
+    Focus on the team's core identity (e.g., Poke, Dive, Protect the Carry) or its key champion.
+    Examples: "Jinx Hyper-carry Comp", "Full Dive Wombo Combo", "Poke & Siege Control", "Anti-Dive Peelsquad".
+    ${formatDraftStateForPrompt(draftState)}
+    Return ONLY the generated name as a raw string of text. Do not add quotes or any other formatting.
+    `;
+    try {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        const ai = getAiInstance();
+        if (!ai) throw new Error("AI not configured.");
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                thinkingConfig: { thinkingBudget: 0 }, // Low latency
+                maxOutputTokens: 20,
+            }
+        });
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+        return response.text.trim();
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error;
+        console.error("Error generating draft name:", error);
+        throw new Error("Failed to generate name.");
+    }
+}
+
 const championSuggestionSchema = {
     type: Type.ARRAY,
     items: {
@@ -185,7 +254,7 @@ const championSuggestionSchema = {
     },
 };
 
-export async function getChampionSuggestions(draftState: DraftState, context: { team: TeamSide; type: 'pick' | 'ban'; index: number }, userRole: string, masteryChampions: string[], signal?: AbortSignal): Promise<ChampionSuggestion[]> {
+export async function getChampionSuggestions(draftState: DraftState, context: { team: TeamSide; type: 'pick' | 'ban'; index: number }, userRole: string, userSkillLevel: UserProfile['skillLevel'], masteryChampions: string[], mode: 'standard' | 'counter-meta', signal?: AbortSignal): Promise<ChampionSuggestion[]> {
     const roleContext = userRole && userRole !== 'All' 
         ? `The player you are advising is a ${userRole} main. If the current pick is for their role, weigh their comfort and proficiency heavily. Otherwise, suggest champions that have strong synergy with the ${userRole} role.`
         : '';
@@ -194,6 +263,23 @@ export async function getChampionSuggestions(draftState: DraftState, context: { 
         ? `The player has high mastery on these champions: [${masteryChampions.join(', ')}]. Consider suggesting one of these if they are a good fit for the composition.`
         : '';
         
+    const modeContext = mode === 'counter-meta'
+        ? "CRITICAL: The user is in 'Counter-Meta' mode. Prioritize viable, but less common or 'off-meta' champions that can surprise an opponent who expects standard picks. Explain why the surprising pick is strong in this specific situation."
+        : "Provide standard, meta-appropriate suggestions.";
+        
+    let skillLevelContext = '';
+    switch (userSkillLevel) {
+        case 'Beginner':
+            skillLevelContext = 'The user is a Beginner. Prioritize suggesting champions who are mechanically simple and have a straightforward game plan.';
+            break;
+        case 'Intermediate':
+            skillLevelContext = 'The user is an Intermediate player. Suggest a mix of standard meta champions and champions that require moderate execution.';
+            break;
+        case 'Advanced':
+            skillLevelContext = 'The user is an Advanced player. Feel free to suggest mechanically complex or high-skill cap champions if they are strategically optimal.';
+            break;
+    }
+
     const currentActionRole = context.type === 'pick' ? `for the ${ROLES[context.index]} role` : '';
 
     const prompt = `
@@ -201,6 +287,8 @@ export async function getChampionSuggestions(draftState: DraftState, context: { 
     
     ${roleContext}
     ${masteryContext}
+    ${skillLevelContext}
+    ${modeContext}
 
     Current Draft:
     ${formatDraftStateForPrompt(draftState)}
@@ -221,6 +309,7 @@ export async function getChampionSuggestions(draftState: DraftState, context: { 
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
+                systemInstruction: "You are DraftWise AI, a world-class strategic co-pilot for League of Legends. Your tone is professional, analytical, and encouraging. Your suggestions should be direct and actionable.",
                 responseMimeType: "application/json",
                 responseSchema: championSuggestionSchema,
                 thinkingConfig: { thinkingBudget: 0 },
@@ -244,12 +333,15 @@ export async function getChampionSuggestions(draftState: DraftState, context: { 
 
 
 async function _fetchAndCache<T>(cacheKey: string, fetcher: () => Promise<T>): Promise<T> {
+    const TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
     try {
         const cachedData = localStorage.getItem(cacheKey);
         if (cachedData) {
-            const { version, data } = JSON.parse(cachedData);
-            if (version === DATA_DRAGON_VERSION) {
-                return data; // Return cached data if version matches
+            const { version, timestamp, data } = JSON.parse(cachedData);
+            const isCacheValid = version === DATA_DRAGON_VERSION && (Date.now() - timestamp < TTL);
+            if (isCacheValid) {
+                return data; // Return cached data if version matches and not expired
             }
         }
     } catch (error) {
@@ -261,7 +353,7 @@ async function _fetchAndCache<T>(cacheKey: string, fetcher: () => Promise<T>): P
     const data = await fetcher();
 
     try {
-        const cachePayload = { version: DATA_DRAGON_VERSION, data };
+        const cachePayload = { version: DATA_DRAGON_VERSION, timestamp: Date.now(), data };
         localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
     } catch (error) {
         console.error(`Failed to save ${cacheKey} to cache:`, error);
@@ -616,6 +708,7 @@ export async function getChampionAnalysis(championName: string, signal?: AbortSi
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
+                systemInstruction: "You are DraftWise AI, a world-class strategic co-pilot for League of Legends. Provide expert, data-driven analysis.",
                 responseMimeType: "application/json",
                 responseSchema: championAnalysisSchema,
             },
@@ -698,5 +791,154 @@ export async function getMatchupAnalysis(championName: string, weakAgainst: stri
             throw error;
         }
         throw new Error(`Failed to get matchup tips for ${championName}.`);
+    }
+}
+
+const playbookDossierSchema = {
+    type: Type.OBJECT,
+    properties: {
+        winCondition: { type: Type.STRING, description: "The primary win condition for the blue team's draft." },
+        earlyGame: { type: Type.STRING, description: "A concise plan for the early game (0-15 mins)." },
+        midGame: { type: Type.STRING, description: "A concise plan for the mid game (15-25 mins)." },
+        teamfighting: { type: Type.STRING, description: "The primary goal and positioning in a 5v5 teamfight." },
+    }
+};
+
+export async function generatePlaybookPlusDossier(draftState: DraftState, signal?: AbortSignal): Promise<PlaybookPlusDossier> {
+    const prompt = `
+    ${STRATEGIC_PRIMER}
+    You are a master strategist creating a game plan dossier for the following saved draft. Focus on the Blue team's perspective.
+    
+    ${formatDraftStateForPrompt(draftState)}
+
+    Provide a concise, actionable game plan. Your response must be in JSON format.
+    1.  **winCondition**: The single most important goal for the blue team to achieve victory.
+    2.  **earlyGame**: The game plan from 0-15 minutes, focusing on lane assignments and jungle pathing priorities.
+    3.  **midGame**: The game plan from 15-25 minutes, focusing on grouping and objective priorities.
+    4.  **teamfighting**: How the blue team should approach a 5v5 fight, including positioning and target priority.
+    `;
+
+    try {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        const ai = getAiInstance();
+        if (!ai) throw new Error("DraftWise AI is not configured. API key is missing.");
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: playbookDossierSchema,
+            },
+        });
+
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+        return _parseJsonResponse<PlaybookPlusDossier>(response.text, "playbook dossier");
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error;
+        console.error("Error generating Playbook+ dossier:", error);
+        throw new Error("Failed to generate strategic dossier.");
+    }
+}
+
+const botActionSchema = {
+    type: Type.OBJECT,
+    properties: {
+        championName: { type: Type.STRING },
+        reasoning: { type: Type.STRING },
+    },
+};
+
+export async function getBotDraftAction(draftState: DraftState, turn: { team: TeamSide; type: 'pick' | 'ban'; index: number }, persona: ArenaBotPersona, availableChampions: ChampionLite[], signal?: AbortSignal): Promise<ChampionSuggestion | null> {
+    let systemInstruction = '';
+    switch (persona) {
+        case 'The Aggressor':
+            systemInstruction = "You are an aggressive player who prioritizes early-game dominance and high-pressure champions like Draven and Lee Sin. You want to win fast.";
+            break;
+        case 'The Strategist':
+            systemInstruction = "You are a calculating player who focuses on late-game scaling, team composition synergy, and counter-picking. You play the long game.";
+            break;
+        case 'The Trickster':
+            systemInstruction = "You are a cunning player who loves deception and pick potential. You prefer champions with stealth, high mobility, or unconventional kits like Shaco, LeBlanc, or Teemo.";
+            break;
+    }
+    
+    const availableChampionNames = availableChampions.map(c => c.name).join(', ');
+    const currentActionRole = turn.type === 'pick' ? `for the ${ROLES[turn.index]} role` : '';
+
+    const prompt = `
+    Based on your persona, analyze the current draft state and select the optimal champion.
+
+    Current Draft:
+    ${formatDraftStateForPrompt(draftState)}
+    
+    Available Champions: [${availableChampionNames}]
+
+    Your current action is to **${turn.type.toUpperCase()}** a champion ${currentActionRole}.
+    
+    Select the single best champion from the available list that fits your persona and provide a one-sentence reason for your choice, explaining how it helps your strategy or counters the opponent.
+    Return your response ONLY as a JSON object.
+    `;
+
+    try {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        const ai = getAiInstance();
+        if (!ai) throw new Error("DraftWise AI is not configured. API key is missing.");
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: botActionSchema,
+                thinkingConfig: { thinkingBudget: 0 },
+            },
+        });
+
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        return _parseJsonResponse<ChampionSuggestion>(response.text, `bot action for ${persona}`);
+
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error;
+        console.error(`Error getting bot action for persona ${persona}:`, error);
+        return null; // Return null on failure so the bot can fall back to random
+    }
+}
+
+export async function getGroundedAnswer(query: string, signal?: AbortSignal): Promise<{ text: string; sources: MetaSource[] }> {
+    const prompt = `
+    You are an expert League of Legends analyst. Your sole purpose is to answer the user's question based on the most up-to-date information available from Google Search.
+    
+    User's question: "${query}"
+
+    Provide a clear, concise, and accurate answer. Use markdown for formatting if it improves readability (e.g., lists, bolding).
+    `;
+
+    try {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        const ai = getAiInstance();
+        if (!ai) throw new Error("DraftWise AI is not configured. API key is missing.");
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                tools: [{ googleSearch: {} }],
+            },
+        });
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+        const rawSources: GroundingChunk[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+        const sources: MetaSource[] = rawSources
+            .map((s: GroundingChunk) => ({ title: s.web?.title || 'Unknown Source', uri: s.web?.uri || '' }))
+            .filter(s => s.uri);
+            
+        return { text: response.text, sources };
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error;
+        console.error("Error fetching grounded answer from Gemini API:", error);
+        throw new Error("Failed to consult the Oracle. The AI may be temporarily unavailable.");
     }
 }

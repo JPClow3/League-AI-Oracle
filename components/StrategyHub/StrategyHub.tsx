@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Armory } from '../Armory/Armory';
 import { Intel } from '../Intel/Intel';
+import type { DraftState } from '../../types';
 
 type StrategyTab = 'champions' | 'intel';
 
 interface StrategyHubProps {
     initialTab?: StrategyTab;
     initialSearchTerm?: string | null;
-    onLoadChampionInLab: (championId: string) => void;
+    onLoadChampionInLab: (championId: string, role?: string) => void;
     onHandled?: () => void;
+    draftState: DraftState;
 }
 
-export const StrategyHub: React.FC<StrategyHubProps> = ({ initialTab = 'champions', initialSearchTerm, onLoadChampionInLab, onHandled }) => {
+export const StrategyHub: React.FC<StrategyHubProps> = ({ initialTab = 'champions', initialSearchTerm, onLoadChampionInLab, onHandled, draftState }) => {
     const [activeTab, setActiveTab] = useState<StrategyTab>(initialTab);
 
     useEffect(() => {
@@ -36,12 +38,12 @@ export const StrategyHub: React.FC<StrategyHubProps> = ({ initialTab = 'champion
     return (
         <div className="flex flex-col h-full">
             <div className="border-b border-slate-700 flex items-center gap-4">
-                 <TabButton tabName="champions" currentTab={activeTab}>Champion Armory</TabButton>
-                 <TabButton tabName="intel" currentTab={activeTab}>AI Intel Hub</TabButton>
+                 <TabButton tabName="champions" currentTab={activeTab}>Champion Dossiers</TabButton>
+                 <TabButton tabName="intel" currentTab={activeTab}>Meta Intelligence</TabButton>
             </div>
 
             <div className="flex-grow pt-6">
-                {activeTab === 'champions' && <Armory initialSearchTerm={initialSearchTerm} onSearchHandled={onHandled} onLoadChampionInLab={onLoadChampionInLab} />}
+                {activeTab === 'champions' && <Armory initialSearchTerm={initialSearchTerm} onSearchHandled={onHandled} onLoadChampionInLab={onLoadChampionInLab} draftState={draftState} />}
                 {activeTab === 'intel' && <Intel onLoadChampionInLab={onLoadChampionInLab} />}
             </div>
         </div>

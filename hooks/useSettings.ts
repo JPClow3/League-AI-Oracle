@@ -8,6 +8,7 @@ const defaultSettings: Settings = {
     secondaryRole: 'All',
     favoriteChampions: [],
     theme: 'cyan',
+    enableSound: false,
 };
 
 const SETTINGS_STORAGE_KEY = 'userSettings';
