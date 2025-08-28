@@ -1,15 +1,14 @@
+
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import type { FeedbackCategory, DraftState } from '../../types';
 import { toSavedDraft } from '../../lib/draftUtils';
 import toast from 'react-hot-toast';
+import { useModals } from '../../hooks/useModals';
+import { useDraft } from '../../contexts/DraftContext';
 
-interface FeedbackModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    draftState: DraftState;
-}
+interface FeedbackModalProps {}
 
 const CATEGORIES: FeedbackCategory[] = [
     'AI Suggestion Quality',
@@ -19,11 +18,15 @@ const CATEGORIES: FeedbackCategory[] = [
     'Other'
 ];
 
-export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, draftState }) => {
+export const FeedbackModal = (props: FeedbackModalProps) => {
+    const { modals, dispatch } = useModals();
+    const { draftState } = useDraft();
     const [category, setCategory] = useState<FeedbackCategory>('AI Suggestion Quality');
     const [comments, setComments] = useState('');
     const [includeDraft, setIncludeDraft] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const onClose = () => dispatch({ type: 'CLOSE', payload: 'feedback' });
 
     const handleSubmit = () => {
         if (!comments.trim()) {
@@ -52,23 +55,23 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, d
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Give Feedback">
+        <Modal isOpen={modals.feedback} onClose={onClose} title="Give Feedback">
             <div className="p-4 space-y-4">
                 <div>
-                    <label htmlFor="feedback-category" className="block text-sm font-medium text-gray-300 mb-1">
+                    <label htmlFor="feedback-category" className="block text-sm font-medium text-text-secondary mb-1">
                         Feedback Category
                     </label>
                     <select
                         id="feedback-category"
                         value={category}
                         onChange={(e) => setCategory(e.target.value as FeedbackCategory)}
-                        className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-bg))]"
+                        className="w-full bg-secondary p-2 rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                         {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="feedback-comments" className="block text-sm font-medium text-gray-300 mb-1">
+                    <label htmlFor="feedback-comments" className="block text-sm font-medium text-text-secondary mb-1">
                         Comments
                     </label>
                     <textarea
@@ -77,7 +80,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, d
                         value={comments}
                         onChange={(e) => setComments(e.target.value)}
                         placeholder="Please be as detailed as possible. What were you doing? What did you expect to happen?"
-                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-bg))] text-sm"
+                        className="w-full p-2 bg-secondary border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-sm"
                     />
                 </div>
                 <div className="flex items-center gap-2">
@@ -86,14 +89,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, d
                         id="include-draft"
                         checked={includeDraft}
                         onChange={(e) => setIncludeDraft(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-[rgb(var(--color-accent-bg))] focus:ring-[rgb(var(--color-accent-bg))]"
+                        className="h-4 w-4 rounded border-border bg-secondary text-accent focus:ring-accent"
                     />
-                    <label htmlFor="include-draft" className="text-sm text-gray-300">
+                    <label htmlFor="include-draft" className="text-sm text-text-secondary">
                         Include current Draft Lab state for context
                     </label>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
+                <div className="flex justify-end gap-2 pt-4 border-t border-border">
                     <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
                     <Button variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Feedback'}

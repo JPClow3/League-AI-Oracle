@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { DraftSlot } from '../../types';
 import { Tooltip } from '../common/Tooltip';
+import { AlertTriangle } from 'lucide-react';
 
 interface TeamAnalyticsProps {
   picks: DraftSlot[];
@@ -14,25 +15,44 @@ const scoreToRating = (score: number, max: number): 'Low' | 'Medium' | 'High' =>
     return 'High';
 }
 
-const RatingIndicator: React.FC<{ label: string, rating: 'Low' | 'Medium' | 'High' }> = ({ label, rating }) => {
+const SynergyScoreDisplay = ({ score }: { score: number }) => {
+    const getScoreInfo = (s: number): { rating: string; color: string } => {
+        if (s < 40) return { rating: 'Low', color: 'text-error' };
+        if (s < 70) return { rating: 'Medium', color: 'text-warning' };
+        return { rating: 'High', color: 'text-success' };
+    };
+    const { rating, color } = getScoreInfo(score);
+
+    return (
+        <div className="flex justify-between items-center">
+            <h4 className="text-sm font-bold text-text-secondary">Team Synergy</h4>
+            <div className="text-right">
+                <span className={`font-black font-display text-2xl ${color}`}>{score}</span>
+                <span className={`font-bold text-xs ml-1 ${color}`}>({rating})</span>
+            </div>
+        </div>
+    );
+};
+
+const RatingIndicator = ({ label, rating }: { label: string, rating: 'Low' | 'Medium' | 'High' }) => {
     const ratingColor = {
-        Low: 'text-red-400',
-        Medium: 'text-yellow-400',
-        High: 'text-green-400',
+        Low: 'text-error',
+        Medium: 'text-warning',
+        High: 'text-success',
     }[rating];
     return (
         <div className="flex justify-between items-center text-sm">
-            <span className="font-semibold text-gray-300">{label}</span>
+            <span className="font-medium text-text-secondary">{label}</span>
             <span className={`font-bold ${ratingColor}`}>{rating}</span>
         </div>
     );
 }
 
-export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ picks }) => {
+export const TeamAnalytics = ({ picks }: TeamAnalyticsProps) => {
   const analytics = useMemo(() => {
     const pickedChampions = picks.map(p => p.champion).filter((c): c is NonNullable<typeof c> => !!c);
     if (pickedChampions.length === 0) {
-      return { ad: 0, ap: 0, mixed: 0, cc: 0, engage: 0, isUnbalanced: false };
+      return { ad: 0, ap: 0, mixed: 0, cc: 0, engage: 0, isUnbalanced: false, total: 0, synergyScore: 0 };
     }
 
     const damage = pickedChampions.reduce((acc, champ) => {
@@ -45,40 +65,64 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ picks }) => {
     const cc = pickedChampions.reduce((sum, champ) => sum + (scoreMap[champ.cc] || 0), 0);
     const engage = pickedChampions.reduce((sum, champ) => sum + (scoreMap[champ.engage] || 0), 0);
     
-    // Unbalanced if 4+ champs are primarily one damage type (excluding mixed)
-    const isUnbalanced = (damage.ad >= 4 && damage.ap === 0) || (damage.ap >= 4 && damage.ad === 0);
+    const isUnbalanced = pickedChampions.length >= 4 && ((damage.ad >= 4 && damage.ap === 0) || (damage.ap >= 4 && damage.ad === 0));
+    const total = pickedChampions.length;
 
-    return { ...damage, cc, engage, isUnbalanced };
+    // --- Synergy Score Calculation ---
+    const roleCoverage = new Set(pickedChampions.map(c => c.roles[0])); // Use primary role as proxy
+    const roleScore = Math.min(roleCoverage.size, 5) * 5; // Max 25 points
+
+    let damageScore = 0;
+    const { ad, ap, mixed } = damage;
+    if (total > 1) {
+        if (ad > 0 && ap > 0) {
+            damageScore = 25; // Ideal mix of AD & AP
+        } else if ((ad > 0 && mixed > 0) || (ap > 0 && mixed > 0)) {
+            damageScore = 18; // Mix with mixed damage is good
+        } else if (ad > 0 || ap > 0) {
+            damageScore = 5; // Full AD or Full AP is bad
+        } else {
+            damageScore = 10; // All mixed damage
+        }
+    } else if (total === 1) {
+        damageScore = 10; // Neutral score for one champion
+    }
+    
+    const maxRawScore = total * 3;
+    const ccScore = maxRawScore > 0 ? (cc / maxRawScore) * 25 : 0;
+    const engageScore = maxRawScore > 0 ? (engage / maxRawScore) * 25 : 0;
+
+    const synergyScore = Math.round(roleScore + damageScore + ccScore + engageScore);
+    // --- End Synergy Score ---
+
+    return { ...damage, cc, engage, isUnbalanced, total, synergyScore };
   }, [picks]);
 
-  const maxScore = 5 * 3; // 5 champions, max score of 3 each
+  const maxScore = analytics.total * 3;
+  const { ad, ap, mixed, total } = analytics;
+  const adPercent = total > 0 ? (ad / total) * 100 : 0;
+  const apPercent = total > 0 ? (ap / total) * 100 : 0;
+  const mixedPercent = total > 0 ? (mixed / total) * 100 : 0;
 
   return (
-    <div className="bg-slate-900/50 p-3 rounded-md mb-4 space-y-3">
-        <div className="text-center">
+    <div className="bg-surface-tertiary/50 p-3 mb-4 space-y-3">
+        <SynergyScoreDisplay score={analytics.synergyScore} />
+        <div className="pt-3 border-t border-border-secondary/50 space-y-2">
             <div className="flex justify-between items-center">
-                <h4 className="text-sm font-bold text-gray-300">Damage Profile</h4>
+                <h4 className="text-sm font-bold text-text-secondary">Damage Profile</h4>
                 {analytics.isUnbalanced && (
-                    <Tooltip content="Team is heavily skewed towards one damage type, making it easy for opponents to itemize defensively.">
-                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                           <path fillRule="evenodd" d="M8.257 3.099c.636-1.21 2.273-1.21 2.91 0l5.425 10.32c.636 1.21-.273 2.706-1.455 2.706H4.287c-1.182 0-2.091-1.496-1.455-2.706L8.257 3.099zM10 12a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 00-1 1v1a1 1 0 102 0V9a1 1 0 00-1-1z" clipRule="evenodd" />
-                         </svg>
+                    <Tooltip content="Your team has a lot of one damage type! Consider adding a different threat to make it harder for the enemy to itemize.">
+                         <div className="flex items-center gap-1 text-warning cursor-help">
+                            <AlertTriangle className="h-5 w-5" />
+                            <span className="text-xs font-semibold">Unbalanced</span>
+                         </div>
                     </Tooltip>
                 )}
             </div>
-            <div className="flex justify-center gap-4 text-xs pt-1">
-                <div className="flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.5 2a.5.5 0 00-.5.5v1.5H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1h-1.5V2.5a.5.5 0 00-.5-.5h-9zM4.5 5H15v9H4.5V5z" clipRule="evenodd" /><path fillRule="evenodd" d="M6 7a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h4a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
-                    <span className="font-semibold text-red-400">AD: {analytics.ad}</span>
-                </div>
-                 <div className="flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm3.707 3.707a1 1 0 011.414 0L10 8.586l1.879-1.88a1 1 0 111.414 1.415L11.414 10l1.879 1.879a1 1 0 01-1.414 1.414L10 11.414l-1.879 1.879a1 1 0 01-1.414-1.414L8.586 10 6.707 8.121a1 1 0 010-1.414z" /></svg>
-                    <span className="font-semibold text-blue-400">AP: {analytics.ap}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 5a1 1 0 000 2h1a1 1 0 000-2H7zM4 9a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm1 3a1 1 0 100 2h1a1 1 0 100-2H5zm3 2a1 1 0 11-2 0 1 1 0 012 0zm2-2a1 1 0 100-2 1 1 0 000 2zm4-3a1 1 0 11-2 0 1 1 0 012 0zm-2 5a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-                    <span className="font-semibold text-purple-400">Mixed: {analytics.mixed}</span>
-                </div>
+            <div className="w-full flex h-2 rounded-full overflow-hidden bg-surface-inset border border-border-secondary/50">
+                <Tooltip content={`${ad} AD Champion${ad !== 1 ? 's' : ''} (${adPercent.toFixed(0)}%)`}><div style={{ width: `${adPercent}%` }} className="h-full bg-team-red transition-all duration-300"></div></Tooltip>
+                <Tooltip content={`${ap} AP Champion${ap !== 1 ? 's' : ''} (${apPercent.toFixed(0)}%)`}><div style={{ width: `${apPercent}%` }} className="h-full bg-team-blue transition-all duration-300"></div></Tooltip>
+                <Tooltip content={`${mixed} Mixed Damage Champion${mixed !== 1 ? 's' : ''} (${mixedPercent.toFixed(0)}%)`}><div style={{ width: `${mixedPercent}%` }} className="h-full bg-purple-500 transition-all duration-300"></div></Tooltip>
             </div>
         </div>
         <RatingIndicator label="Crowd Control" rating={scoreToRating(analytics.cc, maxScore)} />

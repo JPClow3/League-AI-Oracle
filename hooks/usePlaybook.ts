@@ -1,71 +1,56 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { HistoryEntry, DraftState, AIAdvice } from '../types';
 import { toSavedDraft } from '../lib/draftUtils';
-import { generatePlaybookPlusDossier, generateDraftName } from '../services/geminiService';
+import { generatePlaybookPlusDossier } from '../services/geminiService';
 import toast from 'react-hot-toast';
 import { useUserProfile } from './useUserProfile';
+import { MISSION_IDS } from '../constants';
+import { db } from '../lib/indexedDb';
+import type Dexie from 'dexie';
 
-// Type guard to ensure data from localStorage is valid.
-const isHistoryEntry = (obj: any): obj is HistoryEntry => {
-    return (
-        typeof obj === 'object' && obj !== null && typeof obj.id === 'string' &&
-        typeof obj.name === 'string' && typeof obj.createdAt === 'string' &&
-        typeof obj.draft === 'object' && obj.draft.blue?.picks && Array.isArray(obj.draft.blue.picks)
-    );
-};
-
-const PLAYBOOK_STORAGE_KEY = 'history';
-
+/**
+ * Custom hook for managing the user's Playbook (saved draft history).
+ * Handles loading, adding, deleting, and updating entries in IndexedDB.
+ * Includes logic for generating AI-powered "dossiers" for new entries.
+ * @returns An object containing the playbook entries, loading state, and methods to interact with the playbook.
+ */
 export const usePlaybook = () => {
     const [entries, setEntries] = useState<HistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isAdding, setIsAdding] = useState(false); // State lock to prevent race conditions
     const abortControllerRef = useRef<AbortController | null>(null);
     const { completeMission, addSP } = useUserProfile();
 
-    const loadEntries = useCallback(() => {
-        setIsLoading(true);
-        try {
-            const savedData = JSON.parse(localStorage.getItem(PLAYBOOK_STORAGE_KEY) || '[]');
-            if (Array.isArray(savedData)) {
-                // Clean up any stale pending entries from previous sessions
-                const validEntries = savedData.filter(isHistoryEntry).filter(e => e.status !== 'pending');
-                validEntries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                setEntries(validEntries);
-            } else {
-                setEntries([]);
-            }
-        } catch (error) {
-            console.error("Failed to parse playbook from localStorage:", error);
-            toast.error("Could not load The Archives data. It may be corrupted.");
-            localStorage.removeItem(PLAYBOOK_STORAGE_KEY);
-            setEntries([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
     useEffect(() => {
-        loadEntries();
-        const handleStorageChange = (event: StorageEvent) => {
-            if (event.key === PLAYBOOK_STORAGE_KEY) {
-                loadEntries();
+        const loadEntries = async () => {
+            setIsLoading(true);
+            try {
+                const allEntries = await db.history.orderBy('createdAt').reverse().toArray();
+                setEntries(allEntries);
+            } catch (error) {
+                console.error("Failed to load playbook from IndexedDB:", error);
+                toast.error("Could not load The Archives data.");
+            } finally {
+                setIsLoading(false);
             }
         };
-        window.addEventListener('storage', handleStorageChange);
+
+        loadEntries();
+        
+        // Cleanup ongoing dossier generation on component unmount
         return () => {
-            window.removeEventListener('storage', handleStorageChange);
             abortControllerRef.current?.abort();
         };
-    }, [loadEntries]);
+    }, []);
 
+    /**
+     * Adds a new entry to the playbook.
+     * @param name The name for the new playbook entry.
+     * @param draftState The full draft state to be saved.
+     * @param analysis The AI analysis associated with the draft (if any).
+     * @param userNotes Optional user-provided notes.
+     * @returns A promise that resolves to true if the entry was successfully saved.
+     */
     const addEntry = async (name: string, draftState: DraftState, analysis: AIAdvice | null, userNotes?: string): Promise<boolean> => {
-        if (isAdding) {
-            toast.error("Please wait for the current save to complete.");
-            return false;
-        }
-        setIsAdding(true);
-
         const tempId = `temp-${Date.now()}`;
         const newEntry: HistoryEntry = {
             id: tempId,
@@ -77,14 +62,9 @@ export const usePlaybook = () => {
             status: 'pending',
         };
 
-        // Optimistically update UI and save pending state
-        setEntries(prevEntries => {
-            const updatedEntries = [newEntry, ...prevEntries];
-            try {
-                localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updatedEntries));
-            } catch (e) { console.error(e); }
-            return updatedEntries;
-        });
+        // Optimistically update UI
+        setEntries(prevEntries => [newEntry, ...prevEntries]);
+        await db.history.add(newEntry);
         toast.success(`Archiving "${name}"...`);
         
         // Generate dossier in the background
@@ -92,85 +72,78 @@ export const usePlaybook = () => {
         abortControllerRef.current = controller;
 
         try {
-            const dossier = await generatePlaybookPlusDossier(draftState, controller.signal);
-            if (controller.signal.aborted) {
-                setIsAdding(false);
-                return false;
-            }
+            const dossier = analysis ? await generatePlaybookPlusDossier(draftState, controller.signal) : null;
+            if (controller.signal.aborted) return false;
             
+            const finalId = new Date().toISOString(); // Use final timestamp as permanent ID
             const finalEntry: HistoryEntry = {
                 ...newEntry,
-                id: new Date().toISOString(), // Use final timestamp as ID
-                dossier,
+                id: finalId,
+                dossier: dossier || undefined,
                 status: 'saved',
             };
-
-            setEntries(prev => {
-                const updated = prev.map(e => e.id === tempId ? finalEntry : e);
-                try {
-                    localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updated));
-                } catch (e) { console.error(e); }
-                return updated;
+            
+            await (db as Dexie).transaction('rw', db.history, async () => {
+                await db.history.delete(tempId);
+                await db.history.add(finalEntry);
             });
+
+            setEntries(prev => [finalEntry, ...prev.filter(e => e.id !== tempId)]);
             
-            toast.success('Strategic Dossier generated!');
-            completeMission('gs3');
-            completeMission('w2');
-            
-            if (analysis) { // It's a Draft Lab save
-                 // No SP reward here, it's tied to analysis
-            } else { // It's an Arena save
-                addSP(25, "Saved Arena Draft");
+            if (dossier) {
+                toast.success('Strategic Dossier generated!');
+                addSP(50, "Archived Lab Strategy"); // Award SP for successful lab save + dossier
+            } else {
+                 toast.success(`Strategy "${name}" saved to The Archives.`);
+                 addSP(25, "Saved Arena Draft");
             }
+            
+            completeMission(MISSION_IDS.GETTING_STARTED.SAVE_STRATEGY);
+            completeMission(MISSION_IDS.WEEKLY.EXPAND_PLAYBOOK);
+            
             return true;
         } catch (err) {
             if (err instanceof DOMException && err.name === 'AbortError') {
                 console.log("Dossier generation aborted.");
-                // Clean up the pending entry
+                // Clean up the optimistic entry from UI and DB
                 setEntries(prev => prev.filter(e => e.id !== tempId));
+                await db.history.delete(tempId);
                 return false;
             }
             console.error("Failed to generate dossier:", err);
             toast.error("Failed to generate AI dossier for the draft.");
-            setEntries(prev => {
-                const updated = prev.map((e): HistoryEntry => e.id === tempId ? { ...e, status: 'error' } : e);
-                 try {
-                    localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updated));
-                } catch (e) { console.error(e); }
-                return updated;
-            });
+            
+            // Mark the entry as failed but keep it for user to retry/delete
+            const errorEntry: HistoryEntry = { ...newEntry, status: 'error' };
+            await db.history.put(errorEntry);
+            setEntries(prev => prev.map(e => e.id === tempId ? errorEntry : e));
             return false;
-        } finally {
-            setIsAdding(false);
         }
     };
     
-    const deleteEntry = (id: string): void => {
+    /**
+     * Deletes an entry from the playbook by its ID.
+     * @param id The ID of the entry to delete.
+     */
+    const deleteEntry = async (id: string): Promise<void> => {
         const entryToDelete = entries.find(e => e.id === id);
         if (!entryToDelete) return;
         
-        const updatedEntries = entries.filter(entry => entry.id !== id);
-        try {
-            localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updatedEntries));
-            setEntries(updatedEntries);
-            toast.success(`Strategy "${entryToDelete.name}" deleted.`);
-        } catch(err) {
-            console.error("Failed to update playbook in localStorage:", err);
-            toast.error("Could not delete draft. Your browser's storage may be full or disabled.");
-        }
+        await db.history.delete(id);
+        setEntries(prev => prev.filter(entry => entry.id !== id));
+        toast.success(`Strategy "${entryToDelete.name}" deleted.`);
     };
     
-    const updateNotes = (id: string, notes: string): void => {
-        const updatedEntries = entries.map(entry => 
+    /**
+     * Updates the user notes for a specific playbook entry.
+     * @param id The ID of the entry to update.
+     * @param notes The new notes to save.
+     */
+    const updateNotes = async (id: string, notes: string): Promise<void> => {
+        await db.history.update(id, { userNotes: notes });
+        setEntries(prev => prev.map(entry => 
             entry.id === id ? { ...entry, userNotes: notes } : entry
-        );
-        try {
-            localStorage.setItem(PLAYBOOK_STORAGE_KEY, JSON.stringify(updatedEntries));
-            setEntries(updatedEntries);
-        } catch(err) {
-            console.error("Failed to update playbook notes in localStorage:", err);
-            toast.error("Could not save notes. Your browser's storage may be full or disabled.");
-        }
+        ));
     };
 
     return { entries, isLoading, addEntry, deleteEntry, updateNotes, latestEntry: entries[0] };

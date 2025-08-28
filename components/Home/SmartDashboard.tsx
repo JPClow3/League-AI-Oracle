@@ -1,7 +1,7 @@
-
 import React from 'react';
 import type { Page, UserProfile, HistoryEntry } from '../../types';
 import { Button } from '../common/Button';
+import { Sun, Library, FlaskConical } from 'lucide-react';
 
 interface SmartDashboardProps {
     profile: UserProfile;
@@ -9,26 +9,32 @@ interface SmartDashboardProps {
     setCurrentPage: (page: Page) => void;
 }
 
-const SmartCard: React.FC<{
+const SmartCard = ({
+    title,
+    description,
+    actionText,
+    onClick,
+    icon,
+}: {
     title: string;
     description: string;
     actionText: string;
     onClick: () => void;
     icon: React.ReactNode;
-}> = ({ title, description, actionText, onClick, icon }) => (
-    <div className="bg-slate-800/70 p-4 rounded-xl border border-slate-700/80 flex items-center gap-4 w-full sm:w-auto flex-1 basis-full sm:basis-1/3">
-        <div className="flex-shrink-0 bg-slate-700/50 text-[rgb(var(--color-accent-text))] w-12 h-12 rounded-lg flex items-center justify-center">
+}) => (
+    <div className="bg-bg-secondary p-4 rounded-lg border border-border-primary flex items-center gap-4 w-full sm:w-auto flex-1 basis-full sm:basis-1/3 shadow-sm">
+        <div className="flex-shrink-0 bg-accent-light text-accent w-12 h-12 rounded-md flex items-center justify-center">
             {icon}
         </div>
         <div className="flex-grow">
-            <h3 className="font-bold text-white">{title}</h3>
-            <p className="text-sm text-gray-300">{description}</p>
+            <h3 className="font-semibold text-text-primary">{title}</h3>
+            <p className="text-sm text-text-secondary">{description}</p>
         </div>
         <Button onClick={onClick} variant="secondary" className="flex-shrink-0">{actionText}</Button>
     </div>
 );
 
-export const SmartDashboard: React.FC<SmartDashboardProps> = ({ profile, latestPlaybookEntry, setCurrentPage }) => {
+export const SmartDashboard = ({ profile, latestPlaybookEntry, setCurrentPage }: SmartDashboardProps) => {
     const isTrialCompleted = profile.missions.daily.find(m => m.id === 'd2')?.completed ?? false;
 
     const cards = [];
@@ -41,7 +47,7 @@ export const SmartDashboard: React.FC<SmartDashboardProps> = ({ profile, latestP
                 description="Your daily strategic challenge is ready."
                 actionText="Begin Trial"
                 onClick={() => setCurrentPage('Daily Challenge')}
-                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>}
+                icon={<Sun size={28} strokeWidth={1.5} />}
             />
         );
     }
@@ -54,7 +60,7 @@ export const SmartDashboard: React.FC<SmartDashboardProps> = ({ profile, latestP
                 description={`Review your "${latestPlaybookEntry.name}" strategy.`}
                 actionText="View"
                 onClick={() => setCurrentPage('The Archives')}
-                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>}
+                icon={<Library size={28} strokeWidth={1.5} />}
             />
         );
     }
@@ -68,14 +74,14 @@ export const SmartDashboard: React.FC<SmartDashboardProps> = ({ profile, latestP
                 description="Theory-craft your next masterpiece in the Lab."
                 actionText="Enter Lab"
                 onClick={() => setCurrentPage('Strategy Forge')}
-                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>}
+                icon={<FlaskConical size={28} strokeWidth={1.5} />}
             />
         );
     }
 
     return (
         <div>
-            <h2 className="text-2xl font-bold text-white mb-4">Your Dashboard</h2>
+            <h2 className="font-display text-2xl font-semibold text-text-primary mb-4 tracking-wide">Your Dashboard</h2>
             <div className="flex flex-col sm:flex-row gap-4">
                 {cards}
             </div>

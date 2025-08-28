@@ -7,7 +7,7 @@ interface MissionsPanelProps {
     missions: UserProfile['missions'];
 }
 
-const MissionItem: React.FC<{ mission: Mission, isNewlyCompleted: boolean, onAnimationEnd: () => void }> = ({ mission, isNewlyCompleted, onAnimationEnd }) => {
+const MissionItem = ({ mission, isNewlyCompleted, onAnimationEnd }: { mission: Mission, isNewlyCompleted: boolean, onAnimationEnd: () => void }) => {
     const [isAnimating, setIsAnimating] = useState(isNewlyCompleted);
     
     useEffect(() => {
@@ -22,13 +22,13 @@ const MissionItem: React.FC<{ mission: Mission, isNewlyCompleted: boolean, onAni
     }, [isNewlyCompleted, onAnimationEnd]);
     
     return (
-        <div className={`bg-slate-900/50 p-4 rounded-lg transition-opacity ${mission.completed ? 'opacity-50' : ''} ${isAnimating ? 'animate-mission-complete' : ''}`}>
+        <div className={`bg-surface-secondary/50 p-4 rounded-lg transition-opacity border border-border-primary ${mission.completed ? 'opacity-50' : ''} ${isAnimating ? 'animate-mission-complete' : ''}`}>
             <div className="flex justify-between items-start">
                 <div>
-                    <h4 className={`font-bold text-white ${mission.completed ? 'line-through' : ''}`}>{mission.title}</h4>
-                    <p className="text-xs text-gray-300">{mission.description}</p>
+                    <h4 className={`font-bold text-text-primary ${mission.completed ? 'line-through' : ''}`}>{mission.title}</h4>
+                    <p className="text-xs text-text-secondary">{mission.description}</p>
                 </div>
-                <div className="text-sm font-bold text-yellow-300 whitespace-nowrap">
+                <div className="text-sm font-bold text-accent whitespace-nowrap">
                     + {mission.rewardSP} SP
                 </div>
             </div>
@@ -40,17 +40,17 @@ const MissionItem: React.FC<{ mission: Mission, isNewlyCompleted: boolean, onAni
 };
 
 
-export const MissionsPanel: React.FC<MissionsPanelProps> = ({ missions }) => {
+export const MissionsPanel = ({ missions }: MissionsPanelProps) => {
     const { lastCompletedMissionId, clearLastCompletedMissionId } = useUserProfile();
     const areGettingStartedDone = missions.gettingStarted.every(m => m.completed);
 
     return (
-        <div className="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700/50">
-            <h2 className="text-xl font-bold text-white mb-4">Missions & Objectives</h2>
+        <div className="bg-surface p-6 rounded-xl shadow-lg border border-border-primary">
+            <h2 className="text-xl font-bold text-text-primary mb-4">Missions & Objectives</h2>
             
             {!areGettingStartedDone && (
-                <div className="mb-6 space-y-4 p-4 bg-slate-700/50 rounded-lg border border-blue-500/30">
-                     <h3 className="text-lg font-semibold text-blue-300">Getting Started</h3>
+                <div className="mb-6 space-y-4 p-4 bg-surface-secondary rounded-lg border border-accent/20">
+                     <h3 className="text-lg font-semibold text-accent">Getting Started</h3>
                      {missions.gettingStarted.map(mission => (
                         <MissionItem 
                             key={mission.id} 
@@ -64,7 +64,7 @@ export const MissionsPanel: React.FC<MissionsPanelProps> = ({ missions }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-cyan-300">Daily Missions</h3>
+                    <h3 className="text-lg font-semibold text-info">Daily Missions</h3>
                     {missions.daily.map(mission => (
                         <MissionItem 
                             key={mission.id} 
@@ -75,7 +75,7 @@ export const MissionsPanel: React.FC<MissionsPanelProps> = ({ missions }) => {
                     ))}
                 </div>
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-yellow-300">Weekly Missions</h3>
+                    <h3 className="text-lg font-semibold text-accent">Weekly Missions</h3>
                      {missions.weekly.map(mission => (
                         <MissionItem 
                             key={mission.id} 

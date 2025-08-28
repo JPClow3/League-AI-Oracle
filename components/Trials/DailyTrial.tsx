@@ -6,6 +6,9 @@ import { Button } from '../common/Button';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import toast from 'react-hot-toast';
 import { KEYWORDS } from '../Academy/lessons';
+import { safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from '../../lib/draftUtils';
+import { MISSION_IDS } from '../../constants';
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 interface CachedTrial {
     date: string;
@@ -16,7 +19,7 @@ interface DailyTrialProps {
     navigateToAcademy: (lessonId: string) => void;
 }
 
-export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => {
+export const DailyTrial = ({ navigateToAcademy }: DailyTrialProps) => {
     const [question, setQuestion] = useState<TrialQuestion | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -43,7 +46,7 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
             if (controller.signal.aborted) return;
             setQuestion(newQuestion);
             const cachePayload: CachedTrial = { date: today, question: newQuestion };
-            localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
+            safeSetLocalStorage(cacheKey, JSON.stringify(cachePayload));
         } catch (err) {
             if (err instanceof DOMException && err.name === 'AbortError') {
               console.log("Trial fetch aborted.");
@@ -63,7 +66,7 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
 
     useEffect(() => {
         try {
-            const cachedData = localStorage.getItem(cacheKey);
+            const cachedData = safeGetLocalStorage(cacheKey);
             if (cachedData) {
                 const { date, question: cachedQuestion } = JSON.parse(cachedData) as CachedTrial;
                 if (date === today) {
@@ -74,7 +77,7 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
             }
         } catch (e) {
             console.error("Failed to load daily trial from cache", e);
-            localStorage.removeItem(cacheKey);
+            safeRemoveLocalStorage(cacheKey);
         }
         fetchNewQuestion();
 
@@ -89,8 +92,8 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
         setIsAnswered(true);
         if (option === question?.correctAnswer) {
             // Gamification logic for correct answer
-            addSP(75, "Daily Challenge Correct");
-            if(completeMission('d2')) {
+            addSP(75, "Daily Trial Correct");
+            if(completeMission(MISSION_IDS.DAILY.KNOWLEDGE_CHECK)) {
                 // Toast is handled by completeMission
             }
         }
@@ -98,15 +101,15 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
     
     const getButtonClass = (option: string) => {
         if (!isAnswered) {
-            return 'bg-slate-700 hover:bg-slate-600';
+            return 'bg-surface-secondary hover:bg-surface-tertiary text-text-primary';
         }
         if (option === question?.correctAnswer) {
-            return 'bg-green-600';
+            return 'bg-success/80 text-white';
         }
         if (option === selectedAnswer) {
-            return 'bg-red-600';
+            return 'bg-error/80 text-white';
         }
-        return 'bg-slate-700 opacity-60';
+        return 'bg-surface-secondary opacity-50 text-text-secondary';
     };
 
     const explanationLink = useMemo(() => {
@@ -126,16 +129,16 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
 
     return (
         <div className="space-y-6">
-            <div className="bg-slate-800/50 p-4 rounded-lg shadow-lg text-center">
-                <h1 className="font-display text-3xl font-bold text-white">Daily Challenge</h1>
-                <p className="text-sm text-gray-400">Test your strategic knowledge. A new challenge appears each day.</p>
+            <div className="bg-surface-primary/50 p-4 rounded-lg shadow-lg text-center border border-border-primary">
+                <h1 className="font-display text-3xl font-bold text-text-primary">Daily Trial</h1>
+                <p className="text-sm text-text-secondary">Test your strategic knowledge. A new trial appears each day.</p>
             </div>
 
-            <div className="bg-slate-800 p-6 rounded-lg shadow-lg max-w-2xl mx-auto min-h-[300px] flex flex-col justify-center">
+            <div className="bg-surface-primary p-6 rounded-lg shadow-lg max-w-2xl mx-auto min-h-[300px] flex flex-col justify-center border border-border-primary">
                 {isLoading && <Loader messages={["Generating new trial..."]} />}
                 
                 {error && !isLoading && (
-                    <div className="text-center text-red-400">
+                    <div className="text-center text-error">
                         <p className="mb-4">{error}</p>
                         <Button onClick={fetchNewQuestion} variant="primary">
                             Retry
@@ -146,7 +149,7 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
                 {question && !isLoading && (
                     <div className="space-y-6">
                         <div>
-                            <p className="text-lg font-semibold text-center">{question.question}</p>
+                            <p className="text-lg font-semibold text-center text-text-primary">{question.question}</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {question.options.map((option) => (
@@ -154,21 +157,25 @@ export const DailyTrial: React.FC<DailyTrialProps> = ({ navigateToAcademy }) => 
                                     key={option}
                                     onClick={() => handleAnswerSelect(option)}
                                     disabled={isAnswered}
-                                    className={`p-4 rounded-lg text-left transition-all duration-300 text-white font-medium ${getButtonClass(option)}`}
+                                    className={`p-4 rounded-lg text-left transition-all duration-300 font-medium ${getButtonClass(option)}`}
                                 >
-                                    {option}
+                                    <div className="flex items-center justify-between">
+                                        <span>{option}</span>
+                                        {isAnswered && option === question.correctAnswer && <CheckCircle2 className="h-5 w-5" />}
+                                        {isAnswered && option === selectedAnswer && option !== question.correctAnswer && <XCircle className="h-5 w-5" />}
+                                    </div>
                                 </button>
                             ))}
                         </div>
                         {isAnswered && (
-                            <div className={`p-4 rounded-lg ${selectedAnswer === question.correctAnswer ? 'bg-green-900/50' : 'bg-red-900/50'}`}>
-                                <h3 className="font-bold text-lg">{selectedAnswer === question.correctAnswer ? 'Correct!' : 'Incorrect'}</h3>
-                                <p className="mt-2 text-sm">{question.explanation}</p>
+                            <div className={`p-4 rounded-lg ${selectedAnswer === question.correctAnswer ? 'bg-success/10' : 'bg-error/10'}`}>
+                                <h3 className={`font-bold text-lg ${selectedAnswer === question.correctAnswer ? 'text-success' : 'text-error'}`}>{selectedAnswer === question.correctAnswer ? 'Correct!' : 'Incorrect'}</h3>
+                                <p className="mt-2 text-sm text-text-secondary">{question.explanation}</p>
                                 {explanationLink && (
                                     <div className="mt-3">
                                         <button
                                             onClick={() => navigateToAcademy(explanationLink.lessonId)}
-                                            className="text-sm font-semibold text-blue-300 hover:text-blue-200 hover:underline"
+                                            className="text-sm font-semibold text-gold hover:underline"
                                         >
                                             {explanationLink.text} →
                                         </button>

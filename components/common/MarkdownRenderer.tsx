@@ -21,7 +21,7 @@ const renderLine = (line: string) => {
     );
 };
 
-export const MarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
+export const MarkdownRenderer = ({ text }: { text: string }) => {
     if (!text) return null;
     // Split by one or more newlines to handle paragraphs and lists more robustly.
     const blocks = text.split(/\n\s*\n/).filter(block => block.trim() !== '');

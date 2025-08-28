@@ -1,6 +1,8 @@
-import React, { useState, useLayoutEffect } from 'react';
+
+import React, { useState, useLayoutEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../common/Button';
+import FocusTrap from 'focus-trap-react';
 
 export interface TourStep {
     selector: string;
@@ -34,12 +36,14 @@ const calculatePosition = (rect: DOMRect | null) => {
     return { top, left };
 };
 
-export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onClose, steps }) => {
+export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [spotlightStyle, setSpotlightStyle] = useState({});
     const [contentStyle, setContentStyle] = useState({});
     
     const portalRoot = document.body;
+    const titleId = useId();
+    const contentId = useId();
 
     useLayoutEffect(() => {
         if (!isOpen) return;
@@ -86,23 +90,33 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ isOpen, onClose, steps }
     const step = steps[currentStep];
 
     const TourComponent = (
-         <div className="fixed inset-0 z-[1000]">
-            <div style={spotlightStyle} className="tour-spotlight"></div>
-            <div style={contentStyle} className="tour-step-content">
-                <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                <p className="text-sm text-gray-300 mb-4">{step.content}</p>
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">{currentStep + 1} / {steps.length}</span>
-                    <div className="flex gap-2">
-                         {currentStep > 0 && <Button onClick={handlePrev} variant="secondary">Back</Button>}
-                        <Button onClick={onClose} variant="secondary">Skip</Button>
-                        <Button onClick={handleNext} variant="primary">
-                            {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
-                        </Button>
+        <FocusTrap active={isOpen}>
+            <div className="fixed inset-0 z-[1000]">
+                <div style={spotlightStyle} className="tour-spotlight"></div>
+                <div 
+                    style={contentStyle} 
+                    className="fixed bg-surface-primary text-text-primary p-6 rounded-lg border border-border-primary shadow-2xl w-[350px] max-w-[90vw] z-[1002] transition-all duration-300"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={titleId}
+                    aria-describedby={contentId}
+                    tabIndex={-1}
+                >
+                    <h3 id={titleId} className="text-xl font-bold text-text-primary mb-2">{step.title}</h3>
+                    <p id={contentId} className="text-sm text-text-secondary mb-4">{step.content}</p>
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm text-text-muted">{currentStep + 1} / {steps.length}</span>
+                        <div className="flex gap-2">
+                             {currentStep > 0 && <Button onClick={handlePrev} variant="secondary">Back</Button>}
+                            <Button onClick={onClose} variant="secondary">Skip</Button>
+                            <Button onClick={handleNext} variant="primary">
+                                {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </FocusTrap>
     );
     
     return createPortal(TourComponent, portalRoot);

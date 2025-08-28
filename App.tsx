@@ -1,385 +1,225 @@
-
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { CSSTransition, TransitionGroup } from 'react-transition-group';
-import { Home } from './components/Home/Home';
-import { DraftLab } from './components/DraftLab/DraftLab';
-import { Playbook } from './components/Playbook/Playbook';
-import { Academy } from './components/Academy/Academy';
-import { LiveArena } from './components/Arena/LiveArena';
-import { LiveDraft } from './components/LiveDraft/LiveDraft';
-import { Sidebar } from './components/Layout/Sidebar';
-import { BottomNav } from './components/Layout/BottomNav';
-import { Footer } from './components/Layout/Footer';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { StrategyHub } from './components/StrategyHub/StrategyHub';
-import { DailyTrial } from './components/Trials/DailyTrial';
-import { Profile } from './components/Profile/Profile';
-import type { Page, DraftState, Settings, Champion, Theme } from './types';
-import { MetaOracle } from './components/MetaOracle/MetaOracle';
-import { Command, CommandPalette } from './components/common/CommandPalette';
-import { CHAMPIONS, CHAMPIONS_LITE, ROLES } from './constants';
+import type { Page, DraftState, Settings } from './types';
+import { Header } from './components/Layout/Header';
+import { Footer } from './components/Layout/Footer';
+import { BottomNav } from './components/Layout/BottomNav';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useSettings } from './hooks/useSettings';
 import { useUserProfile } from './hooks/useUserProfile';
-import { SettingsModal } from './components/Settings/SettingsModal';
-import { ConfirmationModal, ConfirmationState } from './components/common/ConfirmationModal';
-import { FeedbackModal } from './components/Feedback/FeedbackModal';
+import { getInitialDraftState, useDraft } from './contexts/DraftContext';
 import { ProfileSetupModal } from './components/Onboarding/ProfileSetupModal';
-import toast from 'react-hot-toast';
+import { SettingsPanel } from './components/Settings/SettingsPanel';
+import { ProfileSettingsModal } from './components/Settings/ProfileSettingsModal';
+import { FeedbackModal } from './components/Feedback/FeedbackModal';
+import { CommandPalette } from './components/common/CommandPalette';
+import { useCommands } from './hooks/useCommands';
+import { Router } from './components/Router';
+import { useModals } from './hooks/useModals';
+import { fromSavedDraft } from './lib/draftUtils';
+import { ROLES } from './constants';
+import { useChampions } from './contexts/ChampionContext';
+import { Loader } from './components/common/Loader';
 
-const createInitialSlot = () => ({ champion: null, isActive: false });
-const createInitialTeamState = () => ({
-  picks: Array(5).fill(null).map(createInitialSlot),
-  bans: Array(5).fill(null).map(createInitialSlot),
-});
+const App = () => {
+    const [currentPage, setCurrentPage] = useState<Page>('Home');
+    const { settings, setSettings } = useSettings();
+    const { profile, checkStreak, initializeNewProfile, spForNextLevel } = useUserProfile();
+    const { modals, dispatch } = useModals();
+    const { champions, isLoading: isChampionsLoading, error: championsError } = useChampions();
 
-export const getInitialDraftState = (): DraftState => ({
-  blue: createInitialTeamState(),
-  red: createInitialTeamState(),
-  turn: 'blue',
-  phase: 'ban1',
-});
+    const { draftState, setDraftState, resetDraft } = useDraft();
+    const [liveDraftState, setLiveDraftState] = useState<DraftState>(getInitialDraftState());
+    const [arenaDraftState, setArenaDraftState] = useState<DraftState>(getInitialDraftState());
 
-interface OnboardingData {
-    username: string;
-    primaryRole: string;
-    favoriteChampions: string[];
-    skillLevel: 'Beginner' | 'Intermediate' | 'Advanced';
-    goals: string[];
-    avatar: string;
-    theme: Settings['theme'];
-}
+    // State for navigation with parameters
+    const [academyInitialLessonId, setAcademyInitialLessonId] = useState<string | undefined>();
+    const [strategyHubInitialTab, setStrategyHubInitialTab] = useState<'champions' | 'intel'>('champions');
+    const [strategyHubInitialSearch, setStrategyHubInitialSearch] = useState<string | null>(null);
 
-const THEME_COLORS: Record<Theme, Record<string, string>> = {
-    cyan: { '--color-accent-text': '103 232 249', '--color-accent-bg': '8 145 178', '--color-accent-bg-hover': '14 116 144', '--color-accent-logo': '34 211 238' },
-    crimson: { '--color-accent-text': '251 113 133', '--color-accent-bg': '225 29 72', '--color-accent-bg-hover': '190 18 60', '--color-accent-logo': '244 63 94' },
-    gold: { '--color-accent-text': '252 211 77', '--color-accent-bg': '217 119 6', '--color-accent-bg-hover': '180 83 9', '--color-accent-logo': '250 204 21' },
-    teal: { '--color-accent-text': '94 234 212', '--color-accent-bg': '13 148 136', '--color-accent-bg-hover': '15 118 110', '--color-accent-logo': '45 212 191' },
-};
+    const [startLabTour, setStartLabTour] = useState(false);
+    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
+    // One ref object to hold refs for all pages
+    const pageRefs = useRef<{ [key: string]: React.RefObject<HTMLDivElement> }>({});
 
-const App: React.FC = () => {
-  const pageRefs = useRef<{[key: string]: React.RefObject<HTMLDivElement>}>({});
-  const [currentPage, setCurrentPage] = useState<Page>('Home');
-  const [draftState, setDraftState] = useState<DraftState>(getInitialDraftState());
-  const [arenaDraftState, setArenaDraftState] = useState<DraftState>(getInitialDraftState());
-  const [liveDraftState, setLiveDraftState] = useState<DraftState>(getInitialDraftState());
-  const [confirmationState, setConfirmationState] = useState<ConfirmationState | null>(null);
+    // Apply theme to the document
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', settings.theme);
+    }, [settings.theme]);
 
-  // State for Command Palette
-  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-  const [strategyHubInitialTab, setStrategyHubInitialTab] = useState<'champions' | 'intel'>('champions');
-  const [strategyHubInitialSearch, setStrategyHubInitialSearch] = useState<string | null>(null);
-  const [academyInitialLessonId, setAcademyInitialLessonId] = useState<string | undefined>(undefined);
-
-  // State for Modals
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const { settings, setSettings } = useSettings();
-  const { checkStreak, initializeNewProfile } = useUserProfile();
-
-  // --- Onboarding State ---
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [startLabTour, setStartLabTour] = useState(false);
-
-  useEffect(() => {
-    // Check if onboarding has been completed robustly
-    const onboardingComplete = localStorage.getItem('onboardingComplete');
-    const userProfileExists = localStorage.getItem('userProfile');
-
-    if (!onboardingComplete || !userProfileExists) {
-      // If the flag is set but the profile data is missing, something went wrong.
-      // Reset the flag to re-trigger onboarding.
-      if (onboardingComplete && !userProfileExists) {
-        localStorage.removeItem('onboardingComplete');
-      }
-      setShowOnboardingModal(true);
-    }
-  }, []);
-
-  // BUG FIX: Ensure guided tour is stopped if user navigates away
-  useEffect(() => {
-    if (currentPage !== 'Strategy Forge' && startLabTour) {
-      setStartLabTour(false);
-    }
-  }, [currentPage, startLabTour]);
-
-  // BUG FIX: Apply theme colors dynamically for instant theme switching
-  useEffect(() => {
-    const root = document.documentElement;
-    const themeColors = THEME_COLORS[settings.theme] || THEME_COLORS.cyan;
-    for (const [key, value] of Object.entries(themeColors)) {
-        root.style.setProperty(key, value);
-    }
-  }, [settings.theme]);
-
-  const handleProfileSetupComplete = useCallback((data: OnboardingData) => {
-    setShowOnboardingModal(false);
-    
-    // Set user profile data
-    initializeNewProfile({
-        username: data.username,
-        skillLevel: data.skillLevel,
-        avatar: data.avatar,
-        goals: data.goals,
-        favoriteChampions: data.favoriteChampions
-    });
-
-    // Set user settings
-    setSettings({
-        primaryRole: data.primaryRole,
-        favoriteChampions: data.favoriteChampions,
-        theme: data.theme,
-        enableSound: settings.enableSound, // Preserve existing sound setting
-    });
-    
-    // Set the completion flag last to ensure profile/settings are saved first.
-    localStorage.setItem('onboardingComplete', 'true');
-    setCurrentPage('Strategy Forge'); // Navigate to the lab for the tour
-    setStartLabTour(true);
-  }, [initializeNewProfile, setSettings, settings.enableSound]);
-
-  const handleTourComplete = useCallback(() => {
-    setStartLabTour(false);
-  }, []);
-  // --- End Onboarding State ---
-
-  // Check daily streak on app load
-  useEffect(() => {
-    checkStreak();
-  }, [checkStreak]);
-
-  // Keyboard listener for command palette
-  useEffect(() => {
-      const handler = (e: KeyboardEvent) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-          e.preventDefault();
-          // Ensure other modals are closed before opening the palette
-          setIsSettingsOpen(false);
-          setIsFeedbackModalOpen(false);
-          setConfirmationState(null);
-          setIsPaletteOpen(prev => !prev);
+    // Check if onboarding is complete
+    useEffect(() => {
+        const onboardingComplete = localStorage.getItem('onboardingComplete');
+        if (!onboardingComplete) {
+            dispatch({ type: 'OPEN_ONBOARDING' });
         }
-      };
-      window.addEventListener('keydown', handler);
-      return () => window.removeEventListener('keydown', handler);
-  }, []);
+    }, [dispatch]);
 
-  const loadDraftAndNavigate = (draft: DraftState) => {
-    const isDraftDirty = JSON.stringify(draftState) !== JSON.stringify(getInitialDraftState());
-    
-    const performLoad = () => {
+    const handleOnboardingComplete = (data: { username: string; skillLevel: 'Beginner' | 'Intermediate' | 'Advanced'; avatar: string, goals: string[], favoriteChampions: string[] }) => {
+        initializeNewProfile(data);
+        setSettings({
+            primaryRole: data.favoriteChampions.length > 0 ? settings.primaryRole : 'All',
+            favoriteChampions: data.favoriteChampions,
+        });
+        localStorage.setItem('onboardingComplete', 'true');
+        dispatch({ type: 'CLOSE', payload: 'onboarding' });
+        setStartLabTour(true);
+    };
+
+    const handleTourComplete = () => setStartLabTour(false);
+
+    // Reset draft states
+    const resetLiveDraft = useCallback(() => setLiveDraftState(getInitialDraftState()), []);
+    const resetArena = useCallback(() => setArenaDraftState(getInitialDraftState()), []);
+
+    // Daily streak check
+    useEffect(() => {
+        checkStreak();
+    }, [checkStreak]);
+
+    // Command Palette Hotkey
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                setIsCommandPaletteOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Navigation functions
+    const navigateToAcademy = (lessonId: string) => {
+        setAcademyInitialLessonId(lessonId);
+        setCurrentPage('Academy');
+    };
+
+    const navigateToArmory = (tab: 'champions' | 'intel') => {
+        setStrategyHubInitialTab(tab);
+        setCurrentPage('The Armory');
+    };
+
+    const loadDraftAndNavigate = (draft: DraftState) => {
         setDraftState(draft);
         setCurrentPage('Strategy Forge');
     };
-
-    if (isDraftDirty) {
-        setConfirmationState({
-            title: "Overwrite Draft?",
-            message: "Loading this draft will overwrite your current session in the Strategy Forge. Are you sure you want to continue?",
-            onConfirm: performLoad,
-        });
-    } else {
-        performLoad();
-    }
-  };
-
+    
     const loadChampionToLab = (championId: string, role?: string) => {
-        const champion = CHAMPIONS.find(c => c.id === championId);
-        if (!champion) {
-            toast.error("Champion not found.");
-            return;
-        }
-
+        const champ = champions.find(c => c.id === championId);
+        if (!champ) return;
+        
         setDraftState(prev => {
-            const bluePicks = [...prev.blue.picks];
-            let placed = false;
-
-            if (role) {
-                const roleIndex = ROLES.indexOf(role);
-                if (roleIndex !== -1 && !bluePicks[roleIndex].champion) {
-                    bluePicks[roleIndex] = { champion, isActive: false };
-                    placed = true;
-                    toast.success(`${champion.name} added to ${role} slot!`);
-                }
+            const roleIndex = role ? ROLES.indexOf(role) : -1;
+            const newPicks = [...prev.blue.picks];
+            if (roleIndex !== -1) {
+                newPicks[roleIndex] = { champion: champ, isActive: false };
+            } else {
+                 const emptyIndex = newPicks.findIndex(p => p.champion === null);
+                 if (emptyIndex !== -1) {
+                     newPicks[emptyIndex] = { champion: champ, isActive: false };
+                 }
             }
-            
-            if (!placed) {
-                for (let i = 0; i < bluePicks.length; i++) {
-                    if (!bluePicks[i].champion) {
-                        bluePicks[i] = { champion, isActive: false };
-                        placed = true;
-                        toast.success(`${champion.name} added to Strategy Forge!`);
-                        break;
-                    }
-                }
-            }
-
-            if (!placed) {
-                toast.error("Blue team is full. Clear a slot to add the champion.");
-                return prev; // Return original state if no space
-            }
-            
-            return {
-                ...prev,
-                blue: {
-                    ...prev.blue,
-                    picks: bluePicks
-                }
-            };
+            return { ...prev, blue: { ...prev.blue, picks: newPicks }};
         });
+        
         setCurrentPage('Strategy Forge');
     };
-  
-  const resetDraft = useCallback(() => {
-    setDraftState(getInitialDraftState());
-  }, []);
 
-  const resetArena = useCallback(() => {
-    setArenaDraftState(getInitialDraftState());
-  }, []);
+    const commands = useCommands({
+        setCurrentPage,
+        resetDraft,
+        resetArena,
+        resetLiveDraft,
+        setStrategyHubInitialTab,
+        setStrategyHubInitialSearch,
+    });
 
-  const resetLiveDraft = useCallback(() => {
-    setLiveDraftState(getInitialDraftState());
-  }, []);
-
-  const navigateToAcademy = useCallback((lessonId: string) => {
-    setAcademyInitialLessonId(lessonId);
-    setCurrentPage('Academy');
-  }, []);
-
-  const navigateToArmory = (tab: 'champions' | 'intel') => {
-    setStrategyHubInitialTab(tab);
-    setCurrentPage('The Armory');
-  };
-
-  const commands: Command[] = useMemo(() => {
-    const pageCommands: Command[] = [
-        { id: 'nav-home', title: 'Go to Home', section: 'Navigation', action: () => setCurrentPage('Home') },
-        { id: 'nav-live-draft', title: 'Go to Live Co-Pilot', section: 'Navigation', action: () => setCurrentPage('Live Co-Pilot') },
-        { id: 'nav-draft-lab', title: 'Go to Strategy Forge', section: 'Navigation', action: () => setCurrentPage('Strategy Forge') },
-        { id: 'nav-arena', title: 'Go to Draft Arena', section: 'Navigation', action: () => setCurrentPage('Draft Arena') },
-        { id: 'nav-playbook', title: 'Go to The Archives', section: 'Navigation', action: () => setCurrentPage('The Archives') },
-        { id: 'nav-strategy-hub', title: 'Go to The Armory', section: 'Navigation', action: () => setCurrentPage('The Armory') },
-        { id: 'nav-academy', title: 'Go to Academy', section: 'Navigation', action: () => setCurrentPage('Academy') },
-        { id: 'nav-meta-oracle', title: 'Go to The Oracle', section: 'Navigation', action: () => setCurrentPage('The Oracle') },
-        { id: 'nav-trial', title: 'Go to Daily Challenge', section: 'Navigation', action: () => setCurrentPage('Daily Challenge') },
-        { id: 'nav-profile', title: 'Go to Profile', section: 'Navigation', action: () => setCurrentPage('Profile') },
-    ];
-    
-    const actionCommands: Command[] = [
-        { id: 'action-reset-lab', title: 'Reset Strategy Forge', section: 'Actions', action: resetDraft },
-        { id: 'action-reset-arena', title: 'Reset Draft Arena', section: 'Actions', action: resetArena },
-        { id: 'action-reset-live-draft', title: 'Reset Live Co-Pilot', section: 'Actions', action: resetLiveDraft },
-        { id: 'action-open-settings', title: 'Open Settings', section: 'Actions', action: () => setIsSettingsOpen(true) },
-        { id: 'action-give-feedback', title: 'Give Feedback', section: 'Actions', action: () => setIsFeedbackModalOpen(true) },
-    ];
-
-    const championSearchCommands: Command[] = CHAMPIONS_LITE.map(champ => ({
-        id: `search-champ-${champ.id}`,
-        title: `Find Champion: ${champ.name}`,
-        section: 'Champion Search',
-        action: () => {
-            setStrategyHubInitialTab('champions');
-            setStrategyHubInitialSearch(champ.name);
-            setCurrentPage('The Armory');
+    const renderContent = () => {
+        if (isChampionsLoading) {
+            return (
+                <div className="flex-grow flex items-center justify-center">
+                    <Loader messages={["Loading Champion Database...", "Syncing with Data Dragon..."]} />
+                </div>
+            );
         }
-    }));
 
-    return [...pageCommands, ...actionCommands, ...championSearchCommands];
-  }, [resetDraft, resetArena, resetLiveDraft]);
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'Home':
-        return <Home setCurrentPage={setCurrentPage} navigateToArmory={navigateToArmory} />;
-      case 'Strategy Forge':
-        return <DraftLab draftState={draftState} setDraftState={setDraftState} onReset={resetDraft} startTour={startLabTour} onTourComplete={handleTourComplete} navigateToAcademy={navigateToAcademy} />;
-      case 'Live Co-Pilot':
-        return <LiveDraft
-          draftState={liveDraftState}
-          setDraftState={setLiveDraftState}
-          onReset={resetLiveDraft}
-        />;
-      case 'Draft Arena':
-        return <LiveArena 
-          draftState={arenaDraftState}
-          setDraftState={setArenaDraftState}
-          onReset={resetArena}
-          onNavigateToForge={loadDraftAndNavigate} 
-        />;
-      case 'The Archives':
-        return <Playbook onLoadDraft={loadDraftAndNavigate} setCurrentPage={setCurrentPage} navigateToAcademy={navigateToAcademy} />;
-      case 'Academy':
-        return <Academy initialLessonId={academyInitialLessonId} onHandled={() => setAcademyInitialLessonId(undefined)} />;
-      case 'The Armory':
-        return <StrategyHub 
-            initialTab={strategyHubInitialTab} 
-            initialSearchTerm={strategyHubInitialSearch}
-            onLoadChampionInLab={loadChampionToLab}
-            draftState={draftState}
-            onHandled={() => {
-                setStrategyHubInitialTab('champions');
-                setStrategyHubInitialSearch(null);
-            }} 
-        />;
-      case 'The Oracle':
-        return <MetaOracle />;
-      case 'Daily Challenge':
-        return <DailyTrial navigateToAcademy={navigateToAcademy} />;
-      case 'Profile':
-        return <Profile setCurrentPage={setCurrentPage} navigateToAcademy={navigateToAcademy} />;
-      default:
-        return <Home setCurrentPage={setCurrentPage} navigateToArmory={navigateToArmory} />;
-    }
-  };
-
-  const nodeRef = pageRefs.current[currentPage] ?? (pageRefs.current[currentPage] = React.createRef());
-
-  return (
-    <div className="min-h-screen flex bg-transparent">
-      <ProfileSetupModal isOpen={showOnboardingModal} onComplete={handleProfileSetupComplete} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} draftState={draftState} />
-      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} commands={commands} />
-      <ConfirmationModal
-        isOpen={!!confirmationState}
-        onClose={() => setConfirmationState(null)}
-        state={confirmationState}
-      />
-      <Toaster 
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: '#1e293b', // slate-800
-            color: '#e2e8f0', // slate-200
-            border: '1px solid #334155' // slate-700
-          }
-        }}
-      />
-      
-      <Sidebar 
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenFeedback={() => setIsFeedbackModalOpen(true)}
-      />
-
-      <div className="flex-1 flex flex-col md:pl-64">
-        <main className="flex-grow p-4 md:p-6 pb-20 md:pb-6 relative">
-            <TransitionGroup component={null}>
-                <CSSTransition key={currentPage} nodeRef={nodeRef} timeout={300} classNames="page">
-                    <div ref={nodeRef} className="page-container absolute inset-0 md:inset-6 md:top-0">
-                        {renderPage()}
+        if (championsError) {
+             return (
+                <div className="flex-grow flex items-center justify-center p-4">
+                    <div className="text-center bg-error/10 p-8 border border-error/20 text-error">
+                        <h2 className="text-2xl font-bold">Failed to Load Champion Data</h2>
+                        <p>{championsError}</p>
+                        <p className="mt-2 text-sm">Please check your internet connection and refresh the page.</p>
                     </div>
-                </CSSTransition>
-            </TransitionGroup>
-        </main>
-        <Footer />
-      </div>
+                </div>
+             );
+        }
 
-      <BottomNav currentPage={currentPage} setCurrentPage={setCurrentPage} />
-    </div>
-  );
+        return (
+             <main className="flex-grow w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+                <Router
+                    currentPage={currentPage}
+                    pageRefs={pageRefs}
+                    setCurrentPage={setCurrentPage}
+                    navigateToArmory={navigateToArmory}
+                    startLabTour={startLabTour}
+                    handleTourComplete={handleTourComplete}
+                    navigateToAcademy={navigateToAcademy}
+                    liveDraftState={liveDraftState}
+                    setLiveDraftState={setLiveDraftState}
+                    resetLiveDraft={resetLiveDraft}
+                    arenaDraftState={arenaDraftState}
+                    setArenaDraftState={setArenaDraftState}
+                    resetArena={resetArena}
+                    loadDraftAndNavigate={loadDraftAndNavigate}
+                    academyInitialLessonId={academyInitialLessonId}
+                    setAcademyInitialLessonId={setAcademyInitialLessonId}
+                    strategyHubInitialTab={strategyHubInitialTab}
+                    strategyHubInitialSearch={strategyHubInitialSearch}
+                    loadChampionToLab={loadChampionToLab}
+                    setStrategyHubInitialTab={setStrategyHubInitialTab}
+                    setStrategyHubInitialSearch={setStrategyHubInitialSearch}
+                />
+            </main>
+        );
+    };
+    
+    return (
+        <ErrorBoundary>
+            <div className="flex flex-col min-h-screen">
+                <Toaster
+                    position="bottom-right"
+                    toastOptions={{
+                        style: {
+                            background: 'hsl(var(--surface-tertiary))',
+                            color: 'hsl(var(--text-primary))',
+                            border: '1px solid hsl(var(--border))',
+                        },
+                    }}
+                />
+
+                <ProfileSetupModal
+                    isOpen={modals.onboarding}
+                    onComplete={handleOnboardingComplete}
+                />
+                
+                <SettingsPanel />
+                <ProfileSettingsModal />
+                <FeedbackModal />
+                <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} commands={commands} />
+
+                <Header currentPage={currentPage} setCurrentPage={setCurrentPage} profile={profile} spForNextLevel={spForNextLevel} />
+
+                {renderContent()}
+                
+                <Footer />
+                <BottomNav currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                <div className="pb-16 md:pb-0" /> {/* Spacer for BottomNav */}
+            </div>
+        </ErrorBoundary>
+    );
 };
 
 export default App;

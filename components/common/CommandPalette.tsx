@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import FocusTrap from 'focus-trap-react';
 
@@ -14,7 +15,7 @@ interface CommandPaletteProps {
     commands: Command[];
 }
 
-export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, commands }) => {
+export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +75,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
 
     return (
         <div 
-            className={`fixed inset-0 z-50 transition-opacity duration-300 ${isOpen ? 'bg-black/60' : 'pointer-events-none opacity-0'}`} 
+            className={`fixed inset-0 z-50 transition-opacity duration-300 ${isOpen ? 'bg-background/90' : 'pointer-events-none opacity-0'}`} 
             onClick={onClose} 
             aria-hidden={!isOpen}
         >
@@ -90,21 +91,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                 <div 
                     ref={paletteRef}
                     tabIndex={-1}
-                    className={`bg-slate-800 rounded-lg shadow-2xl border border-slate-700 w-full max-w-2xl mx-auto mt-[15vh] transition-all duration-300 focus:outline-none ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+                    className={`bg-surface rounded-lg shadow-2xl border border-border w-full max-w-2xl mx-auto mt-[15vh] transition-all duration-300 focus:outline-none ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
                     onClick={e => e.stopPropagation()}
                     role="dialog"
                     aria-modal="true"
                     aria-label="Command Palette"
                     onKeyDown={handleKeyDown}
                 >
-                    <div className="p-2 border-b border-slate-700">
+                    <div className="p-2 border-b border-border">
                         <input
                             ref={inputRef}
                             type="text"
                             placeholder="Type a command or search..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-transparent text-white placeholder-gray-400 focus:outline-none px-2 py-2"
+                            className="w-full bg-transparent text-text-primary placeholder-text-secondary focus:outline-none px-2 py-2"
                             aria-controls="command-list"
                             aria-expanded="true"
                         />
@@ -112,7 +113,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                     <ul ref={resultsRef} id="command-list" role="listbox" className="max-h-[50vh] overflow-y-auto p-2">
                         {Object.entries(groupedCommands).map(([section, cmds]) => (
                             <li key={section} role="presentation">
-                                <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase">{section}</div>
+                                <div className="px-2 pt-2 pb-1 text-xs font-semibold text-text-secondary uppercase">{section}</div>
                                 <ul role="presentation">
                                     {cmds.map((cmd) => {
                                         commandIndex++;
@@ -124,7 +125,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                                                 ref={isSelected ? activeItemRef : null}
                                                 onClick={() => { cmd.action(); onClose(); }}
                                                 onMouseMove={() => setActiveIndex(commandIndex)}
-                                                className={`p-2 rounded-md cursor-pointer text-gray-200 ${isSelected ? 'bg-blue-600' : 'hover:bg-slate-700'}`}
+                                                className={`p-2 rounded-md cursor-pointer text-text-primary ${isSelected ? 'bg-accent text-on-accent' : 'hover:bg-secondary'}`}
                                                 role="option"
                                                 aria-selected={isSelected}
                                             >
@@ -136,7 +137,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                             </li>
                         ))}
                          {flatCommands.length === 0 && (
-                            <li className="p-4 text-center text-gray-400">No results found.</li>
+                            <li className="p-4 text-center text-text-secondary">No results found.</li>
                         )}
                     </ul>
                 </div>

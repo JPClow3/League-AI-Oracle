@@ -1,13 +1,14 @@
 
-export type Page = 'Home' | 'Strategy Forge' | 'The Archives' | 'Academy' | 'Draft Arena' | 'The Armory' | 'Daily Challenge' | 'Profile' | 'The Oracle' | 'Live Co-Pilot';
 
-export type Theme = 'cyan' | 'crimson' | 'gold' | 'teal';
+export type Page = 'Home' | 'Strategy Forge' | 'The Archives' | 'Academy' | 'Draft Arena' | 'The Armory' | 'Daily Challenge' | 'Profile' | 'The Oracle' | 'Live Co-Pilot';
+export type DraftMode = 'competitive' | 'soloq';
 
 export interface Settings {
+    theme: 'light' | 'dark';
     primaryRole: string;
     secondaryRole: string;
     favoriteChampions: string[]; // Champion IDs
-    theme: Theme;
+    language: 'en' | 'pt';
     enableSound: boolean;
 }
 
@@ -21,6 +22,7 @@ export interface Champion {
   id: string;
   name: string;
   image: string;
+  splashUrl: string;
   title: string;
   lore: string;
   playstyle: string;
@@ -38,6 +40,7 @@ export interface ChampionLite {
   name: string;
   image: string;
   roles: string[];
+  damageType: 'AD' | 'AP' | 'Mixed';
 }
 
 export type TeamSide = 'blue' | 'red';
@@ -59,9 +62,14 @@ export interface DraftState {
   phase: 'ban1' | 'pick1' | 'ban2' | 'pick2';
 }
 
+export interface DraftWeakness {
+    description: string;
+    keyword?: string;
+}
+
 export interface TeamAnalysis {
   strengths: string[];
-  weaknesses: string[];
+  weaknesses: DraftWeakness[];
   winCondition: string;
   teamIdentity: string;
   powerSpike: string;
@@ -252,6 +260,8 @@ export interface RecentFeedback {
     timestamp: string;
 }
 
+export type TeamfightRole = 'Engage' | 'Disengage' | 'Peel' | 'Damage Dealer' | 'Utility';
+
 export interface UserProfile {
     username: string;
     avatar: string; // Champion ID
@@ -272,6 +282,7 @@ export interface UserProfile {
     championMastery: ChampionMastery[];
     arenaStats: ArenaStats;
     recentFeedback: RecentFeedback[];
+    teamfightRole?: TeamfightRole;
 }
 // --- End Gamification Types ---
 
@@ -299,8 +310,8 @@ export interface ChampionAnalysis {
         synergisticChampions: string[];
     };
     counters: {
-        strongAgainst: string[];
-        weakAgainst: string[];
+        strongAgainst: { championName: string; reasoning: string; }[];
+        weakAgainst: { championName: string; reasoning: string; }[];
     };
     playstyle: {
         earlyGame: string;
@@ -311,12 +322,7 @@ export interface ChampionAnalysis {
 // --- End Champion Analysis Type ---
 
 // --- New Matchup Analysis Type ---
-export interface MatchupTip {
-    championName: string;
-    tip: string;
-}
 export interface MatchupAnalysis {
-    strongAgainstTips: MatchupTip[];
-    weakAgainstTips: MatchupTip[];
+    strongAgainstTips: { championName: string; tip: string; }[];
+    weakAgainstTips: { championName: string; tip: string; }[];
 }
-// --- End Matchup Analysis Type ---

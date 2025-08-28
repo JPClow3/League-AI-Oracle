@@ -4,8 +4,10 @@ import { Button } from './Button';
 
 export interface ConfirmationState {
     title: string;
-    message: string;
+    message: React.ReactNode;
     onConfirm: () => void;
+    confirmVariant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+    confirmText?: string;
 }
 
 interface ConfirmationModalProps {
@@ -14,7 +16,7 @@ interface ConfirmationModalProps {
     state: ConfirmationState | null;
 }
 
-export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, state }) => {
+export const ConfirmationModal = ({ isOpen, onClose, state }: ConfirmationModalProps) => {
     const handleConfirm = () => {
         state?.onConfirm();
         onClose();
@@ -23,13 +25,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, on
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={state?.title || ''}>
             <div className="p-6 space-y-6">
-                <p className="text-lg text-gray-300">{state?.message || ''}</p>
+                <div className="text-lg text-text-secondary">{state?.message || ''}</div>
                 <div className="flex justify-end gap-4">
                     <Button variant="secondary" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button variant="danger" onClick={handleConfirm}>
-                        Confirm
+                    <Button variant={state?.confirmVariant || 'danger'} onClick={handleConfirm}>
+                        {state?.confirmText || 'Confirm'}
                     </Button>
                 </div>
             </div>

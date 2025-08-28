@@ -1,9 +1,11 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { SettingsProvider } from './hooks/useSettings';
 import { UserProfileProvider } from './hooks/useUserProfile';
+import { ModalProvider } from './hooks/useModals';
+import { DraftProvider } from './contexts/DraftContext';
+import { ChampionProvider } from './contexts/ChampionContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -15,7 +17,13 @@ root.render(
   <React.StrictMode>
     <SettingsProvider>
       <UserProfileProvider>
-        <App />
+        <ModalProvider>
+          <DraftProvider>
+            <ChampionProvider>
+              <App />
+            </ChampionProvider>
+          </DraftProvider>
+        </ModalProvider>
       </UserProfileProvider>
     </SettingsProvider>
   </React.StrictMode>

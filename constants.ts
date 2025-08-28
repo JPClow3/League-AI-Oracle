@@ -1,5 +1,4 @@
 import type { Champion, ChampionLite } from './types';
-import { CHAMPION_DETAILS } from './data/championData';
 
 export interface Blueprint {
   name: string;
@@ -7,18 +6,11 @@ export interface Blueprint {
   championIds: string[];
 }
 
-// Centralize the Data Dragon version for easy updates when a new patch is released.
-export const DATA_DRAGON_VERSION = '14.14.1';
-export const DATA_DRAGON_SPLASH_URL_BASE = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/`;
+// NOTE: The data dragon version is now fetched dynamically at app startup in ChampionContext.
 
 // Centralized array of roles for consistency across the application.
 export const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
-
-// Helper to generate Data Dragon champion image URLs
-const getChampionImage = (championId: string) => {
-    // The champion ID from championData.ts should be the correct key for Data Dragon.
-    return `https://ddragon.leagueoflegends.com/cdn/${DATA_DRAGON_VERSION}/img/champion/${championId}.png`;
-}
+export const DAMAGE_TYPES = ['All', 'AD', 'AP', 'Mixed'];
 
 export const BLUEPRINTS: Blueprint[] = [
     {
@@ -43,16 +35,20 @@ export const BLUEPRINTS: Blueprint[] = [
     }
 ];
 
-// Combine detailed data with image URLs. CHAMPION_DETAILS is now the single source of truth.
-export const CHAMPIONS: Champion[] = CHAMPION_DETAILS.map(champion => ({
-  ...champion,
-  image: getChampionImage(champion.id),
-}));
-
-// A lightweight version for performance-critical lists like the champion grid.
-export const CHAMPIONS_LITE: ChampionLite[] = CHAMPIONS.map(c => ({
-    id: c.id,
-    name: c.name,
-    image: c.image,
-    roles: c.roles,
-}));
+export const MISSION_IDS = {
+    GETTING_STARTED: {
+        FIRST_ANALYSIS: 'gs1',
+        PRACTICE_MAKES_PERFECT: 'gs2',
+        SAVE_STRATEGY: 'gs3',
+        CHECK_META: 'gs4',
+    },
+    DAILY: {
+        FIRST_DRAFT_OF_DAY: 'd1',
+        KNOWLEDGE_CHECK: 'd2',
+    },
+    WEEKLY: {
+        ARENA_CONTENDER: 'w1',
+        EXPAND_PLAYBOOK: 'w2',
+        PERFECT_COMP: 'w3',
+    },
+};

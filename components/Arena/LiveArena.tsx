@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { DraftState, Champion, TeamSide, ChampionLite, ArenaBotPersona, ChampionSuggestion } from '../../types';
-import { CHAMPIONS } from '../../constants';
+import { MISSION_IDS, ROLES } from '../../constants';
 import { getBotDraftAction } from '../../services/geminiService';
 import { TeamPanel } from '../DraftLab/TeamPanel';
 import { ChampionGrid } from '../DraftLab/ChampionGrid';
@@ -15,6 +15,8 @@ import { useSettings } from '../../hooks/useSettings';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { getAvailableChampions } from '../../lib/draftUtils';
 import { QuickLookPanel } from '../DraftLab/QuickLookPanel';
+import { Swords } from 'lucide-react';
+import { useChampions } from '../../contexts/ChampionContext';
 
 interface LiveArenaProps {
   draftState: DraftState;
@@ -25,7 +27,7 @@ interface LiveArenaProps {
 
 const BOT_PERSONAS: ArenaBotPersona[] = ['The Aggressor', 'The Strategist', 'The Trickster'];
 
-export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState, onReset, onNavigateToForge }) => {
+export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForge }: LiveArenaProps) => {
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [lastUpdatedIndex, setLastUpdatedIndex] = useState(-1);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,6 +37,7 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
   const [draftName, setDraftName] = useState('');
   const [botPersona, setBotPersona] = useState<ArenaBotPersona>('The Strategist');
   const [quickLookChampion, setQuickLookChampion] = useState<ChampionLite | null>(null);
+  const { champions, championsLite } = useChampions();
   
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const { addEntry: addPlaybookEntry, latestEntry } = usePlaybook();
@@ -45,11 +48,20 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
   const draftFinished = currentTurnIndex >= COMPETITIVE_SEQUENCE.length;
   const currentTurn = !draftFinished ? COMPETITIVE_SEQUENCE[currentTurnIndex] : null;
 
+  // Effect for component unmount cleanup
+  useEffect(() => {
+    return () => {
+        abortControllerRef.current?.abort();
+        // Per code review: reset state on unmount
+        setIsBotThinking(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (draftFinished) {
         addSP(100, "Arena Draft Completed");
-        completeMission('gs2'); // Getting Started: Practice Makes Perfect
-        if (completeMission('w1')) { // Weekly: Arena Contender
+        completeMission(MISSION_IDS.GETTING_STARTED.PRACTICE_MAKES_PERFECT);
+        if (completeMission(MISSION_IDS.WEEKLY.ARENA_CONTENDER)) {
             toast.success("Mission Complete: Arena Contender!");
         }
     }
@@ -58,33 +70,26 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
   const makeBotSelection = useCallback(async (signal: AbortSignal): Promise<{ champion: Champion | undefined, reasoning: string | null }> => {
     if (!currentTurn) return { champion: undefined, reasoning: null };
     
-    const available = getAvailableChampions(draftState);
+    const available = getAvailableChampions(draftState, championsLite);
     if (available.length === 0) {
         console.error("Bot has no champions to pick from.");
         return { champion: undefined, reasoning: null };
     }
 
-    const aiSuggestion = await getBotDraftAction(draftState, currentTurn, botPersona, available, signal);
-    let botPick: Champion | undefined;
-    let reasoning: string | null = null;
-
-    if (aiSuggestion) {
-        botPick = CHAMPIONS.find(c => c.name.toLowerCase() === aiSuggestion.championName.toLowerCase());
-        reasoning = aiSuggestion.reasoning;
+    try {
+        const aiSuggestion = await getBotDraftAction(draftState, currentTurn, botPersona, available, signal);
+        const botPick = champions.find(c => c.name.toLowerCase() === aiSuggestion.championName.toLowerCase());
+        const reasoning = aiSuggestion.reasoning;
+        return { champion: botPick, reasoning };
+    } catch (error) {
+        // This will be caught if getBotDraftAction throws (e.g., from fallback failure)
+        console.error("Critical error in bot action selection:", error);
+        return { champion: undefined, reasoning: null };
     }
-    
-    // Fallback to random if AI fails or suggests an unavailable champion
-    if (!botPick) {
-        console.warn("Bot AI failed or suggested invalid champion, picking random.");
-        botPick = CHAMPIONS.find(c => c.id === available[Math.floor(Math.random() * available.length)].id);
-        reasoning = "Picking a champion that fits my composition."; // Generic fallback reasoning
-    }
-    
-    return { champion: botPick, reasoning };
-  }, [draftState, currentTurn, botPersona]);
+  }, [draftState, currentTurn, botPersona, champions, championsLite]);
   
-  const handleChampionSelect = useCallback((champion: Champion) => {
-    if (!currentTurn) return;
+  const handleChampionSelect = useCallback((champion: Champion | undefined) => {
+    if (!currentTurn || !champion) return; // FIX: Added check for champion to prevent crash
 
     const { team, type, index } = currentTurn;
     setDraftState(prevState => {
@@ -110,13 +115,13 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
   }, [currentTurn, setDraftState, currentTurnIndex]);
 
   const handleChampionSelectLite = useCallback((championLite: ChampionLite) => {
-    const champion = CHAMPIONS.find(c => c.id === championLite.id);
+    const champion = champions.find(c => c.id === championLite.id);
     if (champion) {
         handleChampionSelect(champion);
     } else {
         console.error("Selected champion not found in full list:", championLite.id);
     }
-  }, [handleChampionSelect]);
+  }, [handleChampionSelect, champions]);
 
   useEffect(() => {
     if (draftFinished || !currentTurn || currentTurn.team === 'blue') {
@@ -137,14 +142,14 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
           if (reasoning) {
               const actionText = currentTurn.type === 'pick' ? 'picked' : 'banned';
               toast.custom((t) => (
-                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-slate-800 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-red-500/30`}>
+                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-surface-primary shadow-lg pointer-events-auto flex ring-1 ring-error/30 border border-border-primary`}>
                     <div className="p-4 flex items-center gap-3">
                         <div className="flex-shrink-0">
-                            <img className="h-10 w-10 rounded-full" src={botChampion.image} alt={botChampion.name} />
+                            <img className="h-10 w-10" src={botChampion.image} alt={botChampion.name} />
                         </div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold text-red-300">Opponent {actionText} {botChampion.name}</p>
-                            <p className="mt-1 text-xs text-gray-300">"{reasoning}"</p>
+                            <p className="text-sm font-semibold text-error">Opponent {actionText} {botChampion.name}</p>
+                            <p className="mt-1 text-xs text-text-secondary">"{reasoning}"</p>
                         </div>
                     </div>
                 </div>
@@ -161,7 +166,7 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
         clearTimeout(timer);
         controller.abort();
     }
-  }, [currentTurnIndex, draftFinished, currentTurn, makeBotSelection, handleChampionSelect]);
+  }, [currentTurnIndex, draftFinished, currentTurn, makeBotSelection, handleChampionSelect, draftState]);
 
   const handleSlotClick = (team: TeamSide, type: 'pick' | 'ban', index: number) => {
     if (draftFinished || !currentTurn || isBotThinking || team !== 'blue') return;
@@ -209,18 +214,18 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
       }
       return null;
   }
-
+  
   return (
     <div className="space-y-6">
         <QuickLookPanel champion={quickLookChampion} onClose={() => setQuickLookChampion(null)} />
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-4 rounded-xl shadow-lg">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-primary border border-border-primary p-4 shadow-lg">
              <div className="flex items-center gap-4">
-                <div className="bg-slate-700/50 text-blue-300 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div className="bg-surface-secondary text-accent w-12 h-12 flex items-center justify-center flex-shrink-0">
+                    <Swords size={32} />
                 </div>
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-white">Drafting Arena</h1>
-                    <p className="text-sm text-gray-400">Practice the draft against a bot in a simulated environment.</p>
+                    <h1 className="font-display text-3xl font-bold text-text-primary">Drafting Arena</h1>
+                    <p className="text-sm text-text-secondary">Practice the draft against a simulated environment.</p>
                 </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -230,8 +235,8 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
         </div>
 
         {!isDraftStarted && (
-            <div className="bg-slate-800 p-4 rounded-lg shadow-lg border border-slate-700">
-                <h3 className="text-lg font-bold text-white mb-2">Choose Your Opponent</h3>
+            <div className="bg-surface-primary p-4 border border-border-primary">
+                <h3 className="text-lg font-bold text-text-primary mb-2">Choose Your Opponent</h3>
                 <div className="flex flex-wrap gap-2">
                     {BOT_PERSONAS.map(persona => (
                         <Button 
@@ -246,15 +251,15 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
             </div>
         )}
 
-        <DraftTimeline draftState={draftState} currentTurnIndex={currentTurnIndex} lastUpdatedIndex={lastUpdatedIndex} />
+        <DraftTimeline sequence={COMPETITIVE_SEQUENCE} draftState={draftState} currentTurnIndex={currentTurnIndex} lastUpdatedIndex={lastUpdatedIndex} />
 
         <TurnIndicator turn={currentTurn} isBotThinking={isBotThinking} />
 
         {draftFinished && (
-            <div className="text-center bg-slate-800 p-8 rounded-lg border border-slate-700">
-                <p className="text-gray-300 my-4 max-w-md mx-auto">Review the final compositions below, save to your Playbook, or send to the Draft Lab for a full AI analysis.</p>
+            <div className="text-center bg-surface-primary p-8 border border-border-primary">
+                <p className="text-text-secondary my-4 max-w-md mx-auto">Review the final compositions below, save to your Playbook, or send to the Draft Lab for a full AI analysis.</p>
                 <div className="flex flex-wrap justify-center gap-4">
-                    <Button onClick={handleAnalyze} variant="primary-glow">Analyze in Lab</Button>
+                    <Button onClick={handleAnalyze} variant="primary">Analyze in Lab</Button>
                     <Button onClick={handleSaveToPlaybook} variant="secondary">Save to The Archives</Button>
                     <Button onClick={handleReset} variant="secondary">New Arena Draft</Button>
                 </div>
@@ -276,6 +281,7 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
                     activeRole={null} 
                     draftState={draftState} 
                     intelData={null}
+                    onDragStart={() => {}}
                 />
             </div>
         </Modal>
@@ -289,15 +295,15 @@ export const LiveArena: React.FC<LiveArenaProps> = ({ draftState, setDraftState,
             }} 
             title="Archive Arena Draft"
         >
-            <div className="p-4 space-y-4">
-                <label htmlFor="draftName" className="block text-sm font-medium text-gray-300">Draft Name</label>
+            <div className="p-6 space-y-4">
+                <label htmlFor="draftName" className="block text-sm font-medium text-text-secondary">Draft Name</label>
                 <input
                     id="draftName"
                     type="text"
                     value={draftName}
                     onChange={(e) => setDraftName(e.target.value)}
                     placeholder="e.g., Arena Practice vs Dive"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-surface-secondary border border-border-primary focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={() => { setIsSaveModalOpen(false); setDraftName(''); }} disabled={isSaving}>Cancel</Button>

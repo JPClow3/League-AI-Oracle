@@ -1,6 +1,10 @@
-import React, { useRef } from 'react';
+
+
+import React, { useRef, useEffect } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { CSSTransition } from 'react-transition-group';
+import { Button } from './Button';
+import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -9,9 +13,21 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
   const backdropRef = useRef(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    // Cleanup function to reset on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   return (
     <CSSTransition
@@ -23,7 +39,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     >
       <div
         ref={backdropRef}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50"
+        className="fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] backdrop-blur-sm flex justify-center items-center z-50 p-4"
         onClick={onClose}
         aria-modal="true"
         role="dialog"
@@ -38,7 +54,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
           <div 
             ref={contentRef}
             tabIndex={-1}
-            className="bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col m-4 focus:outline-none border border-slate-700/50 shadow-[inset_0_1px_1px_#ffffff0d]"
+            className="bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full max-w-4xl max-h-[90vh] flex flex-col m-4 focus:outline-none border border-[hsl(var(--border))]"
             onClick={(e) => e.stopPropagation()}
           >
             <FocusTrap
@@ -48,16 +64,14 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
               }}
             >
               <div className="flex flex-col h-full">
-                <div className="flex justify-between items-center p-4 border-b border-slate-700/50 flex-shrink-0">
-                  <h2 className="text-xl font-bold text-slate-200">{title}</h2>
-                  <button onClick={onClose} className="text-slate-400 hover:text-slate-100 transition" aria-label="Close modal">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                <div className="flex justify-between items-center p-6 border-b border-[hsl(var(--border))] flex-shrink-0">
+                  <h2 className="font-display text-2xl font-semibold text-[hsl(var(--text-primary))] tracking-wider">{title}</h2>
+                  <Button onClick={onClose} variant="ghost" aria-label="Close modal">
+                    <X className="h-6 w-6" />
+                  </Button>
                 </div>
-                <div className="p-2 md:p-4 overflow-y-auto flex-grow">
-                  {children}
+                <div className="flex-grow overflow-y-auto">
+                    {children}
                 </div>
               </div>
             </FocusTrap>

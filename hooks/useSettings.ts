@@ -1,13 +1,16 @@
+
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import type { Settings, Theme } from '../types';
+import type { Settings } from '../types';
 import { ROLES } from '../constants';
 import toast from 'react-hot-toast';
+import { safeGetLocalStorage, safeRemoveLocalStorage, safeSetLocalStorage } from '../lib/draftUtils';
 
 const defaultSettings: Settings = {
+    theme: 'dark',
     primaryRole: 'All',
     secondaryRole: 'All',
     favoriteChampions: [],
-    theme: 'cyan',
+    language: 'en',
     enableSound: false,
 };
 
@@ -20,12 +23,17 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+/**
+ * Provides application settings to its children components.
+ * Manages state for user preferences like theme, language, and gameplay roles.
+ * Persists settings to localStorage and syncs across tabs.
+ */
+export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
     const [settings, setSettingsState] = useState<Settings>(defaultSettings);
 
     const loadSettings = useCallback(() => {
         try {
-            const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+            const storedSettings = safeGetLocalStorage(SETTINGS_STORAGE_KEY);
             if (storedSettings) {
                 setSettingsState({ ...defaultSettings, ...JSON.parse(storedSettings) });
             } else {
@@ -34,7 +42,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } catch (error) {
             console.error('Failed to parse settings from localStorage', error);
             toast.error('Your settings were corrupted and have been reset.');
-            localStorage.removeItem(SETTINGS_STORAGE_KEY);
+            safeRemoveLocalStorage(SETTINGS_STORAGE_KEY);
             setSettingsState(defaultSettings);
         }
     }, []);
@@ -53,12 +61,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Save settings whenever they change
     useEffect(() => {
-        try {
-            localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-        } catch (error) {
-            console.error('Failed to save settings to localStorage', error);
-            toast.error("Could not save settings. Your browser's storage may be full.");
-        }
+        safeSetLocalStorage(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     }, [settings]);
 
     const setSettings = (newSettings: Partial<Settings>) => {
@@ -74,6 +77,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
 };
 
+/**
+ * Custom hook to access and manage application settings.
+ * Must be used within a SettingsProvider.
+ * @returns The settings context, including the current settings object and a function to update them.
+ */
 export const useSettings = (): SettingsContextType => {
     const context = useContext(SettingsContext);
     if (context === undefined) {

@@ -1,23 +1,24 @@
 import React, { useMemo, useEffect } from 'react';
 import { CSSTransition } from 'react-transition-group';
 import type { ChampionLite, Champion, Ability } from '../../types';
-import { CHAMPIONS } from '../../constants';
+import { X } from 'lucide-react';
+import { useChampions } from '../../contexts/ChampionContext';
 
 interface QuickLookPanelProps {
     champion: ChampionLite | null;
     onClose: () => void;
 }
 
-const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
+const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
     <div>
         <h3 className="text-sm font-bold text-yellow-300 mb-1 uppercase tracking-wider">{title}</h3>
         {children}
     </div>
 );
 
-const AbilityDisplay: React.FC<{ ability: Ability }> = ({ ability }) => (
+const AbilityDisplay = ({ ability }: { ability: Ability }) => (
      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 bg-slate-900 rounded-md flex items-center justify-center font-bold text-[rgb(var(--color-accent-text))] flex-shrink-0 border border-slate-700 text-xs">
+        <div className="w-8 h-8 bg-slate-900 rounded-md flex items-center justify-center font-bold text-accent flex-shrink-0 border border-slate-700 text-xs">
             {ability.key[0]}
         </div>
         <div>
@@ -26,12 +27,13 @@ const AbilityDisplay: React.FC<{ ability: Ability }> = ({ ability }) => (
     </div>
 );
 
-export const QuickLookPanel: React.FC<QuickLookPanelProps> = ({ champion: championLite, onClose }) => {
+export const QuickLookPanel = ({ champion: championLite, onClose }: QuickLookPanelProps) => {
+    const { champions } = useChampions();
     const panelRef = React.useRef(null);
     const champion = useMemo(() => {
         if (!championLite) return null;
-        return CHAMPIONS.find(c => c.id === championLite.id) || null;
-    }, [championLite]);
+        return champions.find(c => c.id === championLite.id) || null;
+    }, [championLite, champions]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -66,7 +68,7 @@ export const QuickLookPanel: React.FC<QuickLookPanelProps> = ({ champion: champi
         >
             <aside 
                 ref={panelRef}
-                className="fixed top-16 right-0 h-[calc(100vh-8rem)] w-80 bg-slate-800/80 backdrop-blur-md border-l-2 border-[rgb(var(--color-accent-bg))] shadow-2xl z-40 rounded-l-xl p-4 flex flex-col"
+                className="fixed top-16 right-0 h-[calc(100vh-8rem)] w-80 bg-surface shadow-2xl z-40 rounded-l-xl p-4 flex flex-col border-l-2 border-accent"
                 aria-label={`Quick look for ${champion?.name}`}
             >
                 {champion && (
@@ -74,15 +76,15 @@ export const QuickLookPanel: React.FC<QuickLookPanelProps> = ({ champion: champi
                         <div className="flex-shrink-0">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-white">{champion.name}</h2>
-                                    <p className="text-sm text-gray-300 italic -mt-1">{champion.title}</p>
+                                    <h2 className="text-2xl font-bold text-text-primary">{champion.name}</h2>
+                                    <p className="text-sm text-text-secondary italic -mt-1">{champion.title}</p>
                                 </div>
-                                <button onClick={onClose} className="text-gray-300 hover:text-white transition" aria-label="Close quick look">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition" aria-label="Close quick look">
+                                    <X className="h-6 w-6" />
                                 </button>
                             </div>
-                            <img src={champion.image} alt={champion.name} className="w-full my-3 rounded-lg border-2 border-slate-600" />
-                             <div className="space-y-2 bg-slate-900/50 p-3 rounded-md text-sm text-gray-300">
+                            <img src={champion.image} alt={champion.name} className="w-full my-3 rounded-lg border-2 border-border" />
+                             <div className="space-y-2 bg-secondary p-3 rounded-md text-sm text-text-secondary">
                                 <p><strong>Roles:</strong> {champion.roles.join(', ')}</p>
                                 <p><strong>Damage:</strong> {champion.damageType}</p>
                                 <p><strong>Class:</strong> {champion.class.join(', ')}</p>

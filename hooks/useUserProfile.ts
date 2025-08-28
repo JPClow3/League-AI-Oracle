@@ -1,23 +1,26 @@
+
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { UserProfile, Mission, ChampionMastery, Champion, RecentFeedback } from '../types';
 import toast from 'react-hot-toast';
+import { safeGetLocalStorage, safeRemoveLocalStorage, safeSetLocalStorage } from '../lib/draftUtils';
+import { MISSION_IDS } from '../constants';
 
 // --- Default Data for a New User ---
 const getInitialMissions = (): UserProfile['missions'] => ({
     gettingStarted: [
-        { id: 'gs1', title: 'First Analysis', description: 'Analyze your first draft in the Draft Lab.', progress: 0, target: 1, rewardSP: 100, completed: false },
-        { id: 'gs2', title: 'Practice Makes Perfect', description: 'Complete one draft in the Arena.', progress: 0, target: 1, rewardSP: 100, completed: false },
-        { id: 'gs3', title: 'Save a Strategy', description: 'Save a draft to your Playbook.', progress: 0, target: 1, rewardSP: 50, completed: false },
-        { id: 'gs4', title: 'Check the Meta', description: 'Generate an AI Tier List in the Intel Hub.', progress: 0, target: 1, rewardSP: 50, completed: false },
+        { id: MISSION_IDS.GETTING_STARTED.FIRST_ANALYSIS, title: 'First Analysis', description: 'Analyze your first draft in the Draft Lab.', progress: 0, target: 1, rewardSP: 100, completed: false },
+        { id: MISSION_IDS.GETTING_STARTED.PRACTICE_MAKES_PERFECT, title: 'Practice Makes Perfect', description: 'Complete one draft in the Arena.', progress: 0, target: 1, rewardSP: 100, completed: false },
+        { id: MISSION_IDS.GETTING_STARTED.SAVE_STRATEGY, title: 'Save a Strategy', description: 'Save a draft to your Playbook.', progress: 0, target: 1, rewardSP: 50, completed: false },
+        { id: MISSION_IDS.GETTING_STARTED.CHECK_META, title: 'Check the Meta', description: 'Generate an AI Tier List in the Intel Hub.', progress: 0, target: 1, rewardSP: 50, completed: false },
     ],
     daily: [
-        { id: 'd1', title: 'First Draft of the Day', description: 'Complete one analysis in the Draft Lab.', progress: 0, target: 1, rewardSP: 50, completed: false },
-        { id: 'd2', title: 'Knowledge Check', description: 'Complete the Daily Trial.', progress: 0, target: 1, rewardSP: 75, completed: false },
+        { id: MISSION_IDS.DAILY.FIRST_DRAFT_OF_DAY, title: 'First Draft of the Day', description: 'Complete one analysis in the Draft Lab.', progress: 0, target: 1, rewardSP: 50, completed: false },
+        { id: MISSION_IDS.DAILY.KNOWLEDGE_CHECK, title: 'Knowledge Check', description: 'Complete the Daily Trial.', progress: 0, target: 1, rewardSP: 75, completed: false },
     ],
     weekly: [
-        { id: 'w1', title: 'Arena Contender', description: 'Complete 5 drafts in the Arena.', progress: 0, target: 5, rewardSP: 250, completed: false },
-        { id: 'w2', title: 'Expand the Playbook', description: 'Save 3 new drafts to your Playbook.', progress: 0, target: 3, rewardSP: 150, completed: false },
-        { id: 'w3', title: 'The Perfect Comp', description: 'Achieve an S-grade draft analysis in the Lab.', progress: 0, target: 1, rewardSP: 300, completed: false },
+        { id: MISSION_IDS.WEEKLY.ARENA_CONTENDER, title: 'Arena Contender', description: 'Complete 5 drafts in the Arena.', progress: 0, target: 5, rewardSP: 250, completed: false },
+        { id: MISSION_IDS.WEEKLY.EXPAND_PLAYBOOK, title: 'Expand the Playbook', description: 'Save 3 new drafts to your Playbook.', progress: 0, target: 3, rewardSP: 150, completed: false },
+        { id: MISSION_IDS.WEEKLY.PERFECT_COMP, title: 'The Perfect Comp', description: 'Achieve an S-grade draft analysis in the Lab.', progress: 0, target: 1, rewardSP: 300, completed: false },
     ]
 });
 
@@ -87,13 +90,18 @@ interface UserProfileContextType {
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
-export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+/**
+ * Provides user profile and gamification state to its children.
+ * Manages loading and saving the user profile to localStorage, handling level-ups,
+ * missions, and other progression systems.
+ */
+export const UserProfileProvider = ({ children }: { children: React.ReactNode }) => {
     const [profile, setProfileState] = useState<UserProfile>(defaultProfile);
     const [lastCompletedMissionId, setLastCompletedMissionId] = useState<string | null>(null);
 
     const loadProfile = useCallback(() => {
         try {
-            const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+            const storedProfile = safeGetLocalStorage(PROFILE_STORAGE_KEY);
             if (storedProfile) {
                 const parsed = JSON.parse(storedProfile);
                 const defaultMissions = getInitialMissions();
@@ -109,7 +117,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         } catch (error) {
             console.error('Failed to parse user profile from localStorage', error);
             toast.error('Your profile data was corrupted and have been reset.');
-            localStorage.removeItem(PROFILE_STORAGE_KEY);
+            safeRemoveLocalStorage(PROFILE_STORAGE_KEY);
             setProfileState(defaultProfile);
         }
     }, []);
@@ -126,12 +134,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, [loadProfile]);
 
     useEffect(() => {
-        try {
-            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-        } catch (error) {
-            console.error('Failed to save user profile to localStorage', error);
-            toast.error("Could not save your profile. Your browser's storage may be full.");
-        }
+        safeSetLocalStorage(PROFILE_STORAGE_KEY, JSON.stringify(profile));
     }, [profile]);
 
     const setProfile = (newProfileData: Partial<UserProfile>) => {
@@ -202,10 +205,10 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     const completeMission = useCallback((missionId: string) => {
         let missionJustCompleted = false;
-        
+        let missionReward = 0;
+        let missionTitle = '';
+
         setProfileState(prev => {
-            let missionReward = 0;
-            let missionTitle = '';
             let finalProfile = { ...prev };
 
             const updateMissions = (missions: Mission[]): Mission[] => missions.map(m => {
@@ -229,44 +232,21 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
             };
             finalProfile.missions = newMissions;
 
-            if (missionId === 'd1') {
+            if (missionId === MISSION_IDS.DAILY.FIRST_DRAFT_OF_DAY) {
                 finalProfile.lastLabAnalysisDate = new Date().toISOString().split('T')[0];
             }
-
-            // If a mission was completed, calculate and apply SP and level changes atomically.
-            if (missionJustCompleted && missionReward > 0) {
-                setLastCompletedMissionId(missionId);
-                toast.success(`+${missionReward} SP: Mission Complete: ${missionTitle}`, { icon: '⭐' });
-                
-                let newSP = finalProfile.sp + missionReward;
-                let newLevel = finalProfile.level;
-                let spToNext = getSPForNextLevel(newLevel);
-                let leveledUp = false;
-
-                while (newSP >= spToNext) {
-                    newSP -= spToNext;
-                    newLevel++;
-                    spToNext = getSPForNextLevel(newLevel);
-                    leveledUp = true;
-                }
-
-                if (leveledUp) {
-                    toast.success(`Level Up! You are now Level ${newLevel}!`, { icon: '🎉' });
-                }
-
-                finalProfile = {
-                    ...finalProfile,
-                    sp: newSP,
-                    level: newLevel,
-                    rank: getRankForLevel(newLevel),
-                };
-            }
-
+            
             return finalProfile;
         });
+
+        if (missionJustCompleted && missionReward > 0) {
+            setLastCompletedMissionId(missionId);
+            // The addSP function now handles the toast for SP gain and level up.
+            addSP(missionReward, `Mission Complete: ${missionTitle}`);
+        }
         
         return missionJustCompleted;
-    }, []);
+    }, [addSP]);
 
     const addChampionMastery = useCallback((champions: Champion[], grade: string) => {
         const pointsToAdd = MASTERY_POINTS_FROM_GRADE[grade] || 0;
@@ -353,6 +333,12 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
 };
 
+/**
+ * Provides access to the user's profile and gamification state.
+ * Manages SP, level, missions, mastery, and more.
+ * This hook must be used within a UserProfileProvider.
+ * @returns The user profile context, including the profile object and methods to modify it.
+ */
 export const useUserProfile = (): UserProfileContextType => {
     const context = useContext(UserProfileContext);
     if (context === undefined) {

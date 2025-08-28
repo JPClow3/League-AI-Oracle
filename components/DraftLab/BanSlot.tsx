@@ -1,36 +1,63 @@
-
-
 import React from 'react';
 import type { Champion } from '../../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Ban, X } from 'lucide-react';
 
 interface BanSlotProps {
   champion: Champion | null;
   onClick: () => void;
+  onClear?: () => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragEnter?: (e: React.DragEvent) => void;
+  onDragLeave?: (e: React.DragEvent) => void;
   isActive?: boolean;
+  isDraggedOver?: boolean;
 }
 
-export const BanSlot: React.FC<BanSlotProps> = ({ champion, onClick, isActive = false }) => {
-  const activeClasses = isActive ? 'ring-2 ring-[rgb(var(--color-accent-text))] animate-pulse-glow' : 'ring-1 ring-slate-700';
+export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false }: BanSlotProps) => {
+  const activeClasses = isActive ? 'ring-2 ring-accent shadow-glow-accent' :
+                      isDraggedOver ? 'ring-2 ring-info' :
+                      'ring-1 ring-border-primary';
   
   return (
     <div 
       onClick={onClick}
-      className={`w-14 h-14 bg-gradient-to-br from-slate-800 to-slate-900 rounded-md cursor-pointer hover:ring-blue-500/70 transition-all duration-200 flex items-center justify-center relative group ${activeClasses}`}
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      className={`w-12 h-12 bg-surface-tertiary cursor-pointer hover:ring-accent/70 transition-all duration-200 flex items-center justify-center relative group ${activeClasses}`}
     >
-      {champion ? (
-        <>
-          <img src={champion.image} alt={champion.name} className="w-full h-full object-cover rounded-md grayscale" />
-          <div className="absolute inset-0 bg-red-800/80 flex items-center justify-center rounded-md">
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
-          </div>
-        </>
-      ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-        </svg>
-      )}
+       {champion && onClear && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            className="absolute top-0 right-0 z-20 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center text-white/70 hover:bg-error hover:text-white transition-all opacity-0 group-hover:opacity-100"
+            aria-label={`Clear ban ${champion.name}`}
+          >
+            <X size={12} />
+          </button>
+        )}
+      <AnimatePresence>
+        {champion ? (
+          <motion.div
+            {...{
+              initial: { scale: 0.5, opacity: 0 },
+              animate: { scale: 1, opacity: 1 },
+              exit: { scale: 0.5, opacity: 0 },
+              transition: { duration: 0.2, ease: 'easeOut' },
+            }}
+            className="absolute inset-0"
+          >
+            <img src={champion.image} alt={champion.name} className="w-full h-full object-cover grayscale" />
+            <div className="absolute inset-0 bg-error/80 flex items-center justify-center">
+              <Ban className="h-8 w-8 text-white" />
+            </div>
+          </motion.div>
+        ) : (
+          <Ban className="h-6 w-6 text-text-muted" />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

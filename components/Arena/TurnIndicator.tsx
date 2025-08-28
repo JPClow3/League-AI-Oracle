@@ -1,58 +1,50 @@
 
+
 import React from 'react';
 import type { DraftTurn } from './arenaConstants';
+import { Ban, Plus, CheckCircle2 } from 'lucide-react';
 
 interface TurnIndicatorProps {
   turn: DraftTurn | null;
   isBotThinking: boolean;
 }
 
-const ActionIcon: React.FC<{ type: 'ban' | 'pick' }> = ({ type }) => {
+const ActionIcon = ({ type }: { type: 'ban' | 'pick' }) => {
     if (type === 'ban') {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
-        )
+        return <Ban className="h-6 w-6" />;
     }
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-    )
+    return <Plus className="h-6 w-6" />;
 }
 
-export const TurnIndicator: React.FC<TurnIndicatorProps> = ({ turn, isBotThinking }) => {
+export const TurnIndicator = ({ turn, isBotThinking }: TurnIndicatorProps) => {
   if (!turn) {
     return (
-      <div aria-live="polite" className="bg-gradient-to-r from-green-500/20 to-slate-800/20 border border-green-500/50 p-4 rounded-lg text-center shadow-lg flex items-center justify-center gap-4">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <h2 className="text-2xl font-bold text-green-400">Draft Complete!</h2>
+      <div aria-live="polite" className="bg-gradient-to-r from-success/20 to-surface-primary/20 border border-success/50 p-4 rounded-lg text-center shadow-lg flex items-center justify-center gap-4">
+        <CheckCircle2 className="h-8 w-8 text-success" />
+        <h2 className="text-2xl font-bold text-success">Draft Complete!</h2>
       </div>
     );
   }
 
   const { team, type } = turn;
   const isBlue = team === 'blue';
-  const teamColor = isBlue ? 'text-blue-400' : 'text-red-400';
-  const teamBg = isBlue ? 'bg-blue-500/20' : 'bg-red-500/20';
+  const teamColorClass = isBlue ? 'text-team-blue' : 'text-team-red';
+  const teamBg = isBlue ? 'bg-team-blue/10' : 'bg-team-red/10';
   const typeText = type.charAt(0).toUpperCase() + type.slice(1);
 
   return (
-    <div aria-live="polite" className={`bg-slate-800 p-4 rounded-lg shadow-lg flex flex-col md:flex-row items-center justify-between gap-4 border-t-4 ${isBlue ? 'border-blue-500' : 'border-red-500'}`}>
-        <div className={`flex items-center gap-3 px-4 py-2 rounded-md ${teamBg}`}>
+    <div aria-live="polite" className={`bg-surface-primary p-4 rounded-lg shadow-lg flex flex-col md:flex-row items-center justify-between gap-4 border-t-4 ${isBlue ? 'border-accent' : 'border-error'}`}>
+        <div className={`flex items-center gap-3 px-4 py-2 rounded-md ${teamBg} text-text-primary`}>
             <ActionIcon type={type} />
             <span className="font-bold text-lg">{typeText} Phase</span>
         </div>
         <div className="text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white">
-                <span className={teamColor}>{isBlue ? "Your Turn" : "Opponent's Turn"}</span>
+            <h2 className="text-xl md:text-2xl font-bold text-text-primary">
+                <span className={teamColorClass}>{isBlue ? "Your Turn" : "Opponent's Turn"}</span>
             </h2>
         </div>
         <div className="w-48 text-right">
-            {isBotThinking && <p className="text-sm text-gray-400 animate-pulse">Opponent is thinking...</p>}
+            {isBotThinking && <p className="text-sm text-text-secondary animate-pulse">Opponent is thinking...</p>}
         </div>
     </div>
   );

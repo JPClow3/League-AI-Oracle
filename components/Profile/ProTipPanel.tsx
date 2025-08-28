@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import type { Page, UserProfile } from '../../types';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { Button } from '../common/Button';
-import { CHAMPIONS_LITE } from '../../constants';
+import { Lightbulb } from 'lucide-react';
+import { useChampions } from '../../contexts/ChampionContext';
 
 interface ProTipPanelProps {
     profile: UserProfile;
@@ -19,8 +20,9 @@ interface ProTip {
     action?: () => void;
 }
 
-export const ProTipPanel: React.FC<ProTipPanelProps> = ({ profile, setCurrentPage, navigateToAcademy }) => {
+export const ProTipPanel = ({ profile, setCurrentPage, navigateToAcademy }: ProTipPanelProps) => {
     const { entries } = usePlaybook();
+    const { championsLite } = useChampions();
 
     const tips: ProTip[] = useMemo(() => {
         const lastFeedback = profile.recentFeedback[0];
@@ -36,7 +38,8 @@ export const ProTipPanel: React.FC<ProTipPanelProps> = ({ profile, setCurrentPag
                 description: "Your 'Getting Started' missions are a great way to learn the ropes and earn a big SP bonus.",
                 actionText: 'View Missions',
                 action: () => {
-                    document.getElementById('missions-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const missionsPanel = document.getElementById('missions-panel') || document.getElementById('missions-panel-mobile');
+                    missionsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             },
             {
@@ -51,7 +54,7 @@ export const ProTipPanel: React.FC<ProTipPanelProps> = ({ profile, setCurrentPag
                 id: 'high-mastery-no-s',
                 condition: () => !!highMasteryNoS,
                 title: `Reach for the S-Rank!`,
-                description: `You have high mastery on ${CHAMPIONS_LITE.find(c => c.id === highMasteryNoS?.championId)?.name}, but haven't hit an S-rank yet. Review their AI Strategy guide to perfect your drafts.`,
+                description: `You have high mastery on ${championsLite.find(c => c.id === highMasteryNoS?.championId)?.name}, but haven't hit an S-rank yet. Review their AI Strategy guide to perfect your drafts.`,
                 actionText: 'Go to The Armory',
                 action: () => setCurrentPage('The Armory')
             },
@@ -80,7 +83,7 @@ export const ProTipPanel: React.FC<ProTipPanelProps> = ({ profile, setCurrentPag
                 action: () => setCurrentPage('Strategy Forge')
             }
         ];
-    }, [navigateToAcademy, setCurrentPage, profile]);
+    }, [navigateToAcademy, setCurrentPage, profile, championsLite]);
 
     const tip = useMemo(() => {
         return tips.find(tip => tip.condition(profile, entries.length)) || null;
@@ -92,14 +95,14 @@ export const ProTipPanel: React.FC<ProTipPanelProps> = ({ profile, setCurrentPag
     }
 
     return (
-        <div className="bg-slate-800 p-4 rounded-xl shadow-lg border border-yellow-500/30">
+        <div className="bg-surface-primary p-4 rounded-xl shadow-lg border border-accent/30">
             <div className="flex items-start gap-3">
-                 <div className="flex-shrink-0 pt-0.5 text-yellow-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                 <div className="flex-shrink-0 pt-0.5 text-accent">
+                    <Lightbulb className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-yellow-300">Pro Tip: {tip.title}</h3>
-                    <p className="text-sm text-gray-300 mt-1">{tip.description}</p>
+                    <h3 className="font-semibold text-accent">Pro Tip: {tip.title}</h3>
+                    <p className="text-sm text-text-secondary mt-1">{tip.description}</p>
                      {tip.action && tip.actionText && (
                         <div className="mt-3">
                             <Button variant="secondary" onClick={tip.action} className="text-sm">

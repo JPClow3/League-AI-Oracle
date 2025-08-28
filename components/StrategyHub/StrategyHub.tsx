@@ -10,10 +10,9 @@ interface StrategyHubProps {
     initialSearchTerm?: string | null;
     onLoadChampionInLab: (championId: string, role?: string) => void;
     onHandled?: () => void;
-    draftState: DraftState;
 }
 
-export const StrategyHub: React.FC<StrategyHubProps> = ({ initialTab = 'champions', initialSearchTerm, onLoadChampionInLab, onHandled, draftState }) => {
+export const StrategyHub = ({ initialTab = 'champions', initialSearchTerm, onLoadChampionInLab, onHandled }: StrategyHubProps) => {
     const [activeTab, setActiveTab] = useState<StrategyTab>(initialTab);
 
     useEffect(() => {
@@ -22,28 +21,31 @@ export const StrategyHub: React.FC<StrategyHubProps> = ({ initialTab = 'champion
         }
     }, [initialTab]);
 
-    const TabButton: React.FC<{ tabName: StrategyTab; currentTab: StrategyTab; children: React.ReactNode }> = ({ tabName, currentTab, children }) => (
+    const TabButton = ({ tabName, currentTab, children }: { tabName: StrategyTab; currentTab: StrategyTab; children: React.ReactNode }) => (
         <button
             onClick={() => setActiveTab(tabName)}
-            className={`font-display px-4 py-2 text-xl font-bold rounded-t-lg transition-colors ${
+            className={`relative font-display px-4 py-3 text-lg font-bold transition-colors ${
                 currentTab === tabName
-                ? 'text-[rgb(var(--color-accent-text))] border-b-2 border-[rgb(var(--color-accent-bg))]'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'text-text-primary'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
         >
             {children}
+            {currentTab === tabName && (
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent rounded-full" />
+            )}
         </button>
     );
 
     return (
         <div className="flex flex-col h-full">
-            <div className="border-b border-slate-700 flex items-center gap-4">
+            <div className="border-b border-border flex items-center gap-4">
                  <TabButton tabName="champions" currentTab={activeTab}>Champion Dossiers</TabButton>
                  <TabButton tabName="intel" currentTab={activeTab}>Meta Intelligence</TabButton>
             </div>
 
             <div className="flex-grow pt-6">
-                {activeTab === 'champions' && <Armory initialSearchTerm={initialSearchTerm} onSearchHandled={onHandled} onLoadChampionInLab={onLoadChampionInLab} draftState={draftState} />}
+                {activeTab === 'champions' && <Armory initialSearchTerm={initialSearchTerm} onSearchHandled={onHandled} onLoadChampionInLab={onLoadChampionInLab} />}
                 {activeTab === 'intel' && <Intel onLoadChampionInLab={onLoadChampionInLab} />}
             </div>
         </div>

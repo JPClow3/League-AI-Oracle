@@ -7,7 +7,7 @@ interface KeywordHighlighterProps {
   onKeywordClick?: (lessonId: string) => void;
 }
 
-export const KeywordHighlighter: React.FC<KeywordHighlighterProps> = ({ text, onKeywordClick }) => {
+export const KeywordHighlighter = ({ text, onKeywordClick }: KeywordHighlighterProps) => {
   const keywordMap = React.useMemo(() => {
     const map = new Map<string, { definition: string; lessonId: string }>();
     KEYWORDS.forEach(kw => map.set(kw.term.toLowerCase(), { definition: kw.definition, lessonId: kw.lessonId }));
@@ -33,14 +33,14 @@ export const KeywordHighlighter: React.FC<KeywordHighlighterProps> = ({ text, on
           const content = (
             <div>
               <p>{keywordData.definition}</p>
-              {onKeywordClick && <p className="mt-2 text-xs text-cyan-300">Click to learn more</p>}
+              {onKeywordClick && <p className="mt-2 text-xs text-accent">Click to learn more</p>}
             </div>
           );
           return (
             <Tooltip key={index} content={content}>
               <button
                 onClick={() => onKeywordClick?.(keywordData.lessonId)}
-                className="inline p-0 m-0 border-b border-dotted border-blue-400 text-blue-300 font-semibold cursor-pointer text-left bg-transparent hover:text-blue-200"
+                className="inline p-0 m-0 border-b border-dotted border-accent/70 text-accent font-semibold cursor-pointer text-left bg-transparent hover:text-accent/80"
               >
                 {part}
               </button>
