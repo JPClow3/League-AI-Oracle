@@ -15,12 +15,14 @@ interface BanSlotProps {
   isDraggedOver?: boolean;
   side: TeamSide;
   index: number;
+  isDimmed?: boolean;
 }
 
-export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side, index }: BanSlotProps) => {
+export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side, index, isDimmed = false }: BanSlotProps) => {
   const activeClasses = isActive ? 'ring-2 ring-accent shadow-glow-accent' :
                       isDraggedOver ? 'ring-2 ring-info' :
                       'ring-1 ring-border-primary';
+  const dimmedClasses = isDimmed ? 'opacity-50 pointer-events-none' : '';
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -45,7 +47,7 @@ export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDrag
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
-      className={`w-12 h-12 bg-surface-tertiary cursor-pointer hover:ring-accent/70 transition-all duration-200 flex items-center justify-center relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:scale-105 active:scale-[0.98] ${activeClasses}`}
+      className={`w-12 h-12 bg-surface-tertiary cursor-pointer hover:ring-accent/70 transition-all duration-200 flex items-center justify-center relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:-translate-y-0.5 active:translate-y-0 ${activeClasses} ${dimmedClasses}`}
     >
        {champion && onClear && (
           <button 

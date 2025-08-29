@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { ChampionLite, ChampionSuggestion, DraftState } from '../../types';
 // FIX: The `FixedSizeGrid` member could not be found in the `react-window` module.
@@ -11,8 +9,9 @@ import { useSettings } from '../../hooks/useSettings';
 import { ROLES, DAMAGE_TYPES } from '../../constants';
 import { getAvailableChampions } from '../../lib/draftUtils';
 import { Tooltip } from '../common/Tooltip';
-import { Star } from 'lucide-react';
+import { Star, Eye } from 'lucide-react';
 import { useChampions } from '../../contexts/ChampionContext';
+import { Button } from '../common/Button';
 
 type EnrichedChampionSuggestion = ChampionSuggestion & { champion: ChampionLite };
 type IntelData = { sTier: string[], buffs: string[], nerfs: string[] } | null;
@@ -46,11 +45,12 @@ const IntelIcons = ({ championName, intelData }: { championName: string, intelDa
     );
 };
 
-const ChampionCard = React.memo(({ champion, onSelect, onContextMenu, onDragStart, intelData, reasoning, isFavorite = false, isActiveRole = false }: {
+const ChampionCard = React.memo(({ champion, onSelect, onContextMenu, onDragStart, intelData, reasoning, isFavorite = false, isActiveRole = false, onQuickLook }: {
     champion: ChampionLite;
     onSelect: (champion: ChampionLite) => void;
     onContextMenu: (e: React.MouseEvent, champion: ChampionLite) => void;
     onDragStart: (e: React.DragEvent, championId: string) => void;
+    onQuickLook: (champion: ChampionLite) => void;
     intelData: IntelData;
     reasoning?: string;
     isFavorite?: boolean;
@@ -82,6 +82,13 @@ const ChampionCard = React.memo(({ champion, onSelect, onContextMenu, onDragStar
                     <Star className="h-4 w-4" fill="currentColor" />
                 </div>
              )}
+             <button
+                onClick={(e) => { e.stopPropagation(); onQuickLook(champion); }}
+                className="absolute top-0 left-0 z-10 p-1 bg-surface-secondary/70 text-text-muted hover:text-accent transition-all opacity-0 group-hover:opacity-100"
+                aria-label={`Quick look for ${champion.name}`}
+             >
+                <Eye size={14} />
+             </button>
              <img
                 src={champion.image}
                 alt={champion.name}
@@ -112,13 +119,14 @@ const Cell = ({ columnIndex, rowIndex, style, data }: {
     onSelect: (champion: ChampionLite) => void;
     onContextMenu: (e: React.MouseEvent, champion: ChampionLite) => void;
     onDragStart: (e: React.DragEvent, championId: string) => void;
+    onQuickLook: (champion: ChampionLite) => void;
     columnCount: number;
     activeRole: string | null;
     intelData: IntelData;
     favoriteIds: Set<string>;
   };
 }) => {
-  const { filteredChampions, onSelect, onContextMenu, onDragStart, columnCount, activeRole, intelData, favoriteIds } = data;
+  const { filteredChampions, onSelect, onContextMenu, onDragStart, onQuickLook, columnCount, activeRole, intelData, favoriteIds } = data;
   const index = rowIndex * columnCount + columnIndex;
   if (index >= filteredChampions.length) {
     return null;
@@ -134,6 +142,7 @@ const Cell = ({ columnIndex, rowIndex, style, data }: {
         onSelect={onSelect} 
         onContextMenu={onContextMenu} 
         onDragStart={onDragStart}
+        onQuickLook={onQuickLook}
         isActiveRole={isActiveRole}
         isFavorite={isFavorite}
         intelData={intelData} 
@@ -194,13 +203,21 @@ export const ChampionGrid = ({ draftState, onSelect, onQuickLook, onDragStart, r
             return a.name.localeCompare(b.name);
         });
   }, [championsLite, availableChampionIds, recommendedChampions, favoriteIds, debouncedSearchTerm, roleFilter, damageTypeFilter, activeRole]);
+  
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setRoleFilter('All');
+    setDamageTypeFilter('All');
+  };
+  const hasActiveFilters = roleFilter !== 'All' || damageTypeFilter !== 'All' || debouncedSearchTerm !== '';
+
 
   return (
     <div className="flex flex-col h-full bg-surface-primary overflow-hidden">
       <div className="flex flex-col md:flex-row gap-4 p-4 bg-surface-primary/50 z-10 border-b border-border-primary">
         <input
           type="text"
-          placeholder="Search champion... (Right-click for quick look)"
+          placeholder="Search champion... (or click the eye icon)"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full md:w-1/3 px-3 py-2 bg-surface-inset border border-border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-opacity-75"
@@ -253,6 +270,7 @@ export const ChampionGrid = ({ draftState, onSelect, onQuickLook, onDragStart, r
                                     onSelect={onSelect}
                                     onContextMenu={handleContextMenu}
                                     onDragStart={onDragStart}
+                                    onQuickLook={onQuickLook}
                                     reasoning={rec.reasoning}
                                     isActiveRole={activeRole ? rec.champion.roles.includes(activeRole) : false}
                                     intelData={intelData}
@@ -273,6 +291,7 @@ export const ChampionGrid = ({ draftState, onSelect, onQuickLook, onDragStart, r
                                     onSelect={onSelect}
                                     onContextMenu={handleContextMenu}
                                     onDragStart={onDragStart}
+                                    onQuickLook={onQuickLook}
                                     isFavorite
                                     isActiveRole={activeRole ? champ.roles.includes(activeRole) : false}
                                     intelData={intelData}
@@ -305,6 +324,7 @@ export const ChampionGrid = ({ draftState, onSelect, onQuickLook, onDragStart, r
                                     onSelect,
                                     onContextMenu: handleContextMenu,
                                     onDragStart,
+                                    onQuickLook,
                                     columnCount,
                                     activeRole,
                                     intelData,
@@ -317,8 +337,17 @@ export const ChampionGrid = ({ draftState, onSelect, onQuickLook, onDragStart, r
                     }}
                 </AutoSizer>
             ) : (
-                <div className="flex items-center justify-center h-full text-text-secondary">
-                    <p>No available champions match your search.</p>
+                <div className="flex flex-col items-center justify-center h-full text-text-secondary p-4 text-center">
+                    {hasActiveFilters ? (
+                        <>
+                            <p>No available champions match the current filters.</p>
+                            <Button variant="secondary" onClick={handleClearFilters} className="mt-4">
+                                Clear All Filters
+                            </Button>
+                        </>
+                    ) : (
+                        <p>No available champions match your search.</p>
+                    )}
                 </div>
             )}
         </div>

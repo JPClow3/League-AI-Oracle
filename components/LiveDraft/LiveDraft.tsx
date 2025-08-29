@@ -89,19 +89,30 @@ const PreGameBriefing = ({ draftState, onReset }: { draftState: DraftState, onRe
         
         const generateData = async () => {
             try {
-                const [dossierResult, nameResult] = await Promise.all([
+                const [dossierResult, nameResult] = await Promise.allSettled([
                     generatePlaybookPlusDossier(draftState, controller.signal),
                     generateDraftName(draftState, controller.signal)
                 ]);
 
                 if (controller.signal.aborted) return;
                 
-                setDossier(dossierResult);
-                setDraftName(nameResult || 'Live Game Draft');
+                if (dossierResult.status === 'fulfilled') {
+                    setDossier(dossierResult.value);
+                } else {
+                    console.error("Dossier generation failed:", dossierResult.reason);
+                    setError('Failed to generate the AI strategic dossier.');
+                }
+
+                if (nameResult.status === 'fulfilled') {
+                    setDraftName(nameResult.value || 'Live Game Draft');
+                } else {
+                    console.error("Draft name generation failed:", nameResult.reason);
+                    setDraftName('Live Game Draft'); // Fallback name
+                }
 
             } catch (err) {
-                if (!(err instanceof DOMException && err.name === 'AbortError')) {
-                    setError('Failed to generate AI briefing.');
+                 if (!(err instanceof DOMException && err.name === 'AbortError')) {
+                    setError('An unexpected error occurred while generating the briefing.');
                 }
             } finally {
                  if (!controller.signal.aborted) {
@@ -126,16 +137,12 @@ const PreGameBriefing = ({ draftState, onReset }: { draftState: DraftState, onRe
         return <div className="text-center bg-surface p-8 border border-border"><Loader messages={['Analyzing final draft...', 'Generating strategic dossier...']} /></div>;
     }
 
-    if (error) {
-         return <div className="text-center bg-error/10 p-8 border border-error/20 text-error">{error}</div>;
-    }
-
     return (
         <div className="text-center bg-surface p-8 border border-border space-y-4">
-            {dossier && <DossierDisplay dossier={dossier} />}
+            {dossier ? <DossierDisplay dossier={dossier} /> : <div className="text-center bg-error/10 p-4 border border-error/20 text-error">{error}</div>}
             <p className="text-text-secondary my-4 max-w-md mx-auto">Review your pre-game briefing. You can save this draft to your Playbook for later analysis.</p>
             <div className="flex flex-wrap justify-center gap-4">
-                <Button onClick={handleSave} variant="primary" disabled={isSaving}>
+                <Button onClick={handleSave} variant="primary" disabled={isSaving || !dossier}>
                     {isSaving ? 'Saving...' : 'Save to Playbook'}
                 </Button>
                 <Button onClick={onReset} variant="secondary">New Co-Pilot Session</Button>

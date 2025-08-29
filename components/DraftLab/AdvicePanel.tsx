@@ -7,6 +7,7 @@ import { PowerSpikeTimeline } from './PowerSpikeTimeline';
 import { KEYWORDS } from '../Academy/lessons';
 import { ThumbsUp, ThumbsDown, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { Button } from '../common/Button';
+import { motion } from 'framer-motion';
 
 interface AdvicePanelProps {
   advice: AIAdvice | null;
@@ -37,10 +38,15 @@ const GradeDisplay = ({ score }: { score: string }) => {
         <div className={`relative flex items-center justify-center p-4 min-h-[100px] ${gradeColor}`}>
             <div className="absolute inset-0 bg-current opacity-5"></div>
             <div className="absolute inset-0 border-2 border-current opacity-20"></div>
-            <div className="relative flex items-start justify-center">
+            <motion.div
+                className="relative flex items-start justify-center"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2, type: 'spring' }}
+            >
                  <span className="font-display font-black text-7xl" style={{ textShadow: '0 0 10px currentColor' }}>{grade}</span>
                  <span className="font-display font-bold text-2xl mt-2">{modifier}</span>
-            </div>
+            </motion.div>
         </div>
     );
 };

@@ -192,6 +192,54 @@ const MatchupsDisplay = ({ analysis, matchupAnalysis, onRetry }: { analysis: Cha
     );
 };
 
+// --- Custom Hook for Data Fetching Logic ---
+const useChampionAnalysis = (champion: Champion, latestVersion: string | null) => {
+    const [analysis, setAnalysis] = useState<ChampionAnalysis | null>(null);
+    const [matchupAnalysis, setMatchupAnalysis] = useState<MatchupAnalysis | null>(null);
+    const [isLoading, setIsLoading] = useState<Record<string, boolean>>({ analysis: false, matchups: false });
+    const [error, setError] = useState<Record<string, string | null>>({ analysis: null, matchups: null });
+
+    const fetchAnalysis = useCallback(async (signal: AbortSignal) => {
+        if (!latestVersion) return;
+        setIsLoading(prev => ({ ...prev, analysis: true }));
+        setError(prev => ({ ...prev, analysis: null }));
+        try {
+            const result = await getChampionAnalysis(champion.name, latestVersion, signal);
+            if (!signal.aborted) setAnalysis(result);
+        } catch (err) {
+            if (err instanceof DOMException && err.name === 'AbortError') return;
+            setError(prev => ({ ...prev, analysis: err instanceof Error ? err.message : 'Failed to load AI analysis.' }));
+        } finally {
+            if (!signal.aborted) setIsLoading(prev => ({ ...prev, analysis: false }));
+        }
+    }, [champion.name, latestVersion]);
+
+    const fetchMatchups = useCallback(async (signal: AbortSignal) => {
+        if (!analysis) return;
+        setIsLoading(prev => ({ ...prev, matchups: true }));
+        setError(prev => ({ ...prev, matchups: null }));
+        try {
+            const result = await getMatchupAnalysis(champion.name, analysis.counters.weakAgainst, analysis.counters.strongAgainst, signal);
+            if (!signal.aborted) setMatchupAnalysis(result);
+        } catch (err) {
+            if (err instanceof DOMException && err.name === 'AbortError') return;
+            setError(prev => ({ ...prev, matchups: err instanceof Error ? err.message : 'Failed to load matchup tips.' }));
+        } finally {
+            if (!signal.aborted) setIsLoading(prev => ({ ...prev, matchups: false }));
+        }
+    }, [champion.name, analysis]);
+
+    const reset = useCallback(() => {
+        setAnalysis(null);
+        setMatchupAnalysis(null);
+        setError({ analysis: null, matchups: null });
+        setIsLoading({ analysis: false, matchups: false });
+    }, []);
+
+    return { analysis, matchupAnalysis, isLoading, error, fetchAnalysis, fetchMatchups, reset };
+};
+
+
 // --- Main Component ---
 
 interface ChampionDetailModalProps {
@@ -203,73 +251,21 @@ interface ChampionDetailModalProps {
 
 export const ChampionDetailModal = ({ isOpen, onClose, champion, onLoadInLab }: ChampionDetailModalProps) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'abilities' | 'strategy' | 'matchups'>('overview');
-    const [analysis, setAnalysis] = useState<ChampionAnalysis | null>(null);
-    const [matchupAnalysis, setMatchupAnalysis] = useState<MatchupAnalysis | null>(null);
-    const [isLoading, setIsLoading] = useState<Record<string, boolean>>({ analysis: false, matchups: false });
-    const [error, setError] = useState<Record<string, string | null>>({ analysis: null, matchups: null });
-    
+    const { latestVersion } = useChampions();
+    const { analysis, matchupAnalysis, isLoading, error, fetchAnalysis, fetchMatchups, reset } = useChampionAnalysis(champion, latestVersion);
     const abortControllerRef = useRef<AbortController | null>(null);
-    const { setDraftState } = useDraft();
-    const { champions, latestVersion } = useChampions();
-
-    const fetchAnalysis = useCallback(async (signal: AbortSignal) => {
-        if (!latestVersion) return;
-        setIsLoading(prev => ({ ...prev, analysis: true }));
-        setError(prev => ({ ...prev, analysis: null }));
-        try {
-            const result = await getChampionAnalysis(champion.name, latestVersion, signal);
-            if (!signal.aborted) {
-                setAnalysis(result);
-            }
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') return;
-            setError(prev => ({ ...prev, analysis: err instanceof Error ? err.message : 'Failed to load AI analysis.' }));
-        } finally {
-            if (!signal.aborted) {
-                 setIsLoading(prev => ({ ...prev, analysis: false }));
-            }
-        }
-    }, [champion.name, latestVersion]);
-
-    const fetchMatchups = useCallback(async (signal: AbortSignal) => {
-        if (!analysis) return;
-        setIsLoading(prev => ({ ...prev, matchups: true }));
-        setError(prev => ({ ...prev, matchups: null }));
-        try {
-            const result = await getMatchupAnalysis(champion.name, analysis.counters.weakAgainst, analysis.counters.strongAgainst, signal);
-            if (!signal.aborted) {
-                setMatchupAnalysis(result);
-            }
-        } catch (err) {
-             if (err instanceof DOMException && err.name === 'AbortError') return;
-            setError(prev => ({ ...prev, matchups: err instanceof Error ? err.message : 'Failed to load matchup tips.' }));
-        } finally {
-            if (!signal.aborted) {
-                 setIsLoading(prev => ({ ...prev, matchups: false }));
-            }
-        }
-    }, [champion.name, analysis]);
 
     // Reset state when champion changes or modal opens/closes
     useEffect(() => {
-        const resetAllState = () => {
-            setActiveTab('overview');
-            setAnalysis(null);
-            setMatchupAnalysis(null);
-            setError({ analysis: null, matchups: null });
-            setIsLoading({ analysis: false, matchups: false });
-        };
-        
         if (isOpen) {
-            resetAllState();
+            setActiveTab('overview');
+            reset();
         }
-
-        // Cleanup on modal close or champion change
         return () => {
             abortControllerRef.current?.abort();
-            resetAllState();
+            if (!isOpen) reset();
         };
-    }, [isOpen, champion]);
+    }, [isOpen, champion, reset]);
 
     // Fetch data when switching to a tab
     useEffect(() => {
@@ -286,7 +282,6 @@ export const ChampionDetailModal = ({ isOpen, onClose, champion, onLoadInLab }: 
             fetchMatchups(controller.signal);
         }
         
-        // Abort fetch if tab changes mid-request
         return () => controller.abort();
     }, [isOpen, activeTab, analysis, matchupAnalysis, isLoading, fetchAnalysis, fetchMatchups]);
 

@@ -102,6 +102,7 @@ export interface ItemSuggestion {
 }
 
 export interface AIAdvice {
+  draftId?: string; // ID of the draft state this advice was generated for
   teamAnalysis: {
     blue: TeamAnalysis;
     red: TeamAnalysis;

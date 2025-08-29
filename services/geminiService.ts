@@ -135,16 +135,23 @@ function _parseJsonResponse<T>(responseText: string | undefined, context: string
         throw new Error(`AI_EMPTY_RESPONSE: The AI returned an empty response for ${context}. This might be a temporary issue, please try again.`);
     }
 
-    // More robustly find and extract the JSON block
+    // Attempt to extract from a markdown block first
     const match = textToParse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (match && match[1]) {
         textToParse = match[1];
+    } else {
+        // If no markdown block, find the first '{' and last '}'
+        const firstBrace = textToParse.indexOf('{');
+        const lastBrace = textToParse.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+            textToParse = textToParse.substring(firstBrace, lastBrace + 1);
+        }
     }
     
     try {
         return JSON.parse(textToParse) as T;
     } catch (parseError) {
-        console.error(`Failed to parse JSON response for ${context} from Gemini API:`, parseError, `\nReceived text: ${textToParse}`);
+        console.error(`Failed to parse JSON response for ${context} from Gemini API:`, parseError, `\nReceived text: ${responseText}`);
         throw new Error(`AI_INVALID_FORMAT: The AI's response for ${context} was in an unexpected format. Please try again.`);
     }
 }
@@ -294,7 +301,7 @@ function formatDraftStateForPrompt(draftState: DraftState): string {
   return `${formatTeam('blue')}\n${formatTeam('red')}`;
 }
 
-export async function getDraftAdvice(draftState: DraftState, userPrimaryRole: string, userSkillLevel: string, signal?: AbortSignal): Promise<AIAdvice> {
+export async function getDraftAdvice(draftState: DraftState, userPrimaryRole: string, userSkillLevel: string, signal?: AbortSignal): Promise<Omit<AIAdvice, 'draftId'>> {
   const ai = getAiInstance();
   if (!ai) throw new Error("AI service not initialized.");
 
@@ -325,7 +332,7 @@ export async function getDraftAdvice(draftState: DraftState, userPrimaryRole: st
   });
 
   const response: GenerateContentResponse = await _withRetries(() => apiCall(), signal);
-  return _parseJsonResponse<AIAdvice>(response.text, "Draft Advice");
+  return _parseJsonResponse<Omit<AIAdvice, 'draftId'>>(response.text, "Draft Advice");
 }
 
 // Additional AI service functions would go here...
@@ -475,59 +482,68 @@ export async function generateDraftName(draftState: DraftState, signal?: AbortSi
     return response.text.replace(/["']/g, "").trim();
 }
 
-export async function getTierList(signal: AbortSignal): Promise<StructuredTierList> {
+
+// --- REFACTORED GROUNDED API CALLS ---
+/**
+ * A generic helper for making grounded API calls using Google Search.
+ * @param prompt The prompt to send to the Gemini API.
+ * @param signal An optional AbortSignal to cancel the operation.
+ * @returns The full GenerateContentResponse object.
+ */
+async function _makeGroundedApiCall(prompt: string, signal?: AbortSignal): Promise<GenerateContentResponse> {
     const ai = getAiInstance();
     if (!ai) throw new Error("AI service not initialized.");
 
-    const prompt = `Analyze recent high-level League of Legends match data and popular strategy sites to generate a structured S-Tier list for the current patch. For each champion, provide a very brief reason for their S-Tier status. Structure the output as a JSON object. The JSON object must contain a 'summary' (string) and a 'tierList' (array). Each element in the 'tierList' array should be an object with a 'role' (string) and a 'champions' (array of objects, where each object has 'championName' (string) and 'reasoning' (string)). Do not include sources in the JSON response.`;
-
-    const apiCall = async () => {
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                tools: [{ googleSearch: {} }],
-            }
-        });
-        const sources: MetaSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
-            ?.map((chunk: GroundingChunk) => ({
-                title: chunk.web?.title || 'Unknown Source',
-                uri: chunk.web?.uri || '',
-            }))
-            .filter(source => source.uri) || [];
-
-        const parsed = _parseJsonResponse<Omit<StructuredTierList, 'sources'>>(response.text, "Tier List");
-        return { ...parsed, sources };
-    };
+    const apiCall = () => ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            tools: [{ googleSearch: {} }],
+        }
+    });
     return _withRetries(apiCall, signal);
+}
+
+/**
+ * Extracts and formats web sources from a Gemini API response.
+ * @param response The response object from a grounded API call.
+ * @returns An array of MetaSource objects.
+ */
+function _extractSourcesFromResponse(response: GenerateContentResponse): MetaSource[] {
+    return response.candidates?.[0]?.groundingMetadata?.groundingChunks
+        ?.map((chunk: GroundingChunk) => ({
+            title: chunk.web?.title || 'Unknown Source',
+            uri: chunk.web?.uri || '',
+        }))
+        .filter(source => source.uri) || [];
+}
+
+export async function getTierList(signal: AbortSignal): Promise<StructuredTierList> {
+    const prompt = `Analyze recent high-level League of Legends match data and popular strategy sites to generate a structured S-Tier list for the current patch. For each champion, provide a very brief reason for their S-Tier status. Structure the output as a JSON object. The JSON object must contain a 'summary' (string) and a 'tierList' (array). Each element in the 'tierList' array should be an object with a 'role' (string) and a 'champions' (array of objects, where each object has 'championName' (string) and 'reasoning' (string)). Do not include sources in the JSON response.`;
+    
+    const response = await _makeGroundedApiCall(prompt, signal);
+    const sources = _extractSourcesFromResponse(response);
+    const parsed = _parseJsonResponse<Omit<StructuredTierList, 'sources'>>(response.text, "Tier List");
+    return { ...parsed, sources };
 }
 
 export async function getPatchNotesSummary(signal: AbortSignal): Promise<StructuredPatchNotes> {
-    const ai = getAiInstance();
-    if (!ai) throw new Error("AI service not initialized.");
-
     const prompt = `Provide a concise summary of the most recent League of Legends patch notes. Identify the top 3-5 most impactful changes. Format the response as a JSON object. The JSON object must contain a 'summary' (string), and arrays for 'buffs', 'nerfs', and 'systemChanges'. Each element in these arrays should be an object with 'name' (string) and 'change' (string). Do not include sources in the JSON response.`;
-
-    const apiCall = async () => {
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                tools: [{ googleSearch: {} }],
-            }
-        });
-        const sources: MetaSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
-            ?.map((chunk: GroundingChunk) => ({
-                title: chunk.web?.title || 'Unknown Source',
-                uri: chunk.web?.uri || '',
-            }))
-            .filter(source => source.uri) || [];
-
-        const parsed = _parseJsonResponse<Omit<StructuredPatchNotes, 'sources'>>(response.text, "Patch Notes");
-        return { ...parsed, sources };
-    };
-    return _withRetries(apiCall, signal);
+    
+    const response = await _makeGroundedApiCall(prompt, signal);
+    const sources = _extractSourcesFromResponse(response);
+    const parsed = _parseJsonResponse<Omit<StructuredPatchNotes, 'sources'>>(response.text, "Patch Notes");
+    return { ...parsed, sources };
 }
+
+export async function getGroundedAnswer(query: string, signal: AbortSignal): Promise<{ text: string, sources: MetaSource[] }> {
+    const prompt = `As a League of Legends expert, answer the following question based on the latest information from the web: "${query}"`;
+    const response = await _makeGroundedApiCall(prompt, signal);
+    const sources = _extractSourcesFromResponse(response);
+    return { text: response.text, sources };
+}
+// --- END REFACTORED GROUNDED API CALLS ---
+
 
 export async function getTrialQuestion(signal: AbortSignal): Promise<TrialQuestion> {
     const ai = getAiInstance();
@@ -696,29 +712,4 @@ export async function generatePlaybookPlusDossier(draftState: DraftState, signal
 
     const response: GenerateContentResponse = await _withRetries(apiCall, signal);
     return _parseJsonResponse<PlaybookPlusDossier>(response.text, "Playbook Dossier");
-}
-
-export async function getGroundedAnswer(query: string, signal: AbortSignal): Promise<{ text: string, sources: MetaSource[] }> {
-    const ai = getAiInstance();
-    if (!ai) throw new Error("AI service not initialized.");
-
-    const apiCall = async () => {
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: `As a League of Legends expert, answer the following question based on the latest information from the web: "${query}"`,
-            config: {
-                tools: [{ googleSearch: {} }],
-            }
-        });
-        const sources: MetaSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
-            ?.map((chunk: GroundingChunk) => ({
-                title: chunk.web?.title || 'Unknown Source',
-                uri: chunk.web?.uri || '',
-            }))
-            .filter(source => source.uri) || [];
-        
-        return { text: response.text, sources };
-    };
-
-    return _withRetries(apiCall, signal);
 }

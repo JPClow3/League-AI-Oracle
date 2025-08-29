@@ -17,12 +17,14 @@ interface PickSlotProps {
   isActive?: boolean;
   isDraggedOver?: boolean;
   side: TeamSide;
+  isDimmed?: boolean;
 }
 
-export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side }: PickSlotProps) => {
+export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side, isDimmed = false }: PickSlotProps) => {
   const activeClasses = isActive ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-accent shadow-glow-accent' :
                       isDraggedOver ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-info' : 
                       'ring-1 ring-border-primary/50';
+  const dimmedClasses = isDimmed ? 'opacity-50 pointer-events-none' : '';
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -47,7 +49,7 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver,
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
-      className={`relative flex items-center bg-surface p-2 cursor-pointer group transition-all duration-200 hover:ring-accent/70 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:scale-[1.02] active:scale-[0.98] ${activeClasses}`}
+      className={`relative flex items-center bg-surface p-2 cursor-pointer group transition-all duration-200 hover:ring-accent/70 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:-translate-y-0.5 active:translate-y-0 ${activeClasses} ${dimmedClasses}`}
     >
        {champion && onClear && (
           <button 

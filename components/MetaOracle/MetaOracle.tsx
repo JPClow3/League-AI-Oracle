@@ -19,46 +19,28 @@ const EXAMPLE_PROMPTS = [
 export const MetaOracle = () => {
     const [query, setQuery] = useState('');
     
-    const fetcher = useCallback((signal: AbortSignal) => {
-        // Ensure the fetcher function has access to the latest query
-        // by not memoizing the query itself inside the callback's dependencies.
-        return getGroundedAnswer(query, signal);
-    }, [query]); // Re-create fetcher when query changes
+    // The fetcher now accepts the query as an argument to avoid race conditions.
+    const fetcher = useCallback((signal: AbortSignal, currentQuery: string) => {
+        if (!currentQuery) {
+            return Promise.resolve({ text: '', sources: [] });
+        }
+        return getGroundedAnswer(currentQuery, signal);
+    }, []);
 
     const { data: response, isLoading, error, execute: fetchResponse } = useGeminiData(fetcher, true);
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (query.trim()) {
-            fetchResponse();
+            fetchResponse(query);
         }
     };
 
     const handleExampleClick = (prompt: string) => {
         setQuery(prompt);
-        // The fetcher will be updated due to state change,
-        // so we can call fetchResponse right after.
-        // To be safe, we can use an effect or just call it directly
-        // but it's cleaner to just update state and submit.
-        // A direct call might be better for UX here.
-        // Let's create a wrapper.
-        const executeQuery = async (p: string) => {
-             const result = await getGroundedAnswer(p, new AbortController().signal);
-             // a bit hacky to bypass the hook's state, but works for this UX
-        }
-        fetchResponse(); // This will use the latest `fetcher` with the new query.
+        // Directly call fetchResponse with the new prompt, avoiding state-related race conditions.
+        fetchResponse(prompt);
     };
-    
-    // This effect ensures that when an example is clicked, the fetch is triggered after the state updates.
-    useEffect(() => {
-        if (isLoading) return; // prevent re-fetching if a fetch is already in progress
-        const isExample = EXAMPLE_PROMPTS.includes(query);
-        const wasJustClicked = response === null; // A simple proxy to know if it's the first query
-        if (isExample && wasJustClicked) {
-            fetchResponse();
-        }
-    }, [query, response, isLoading, fetchResponse]);
-
 
     return (
         <div className="space-y-6">
@@ -93,18 +75,18 @@ export const MetaOracle = () => {
                 {error && !isLoading && (
                     <div aria-live="polite" className="text-center p-8">
                         <p className="text-error mb-4">{error}</p>
-                        <Button onClick={fetchResponse}>Retry</Button>
+                        <Button onClick={() => fetchResponse(query)}>Retry</Button>
                     </div>
                 )}
                 
-                {!isLoading && !error && !response && (
+                {!isLoading && !error && !response?.text && (
                     <div className="text-center p-8 text-text-secondary">
                         <h3 className="text-lg font-semibold text-text-primary mb-4">Try asking about...</h3>
                         <div className="flex flex-wrap justify-center gap-3">
                             {EXAMPLE_PROMPTS.map(prompt => (
                                 <button
                                     key={prompt}
-                                    onClick={() => setQuery(prompt)}
+                                    onClick={() => handleExampleClick(prompt)}
                                     className="px-3 py-2 bg-secondary text-sm hover:bg-border transition-colors"
                                 >
                                     "{prompt}"
@@ -114,7 +96,7 @@ export const MetaOracle = () => {
                     </div>
                 )}
 
-                {response && !isLoading && (
+                {response && response.text && !isLoading && (
                     <div aria-live="polite" className="space-y-6">
                         <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-headings:text-text-primary prose-a:text-primary prose-strong:text-text-primary">
                            <MarkdownRenderer text={response.text} />
