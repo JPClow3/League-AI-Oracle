@@ -1,5 +1,4 @@
-
-import type { DraftState, SavedDraft, Champion, DraftSlot, SavedTeamState, ChampionLite } from '../types';
+import type { DraftState, SavedDraft, Champion, DraftSlot, SavedTeamState, ChampionLite, TeamSide } from '../types';
 import toast from 'react-hot-toast';
 
 // --- Hardened LocalStorage Utilities ---
@@ -98,4 +97,40 @@ export const getAvailableChampions = (draftState: DraftState, championsLite: Cha
     ];
     const pickedIds = new Set(allPicksAndBans.filter(s => s.champion).map(s => s.champion!.id));
     return championsLite.filter(c => !pickedIds.has(c.id));
+};
+
+/**
+ * Returns a new DraftState with an updated champion in a specific slot.
+ * This is a pure function that does not mutate the original state.
+ * @param draftState The current draft state.
+ * @param team The team side ('blue' or 'red').
+ * @param type The slot type ('pick' or 'ban').
+ * @param index The index of the slot to update.
+ * @param champion The champion to place in the slot (or null to clear).
+ * @returns A new, updated DraftState object.
+ */
+export const updateSlotInDraft = (
+    draftState: DraftState, 
+    team: TeamSide, 
+    type: 'pick' | 'ban', 
+    index: number, 
+    champion: Champion | null
+): DraftState => {
+    const isPick = type === 'pick';
+    const teamState = draftState[team];
+    const targetArray = isPick ? teamState.picks : teamState.bans;
+
+    // Create a new array with the updated slot
+    const newArray = targetArray.map((slot, i) =>
+        i === index ? { ...slot, champion } : slot
+    );
+
+    // Return a new state object with the changes applied
+    return {
+        ...draftState,
+        [team]: {
+          ...teamState,
+          [isPick ? 'picks' : 'bans']: newArray,
+        },
+    };
 };

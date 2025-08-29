@@ -17,16 +17,18 @@ interface TeamPanelProps {
   onDragEnter?: (event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => void;
   onDragLeave?: () => void;
   draggedOverSlot?: { team: TeamSide; type: 'pick' | 'ban'; index: number } | null;
+  isTurnActive?: boolean;
 }
 
-export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDragOver, onDragEnter, onDragLeave, activeSlot, draggedOverSlot }: TeamPanelProps) => {
+export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDragOver, onDragEnter, onDragLeave, activeSlot, draggedOverSlot, isTurnActive = false }: TeamPanelProps) => {
   const isBlue = side === 'blue';
   const teamColorClass = isBlue ? 'border-team-blue' : 'border-team-red';
   const teamName = isBlue ? 'Blue Team' : 'Red Team';
   const gradientClass = isBlue ? 'from-team-blue/5 to-bg-secondary' : 'from-team-red/5 to-bg-secondary';
+  const turnGlowClass = isTurnActive ? (isBlue ? 'shadow-glow-accent' : 'shadow-lg shadow-error/30') : '';
 
   return (
-    <div className={`bg-bg-secondary p-4 shadow-sm border ${teamColorClass} border-t-4 bg-gradient-to-b ${gradientClass}`}>
+    <div className={`bg-bg-secondary p-4 shadow-sm border ${teamColorClass} border-t-4 bg-gradient-to-b ${gradientClass} transition-shadow duration-300 ${turnGlowClass}`}>
         <h2 className={`text-2xl font-bold font-display mb-4 text-center text-text-primary`}>{teamName}</h2>
         
         <TeamAnalytics picks={state.picks} />
@@ -37,7 +39,8 @@ export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDra
             <div className="space-y-2">
               {state.picks.map((pick, index) => (
                 <PickSlot 
-                  key={index} 
+                  key={index}
+                  side={side}
                   champion={pick.champion}
                   role={ROLES[index]}
                   onClick={() => onSlotClick(side, 'pick', index)}
@@ -60,6 +63,8 @@ export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDra
               {state.bans.map((ban, index) => (
                 <BanSlot 
                   key={index} 
+                  side={side}
+                  index={index}
                   champion={ban.champion} 
                   onClick={() => onSlotClick(side, 'ban', index)}
                   onClear={onClearSlot ? () => onClearSlot(side, 'ban', index) : undefined}

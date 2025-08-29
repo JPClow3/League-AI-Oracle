@@ -1,6 +1,11 @@
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import type { ChampionLite, ChampionSuggestion, DraftState } from '../../types';
-import { FixedSizeGrid as Grid } from 'react-window';
+// FIX: The `FixedSizeGrid` member could not be found in the `react-window` module.
+// This is often due to a module resolution issue. Using a namespace import is a common workaround.
+import * as ReactWindow from 'react-window';
+const Grid = (ReactWindow as any).FixedSizeGrid;
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useSettings } from '../../hooks/useSettings';
 import { ROLES, DAMAGE_TYPES } from '../../constants';
@@ -41,7 +46,7 @@ const IntelIcons = ({ championName, intelData }: { championName: string, intelDa
     );
 };
 
-const ChampionCard = ({ champion, onSelect, onContextMenu, onDragStart, intelData, reasoning, isFavorite = false, isActiveRole = false }: {
+const ChampionCard = React.memo(({ champion, onSelect, onContextMenu, onDragStart, intelData, reasoning, isFavorite = false, isActiveRole = false }: {
     champion: ChampionLite;
     onSelect: (champion: ChampionLite) => void;
     onContextMenu: (e: React.MouseEvent, champion: ChampionLite) => void;
@@ -95,7 +100,7 @@ const ChampionCard = ({ champion, onSelect, onContextMenu, onDragStart, intelDat
     }
 
     return cardContent;
-};
+});
 
 
 const Cell = ({ columnIndex, rowIndex, style, data }: {

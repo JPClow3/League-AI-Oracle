@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import type { HistoryEntry, DraftState, PlaybookPlusDossier } from '../../types';
 import { Modal } from '../common/Modal';
@@ -124,7 +125,7 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
     );
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={entry ? `Archives: ${entry.name}` : 'Archived Entry'}>
+        <Modal isOpen={isOpen} onClose={onClose} title={entry ? `Archives: ${entry.name}` : 'Archived Entry'} size="6xl">
             {entry && fullDraft && (
                  <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4 flex flex-col">
@@ -154,7 +155,8 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
                         
                         {activeTab === 'dossier' && entry.dossier && <DossierDisplay dossier={entry.dossier} />}
                         
-                        {activeTab === 'analysis' && <AdvicePanel advice={entry.analysis || null} isLoading={false} error={null} navigateToAcademy={navigateToAcademy} analysisCompleted={false} onAnimationEnd={() => {}} />}
+                        {/* FIX: Added the required 'isStale' prop. For a saved entry, the analysis is never stale. */}
+                        {activeTab === 'analysis' && <AdvicePanel advice={entry.analysis || null} isLoading={false} error={null} navigateToAcademy={navigateToAcademy} analysisCompleted={false} onAnimationEnd={() => {}} isStale={false} />}
 
                         {activeTab === 'dossier' && !entry.dossier && (
                             <div className="text-center p-8 text-text-secondary">

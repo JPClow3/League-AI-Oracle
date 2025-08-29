@@ -3,17 +3,16 @@ import type { DraftState, Champion, TeamSide, ChampionLite, ArenaBotPersona, Cha
 import { MISSION_IDS, ROLES } from '../../constants';
 import { getBotDraftAction } from '../../services/geminiService';
 import { TeamPanel } from '../DraftLab/TeamPanel';
-import { ChampionGrid } from '../DraftLab/ChampionGrid';
-import { Modal } from '../common/Modal';
+import { ArenaChampionSelectModal } from './ArenaChampionSelectModal';
+import { ArenaSaveModal } from './ArenaSaveModal';
 import { Button } from '../common/Button';
 import { TurnIndicator } from './TurnIndicator';
 import { DraftTimeline } from './DraftTimeline';
 import { COMPETITIVE_SEQUENCE } from './arenaConstants';
 import toast from 'react-hot-toast';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { useSettings } from '../../hooks/useSettings';
 import { usePlaybook } from '../../hooks/usePlaybook';
-import { getAvailableChampions } from '../../lib/draftUtils';
+import { getAvailableChampions, updateSlotInDraft } from '../../lib/draftUtils';
 import { QuickLookPanel } from '../DraftLab/QuickLookPanel';
 import { Swords } from 'lucide-react';
 import { useChampions } from '../../contexts/ChampionContext';
@@ -33,14 +32,11 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBotThinking, setIsBotThinking] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [draftName, setDraftName] = useState('');
   const [botPersona, setBotPersona] = useState<ArenaBotPersona>('The Strategist');
   const [quickLookChampion, setQuickLookChampion] = useState<ChampionLite | null>(null);
   const { champions, championsLite } = useChampions();
   
   const abortControllerRef = React.useRef<AbortController | null>(null);
-  const { addEntry: addPlaybookEntry, latestEntry } = usePlaybook();
 
   const { addSP, completeMission } = useUserProfile();
 
@@ -52,7 +48,6 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   useEffect(() => {
     return () => {
         abortControllerRef.current?.abort();
-        // Per code review: reset state on unmount
         setIsBotThinking(false);
     }
   }, []);
@@ -82,32 +77,19 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
         const reasoning = aiSuggestion.reasoning;
         return { champion: botPick, reasoning };
     } catch (error) {
-        // This will be caught if getBotDraftAction throws (e.g., from fallback failure)
-        console.error("Critical error in bot action selection:", error);
-        return { champion: undefined, reasoning: null };
+        console.error("Critical error in bot action selection, using fallback:", error);
+        toast("The opponent AI had an issue and is selecting a random champion to continue.", { icon: '🤖' });
+        const randomPick = available[Math.floor(Math.random() * available.length)];
+        const champion = champions.find(c => c.id === randomPick.id);
+        return { champion, reasoning: "Failsafe: A random champion was selected due to an AI error." };
     }
   }, [draftState, currentTurn, botPersona, champions, championsLite]);
   
   const handleChampionSelect = useCallback((champion: Champion | undefined) => {
-    if (!currentTurn || !champion) return; // FIX: Added check for champion to prevent crash
+    if (!currentTurn || !champion) return;
 
     const { team, type, index } = currentTurn;
-    setDraftState(prevState => {
-      const isPick = type === 'pick';
-      const targetArray = isPick ? prevState[team].picks : prevState[team].bans;
-
-      const newArray = targetArray.map((slot, i) =>
-        i === index ? { ...slot, champion } : slot
-      );
-
-      return {
-        ...prevState,
-        [team]: {
-          ...prevState[team],
-          [isPick ? 'picks' : 'bans']: newArray,
-        },
-      };
-    });
+    setDraftState(prev => updateSlotInDraft(prev, team, type, index, champion));
 
     setIsModalOpen(false);
     setLastUpdatedIndex(currentTurnIndex);
@@ -186,27 +168,6 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   const handleAnalyze = () => {
     onNavigateToForge(draftState);
   };
-  
-  const handleSaveToPlaybook = () => {
-    const defaultName = `Arena Practice vs ${botPersona}`;
-    // Check if a draft with this name already exists
-    const existingEntry = latestEntry?.name.startsWith(defaultName);
-    setDraftName(existingEntry ? `${defaultName} #${(Math.random() * 100).toFixed(0)}` : defaultName);
-    setIsSaveModalOpen(true);
-  };
-
-  const confirmSaveToPlaybook = async () => {
-    if (draftName.trim() && !isSaving) {
-        setIsSaving(true);
-        // Arena drafts don't have analysis, so pass null
-        const success = await addPlaybookEntry(draftName.trim(), draftState, null);
-        setIsSaving(false);
-        if (success) {
-             setIsSaveModalOpen(false);
-        }
-    }
-  };
-
 
   const activeSlotForTeam = (team: TeamSide) => {
       if (currentTurn?.team === team) {
@@ -229,7 +190,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
                 </div>
             </div>
             <div className="flex flex-wrap gap-2">
-                <Button onClick={handleSaveToPlaybook} variant="secondary" disabled={!isDraftStarted}>Save to The Archives</Button>
+                <Button onClick={() => setIsSaveModalOpen(true)} variant="secondary" disabled={!isDraftStarted}>Save to The Archives</Button>
                 <Button onClick={handleReset} variant="danger">Reset</Button>
             </div>
         </div>
@@ -260,59 +221,31 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
                 <p className="text-text-secondary my-4 max-w-md mx-auto">Review the final compositions below, save to your Playbook, or send to the Draft Lab for a full AI analysis.</p>
                 <div className="flex flex-wrap justify-center gap-4">
                     <Button onClick={handleAnalyze} variant="primary">Analyze in Lab</Button>
-                    <Button onClick={handleSaveToPlaybook} variant="secondary">Save to The Archives</Button>
+                    <Button onClick={() => setIsSaveModalOpen(true)} variant="secondary">Save to The Archives</Button>
                     <Button onClick={handleReset} variant="secondary">New Arena Draft</Button>
                 </div>
             </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} />
-            <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('red')} />
+            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} isTurnActive={!draftFinished && currentTurn?.team === 'blue'} />
+            <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('red')} isTurnActive={!draftFinished && currentTurn?.team === 'red'} />
         </div>
 
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Select your Champion">
-            <div className="h-[550px]">
-                <ChampionGrid 
-                    onSelect={handleChampionSelectLite} 
-                    onQuickLook={setQuickLookChampion} 
-                    recommendations={[]} 
-                    isRecsLoading={false} 
-                    activeRole={null} 
-                    draftState={draftState} 
-                    intelData={null}
-                    onDragStart={() => {}}
-                />
-            </div>
-        </Modal>
+        <ArenaChampionSelectModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSelect={handleChampionSelectLite}
+            onQuickLook={setQuickLookChampion}
+            draftState={draftState}
+        />
 
-        <Modal 
-            isOpen={isSaveModalOpen} 
-            onClose={() => {
-                if(isSaving) return;
-                setIsSaveModalOpen(false);
-                setDraftName('');
-            }} 
-            title="Archive Arena Draft"
-        >
-            <div className="p-6 space-y-4">
-                <label htmlFor="draftName" className="block text-sm font-medium text-text-secondary">Draft Name</label>
-                <input
-                    id="draftName"
-                    type="text"
-                    value={draftName}
-                    onChange={(e) => setDraftName(e.target.value)}
-                    placeholder="e.g., Arena Practice vs Dive"
-                    className="w-full px-3 py-2 bg-surface-secondary border border-border-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-                <div className="flex justify-end gap-2">
-                    <Button variant="secondary" onClick={() => { setIsSaveModalOpen(false); setDraftName(''); }} disabled={isSaving}>Cancel</Button>
-                    <Button variant="primary" onClick={confirmSaveToPlaybook} disabled={!draftName.trim() || isSaving}>
-                        {isSaving ? 'Saving...' : 'Save to The Archives'}
-                    </Button>
-                </div>
-            </div>
-      </Modal>
+        <ArenaSaveModal
+            isOpen={isSaveModalOpen}
+            onClose={() => setIsSaveModalOpen(false)}
+            draftState={draftState}
+            botPersona={botPersona}
+        />
     </div>
   );
 };

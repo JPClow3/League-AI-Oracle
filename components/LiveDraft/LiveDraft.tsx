@@ -346,7 +346,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} />
+            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} isTurnActive={!draftFinished && currentTurn?.team === 'blue'} />
             
             <div className="lg:col-span-1 order-first lg:order-none bg-surface p-4 min-h-[300px] border border-border">
                 {currentTurn?.team === 'blue' ? (
@@ -364,7 +364,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
                 )}
             </div>
 
-            <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('red')} />
+            <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('red')} isTurnActive={!draftFinished && currentTurn?.team === 'red'} />
         </div>
 
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={`Select Champion for ${currentTurn?.team}'s ${currentTurn?.type}`}>

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { UserProfile, Mission, ChampionMastery, Champion, RecentFeedback } from '../types';
 import toast from 'react-hot-toast';
@@ -285,24 +284,25 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
 
     const checkStreak = useCallback(() => {
         const today = new Date();
-        const lastActive = new Date(profile.lastActiveDate);
+        today.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
         
-        const todayStr = today.toISOString().split('T')[0];
-        const lastActiveStr = lastActive.toISOString().split('T')[0];
+        const lastActive = new Date(profile.lastActiveDate);
+        lastActive.setHours(0, 0, 0, 0); // Normalize last active date
 
-        if (todayStr === lastActiveStr) return; // Already active today
+        if (today.getTime() === lastActive.getTime()) return; // Already active today
+
+        const todayStr = new Date().toISOString().split('T')[0];
         
         // Reset daily missions if it's a new day
         const resetDailies = profile.missions.daily.map(m => ({ ...m, progress: 0, completed: false }));
 
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const msInDay = 1000 * 60 * 60 * 24;
+        const dayDifference = (today.getTime() - lastActive.getTime()) / msInDay;
 
-        if (lastActiveStr === yesterdayStr) {
-            setProfile({ streak: profile.streak + 1, lastActiveDate: todayStr, missions: {...profile.missions, daily: resetDailies} });
+        if (dayDifference === 1) {
+             setProfile({ streak: profile.streak + 1, lastActiveDate: todayStr, missions: {...profile.missions, daily: resetDailies} });
         } else {
-            setProfile({ streak: 1, lastActiveDate: todayStr, missions: {...profile.missions, daily: resetDailies} });
+             setProfile({ streak: 1, lastActiveDate: todayStr, missions: {...profile.missions, daily: resetDailies} });
         }
     }, [profile.lastActiveDate, profile.streak, profile.missions]);
 

@@ -86,7 +86,8 @@ const transformDdragonData = (ddragonData: any, version: string): Champion[] => 
             title: champ.title,
             lore: champ.lore,
             image: `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${champ.image.full}`,
-            splashUrl: `https://ddragon.leagueoflegends.com/cdn/${version}/img/splash/${champ.id}_0.jpg`,
+            splashUrl: `https://ddragon.leagueoflegends.com/cdn/img/splash/${champ.id}_0.jpg`,
+            loadingScreenUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champ.id}_0.jpg`,
             playstyle: champ.blurb, // Use blurb as a proxy for playstyle
             roles: deriveRoles(champ.tags, champ.id),
             class: champ.tags,
@@ -165,7 +166,10 @@ export const ChampionProvider = ({ children }: { children: React.ReactNode }) =>
 
             } catch (err) {
                 console.error("Fatal error fetching champion data:", err);
-                setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+                setError(err instanceof Error ? `Could not connect to Riot's Data Dragon API. Please check your internet connection and try again. Details: ${err.message}` : 'An unknown error occurred while fetching champion data.');
+            } finally {
+                // Ensure loading is always set to false after an attempt.
+                setIsLoading(false);
             }
         };
 
@@ -182,7 +186,6 @@ export const ChampionProvider = ({ children }: { children: React.ReactNode }) =>
                 damageType: c.damageType,
             }));
             setChampionsLite(liteList);
-            setIsLoading(false);
         }
     }, [champions]);
 

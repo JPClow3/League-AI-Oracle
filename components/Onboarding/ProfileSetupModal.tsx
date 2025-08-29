@@ -6,6 +6,7 @@ import { ROLES } from '../../constants';
 import type { ChampionLite, Settings } from '../../types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useChampions } from '../../contexts/ChampionContext';
+import { Users, Shield, Sprout, Zap, Crosshair, Heart } from 'lucide-react';
 
 interface OnboardingData {
     username: string;
@@ -22,8 +23,16 @@ interface ProfileSetupModalProps {
 }
 
 const TOTAL_STEPS = 5;
-const STARTER_CHAMP_NAMES = ['Ahri', 'Lux', 'Ashe', 'Garen', 'Master Yi', 'Alistar', 'Malphite', 'Jinx', 'Leona', 'Yasuo', 'Zed', 'Lee Sin', 'Vi', 'Caitlyn', 'Sett'];
 const GOALS = ['Improve Drafting', 'Master Compositions', 'Learn Meta Strategies'];
+
+const ROLE_ICONS: { [key: string]: React.ReactNode } = {
+    All: <Users size={32} />,
+    Top: <Shield size={32} />,
+    Jungle: <Sprout size={32} />,
+    Mid: <Zap size={32} />,
+    ADC: <Crosshair size={32} />,
+    Support: <Heart size={32} />,
+};
 
 const ProgressBar = ({ step, total }: { step: number; total: number }) => (
     <div className="w-full bg-surface-inset h-2.5">
@@ -49,9 +58,8 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
     const [skillLevel, setSkillLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
     const [goals, setGoals] = useState<string[]>([]);
     const [avatar, setAvatar] = useState('Garen');
+    const [champSearch, setChampSearch] = useState('');
     
-    const onboardingChamps = useMemo(() => championsLite.filter(c => STARTER_CHAMP_NAMES.includes(c.name)), [championsLite]);
-
     const resetState = useCallback(() => {
         setStep(1);
         setDirection(0);
@@ -61,6 +69,7 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
         setSkillLevel('Beginner');
         setGoals([]);
         setAvatar('Garen');
+        setChampSearch('');
     }, [settings.primaryRole]);
 
     useEffect(() => {
@@ -70,6 +79,7 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
     }, [isOpen, resetState]);
 
     useEffect(() => {
+        // Clear favorite champions when role changes to avoid irrelevant selections.
         setFavoriteChampions([]);
     }, [primaryRole]);
 
@@ -131,12 +141,13 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
         }),
     };
     
-    const championsForRole = useMemo(() => {
-        if (primaryRole === 'All') {
-            return championsLite;
+    const filteredChampions = useMemo(() => {
+        let champs = primaryRole === 'All' ? championsLite : championsLite.filter(c => c.roles.includes(primaryRole));
+        if (champSearch) {
+            champs = champs.filter(c => c.name.toLowerCase().includes(champSearch.toLowerCase()));
         }
-        return championsLite.filter(c => c.roles.includes(primaryRole));
-    }, [primaryRole, championsLite]);
+        return champs;
+    }, [primaryRole, championsLite, champSearch]);
 
     return (
         <Modal isOpen={isOpen} onClose={handleSkip} title="Strategist Profile Setup">
@@ -182,8 +193,9 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
                                             <button
                                                 key={role}
                                                 onClick={() => setPrimaryRole(role)}
-                                                className={`flex flex-col items-center justify-center gap-2 p-3 border-2 transition-all aspect-square ${primaryRole === role ? 'bg-secondary border-gold shadow-md shadow-gold/30' : 'bg-surface border-border-primary hover:border-gold/70'}`}
+                                                className={`flex flex-col items-center justify-center gap-2 p-3 border-2 transition-all aspect-square ${primaryRole === role ? 'bg-secondary border-gold shadow-md shadow-gold/30 text-gold' : 'bg-surface border-border-primary hover:border-gold/70 text-text-secondary'}`}
                                             >
+                                                {ROLE_ICONS[role]}
                                                 <span className="font-semibold text-lg text-text-primary">{role}</span>
                                             </button>
                                         ))}
@@ -194,17 +206,24 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
                                  <div>
                                     <h3 className="text-2xl font-semibold text-text-primary mb-2 text-center">Choose up to 3 favorite champions.</h3>
                                     <p className="text-sm text-text-muted mb-4 text-center">This grants you starter Draft Mastery points for them.</p>
-                                    <div className="flex justify-center flex-wrap gap-3 max-h-[300px] overflow-y-auto p-2 bg-surface-inset">
-                                        {championsForRole.length > 0 ? championsForRole.map(champ => (
+                                    <input
+                                        type="text"
+                                        value={champSearch}
+                                        onChange={(e) => setChampSearch(e.target.value)}
+                                        placeholder="Search champions..."
+                                        className="w-full px-3 py-2 bg-surface-inset border border-border-primary focus:outline-none focus:ring-2 focus:ring-gold mb-2"
+                                    />
+                                    <div className="flex justify-center flex-wrap gap-3 max-h-[250px] overflow-y-auto p-2 bg-surface-inset">
+                                        {filteredChampions.length > 0 ? filteredChampions.map(champ => (
                                             <button
                                                 key={champ.id}
                                                 onClick={() => handleFavoriteToggle(champ.id)}
-                                                className={`p-1 transition-all ${favoriteChampions.includes(champ.id) ? 'ring-2 ring-gold shadow-md shadow-gold/30' : ''}`}
+                                                className={`p-1 transition-all rounded-md ${favoriteChampions.includes(champ.id) ? 'ring-2 ring-gold shadow-md shadow-gold/30' : ''}`}
                                             >
-                                                <img src={champ.image} alt={champ.name} className="w-16 h-16" />
+                                                <img src={champ.image} alt={champ.name} className="w-16 h-16 rounded-md" />
                                             </button>
                                         )) : (
-                                            <p className="text-text-muted p-8">No starter champions found for this role. Try 'All' for more options.</p>
+                                            <p className="text-text-muted p-8">No champions found.</p>
                                         )}
                                     </div>
                                 </div>
@@ -233,8 +252,15 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
                                 <div>
                                     <h3 className="text-2xl font-semibold text-text-primary mb-3 text-center">Customize your look</h3>
                                     <p className="text-sm text-text-muted mb-4 text-center">Choose a profile avatar.</p>
-                                     <div className="flex justify-center flex-wrap gap-3 mb-6 max-h-[250px] overflow-y-auto p-2 bg-surface-inset">
-                                        {onboardingChamps.map(champ => (
+                                     <input
+                                        type="text"
+                                        value={champSearch}
+                                        onChange={(e) => setChampSearch(e.target.value)}
+                                        placeholder="Search champions..."
+                                        className="w-full px-3 py-2 bg-surface-inset border border-border-primary focus:outline-none focus:ring-2 focus:ring-gold mb-2"
+                                    />
+                                     <div className="flex justify-center flex-wrap gap-3 mb-6 max-h-[200px] overflow-y-auto p-2 bg-surface-inset">
+                                        {filteredChampions.map(champ => (
                                             <button key={champ.id} onClick={() => setAvatar(champ.id)} className={`p-1 rounded-full transition-all ${avatar === champ.id ? 'ring-2 ring-gold shadow-md shadow-gold/30' : ''}`}>
                                                 <img src={champ.image} alt={champ.name} className="w-16 h-16 rounded-full" />
                                             </button>

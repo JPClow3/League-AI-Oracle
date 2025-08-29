@@ -23,6 +23,7 @@ export interface Champion {
   name: string;
   image: string;
   splashUrl: string;
+  loadingScreenUrl: string;
   title: string;
   lore: string;
   playstyle: string;

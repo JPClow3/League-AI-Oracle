@@ -1,5 +1,7 @@
+
+
 import React from 'react';
-import type { Champion } from '../../types';
+import type { Champion, TeamSide } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X } from 'lucide-react';
 
@@ -14,13 +16,25 @@ interface PickSlotProps {
   onDragLeave?: (e: React.DragEvent) => void;
   isActive?: boolean;
   isDraggedOver?: boolean;
+  side: TeamSide;
 }
 
-export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false }: PickSlotProps) => {
+export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side }: PickSlotProps) => {
   const activeClasses = isActive ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-accent shadow-glow-accent' :
                       isDraggedOver ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-info' : 
                       'ring-1 ring-border-primary/50';
-  const splashUrl = champion ? champion.splashUrl : '';
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  const teamName = side.charAt(0).toUpperCase() + side.slice(1);
+  const ariaLabel = champion 
+    ? `${teamName} Team ${role} pick: ${champion.name}. Press Enter or Space to change.`
+    : `${teamName} Team ${role} pick: Empty. Press Enter or Space to select a champion.`;
 
   return (
     <div 
@@ -29,7 +43,11 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver,
       onDragOver={onDragOver}
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
-      className={`relative flex items-center bg-surface p-2 cursor-pointer group transition-all duration-200 hover:ring-accent/70 overflow-hidden ${activeClasses}`}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      className={`relative flex items-center bg-surface p-2 cursor-pointer group transition-all duration-200 hover:ring-accent/70 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:scale-[1.02] active:scale-[0.98] ${activeClasses}`}
     >
        {champion && onClear && (
           <button 
@@ -52,7 +70,7 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver,
           >
             <div 
               className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
-              style={{ backgroundImage: `url(${splashUrl})` }}
+              style={{ backgroundImage: `url(${champion.loadingScreenUrl})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/70 to-transparent group-hover:from-surface/80" />
           </motion.div>

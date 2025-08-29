@@ -6,14 +6,17 @@ import { CSSTransition } from 'react-transition-group';
 import { Button } from './Button';
 import { X } from 'lucide-react';
 
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl';
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: ModalSize;
 }
 
-export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, children, size = '4xl' }: ModalProps) => {
   const backdropRef = useRef(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +31,18 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
+
+  const sizeClasses: Record<ModalSize, string> = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+  };
 
   return (
     <CSSTransition
@@ -54,7 +69,7 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
           <div 
             ref={contentRef}
             tabIndex={-1}
-            className="bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full max-w-4xl max-h-[90vh] flex flex-col m-4 focus:outline-none border border-[hsl(var(--border))]"
+            className={`bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full max-h-[90vh] flex flex-col m-4 focus:outline-none border border-[hsl(var(--border))] ${sizeClasses[size]}`}
             onClick={(e) => e.stopPropagation()}
           >
             <FocusTrap

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, useReducer } from 'react';
 import type { DraftState, Champion, AIAdvice, TeamSide, ChampionLite, ChampionSuggestion } from '../../types';
 import { ROLES, MISSION_IDS } from '../../constants';
 import { getDraftAdvice, getChampionSuggestions, generateDraftName, getTierList, getPatchNotesSummary } from '../../services/geminiService';
@@ -19,6 +19,8 @@ import { KEYWORDS } from '../Academy/lessons';
 import { FlaskConical } from 'lucide-react';
 import { ConfirmationModal, ConfirmationState } from '../common/ConfirmationModal';
 import { useChampions } from '../../contexts/ChampionContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { updateSlotInDraft } from '../../lib/draftUtils';
 
 interface DraftLabProps {
   startTour?: boolean;
@@ -29,6 +31,76 @@ interface DraftLabProps {
 type EnrichedChampionSuggestion = ChampionSuggestion & { champion: ChampionLite };
 type IntelData = { sTier: string[], buffs: string[], nerfs: string[] };
 type DraggedOverSlot = { team: TeamSide; type: 'pick' | 'ban'; index: number };
+type MobileTab = 'blue' | 'red' | 'ai';
+
+// --- State Management with useReducer ---
+
+interface DraftLabState {
+    selectionContext: DraggedOverSlot | null;
+    aiAdvice: AIAdvice | null;
+    isLoading: boolean;
+    error: string | null;
+    recommendations: EnrichedChampionSuggestion[];
+    isRecsLoading: boolean;
+    mobileTab: MobileTab;
+    analysisCompleted: boolean;
+    confirmationWarnings: ConfirmationState | null;
+}
+
+type DraftLabAction =
+    | { type: 'SET_SELECTION_CONTEXT'; payload: DraggedOverSlot | null }
+    | { type: 'START_ANALYSIS' }
+    | { type: 'ANALYSIS_SUCCESS'; payload: AIAdvice }
+    | { type: 'ANALYSIS_ERROR'; payload: string }
+    | { type: 'START_RECS_FETCH' }
+    | { type: 'RECS_FETCH_SUCCESS'; payload: EnrichedChampionSuggestion[] }
+    | { type: 'RECS_FETCH_ERROR' }
+    | { type: 'CLEAR_ANALYSIS' }
+    | { type: 'SET_MOBILE_TAB'; payload: MobileTab }
+    | { type: 'SET_ANALYSIS_COMPLETED'; payload: boolean }
+    | { type: 'SET_CONFIRMATION'; payload: ConfirmationState | null };
+
+const initialState: DraftLabState = {
+    selectionContext: null,
+    aiAdvice: null,
+    isLoading: false,
+    error: null,
+    recommendations: [],
+    isRecsLoading: false,
+    mobileTab: 'blue',
+    analysisCompleted: false,
+    confirmationWarnings: null,
+};
+
+function draftLabReducer(state: DraftLabState, action: DraftLabAction): DraftLabState {
+    switch (action.type) {
+        case 'SET_SELECTION_CONTEXT':
+            return { ...state, selectionContext: action.payload };
+        case 'START_ANALYSIS':
+            return { ...state, isLoading: true, error: null };
+        case 'ANALYSIS_SUCCESS':
+            return { ...state, isLoading: false, aiAdvice: action.payload, analysisCompleted: true, mobileTab: 'ai' };
+        case 'ANALYSIS_ERROR':
+            return { ...state, isLoading: false, error: action.payload };
+        case 'START_RECS_FETCH':
+            return { ...state, isRecsLoading: true, recommendations: [] };
+        case 'RECS_FETCH_SUCCESS':
+            return { ...state, isRecsLoading: false, recommendations: action.payload };
+        case 'RECS_FETCH_ERROR':
+            return { ...state, isRecsLoading: false };
+        case 'CLEAR_ANALYSIS':
+            return { ...state, aiAdvice: null, error: null };
+        case 'SET_MOBILE_TAB':
+            return { ...state, mobileTab: action.payload };
+        case 'SET_ANALYSIS_COMPLETED':
+            return { ...state, analysisCompleted: action.payload };
+        case 'SET_CONFIRMATION':
+            return { ...state, confirmationWarnings: action.payload };
+        default:
+            return state;
+    }
+}
+// --- End State Management ---
 
 const GRADE_SCORES: Record<string, number> = { S: 150, A: 100, B: 50, C: 25, D: 10, F: 0 };
 const getScoreValue = (score: string | undefined): number => {
@@ -112,35 +184,29 @@ const validateDraft = (draftState: DraftState): string[] => {
 export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: DraftLabProps) => {
   const { draftState, setDraftState, resetDraft: onReset } = useDraft();
   const { champions, championsLite, latestVersion } = useChampions();
+  
+  // --- REDUCER STATE ---
+  const [state, dispatch] = useReducer(draftLabReducer, initialState);
+  const { selectionContext, aiAdvice, isLoading, error, recommendations, isRecsLoading, mobileTab, analysisCompleted, confirmationWarnings } = state;
+
+  // --- LOCAL UI STATE ---
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [draftNotes, setDraftNotes] = useState('');
-  const [selectionContext, setSelectionContext] = useState<DraggedOverSlot | null>(null);
   const [activeRole, setActiveRole] = useState<string | null>(null);
-  const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [counterMetaMode, setCounterMetaMode] = useState(false);
   const [quickLookChampion, setQuickLookChampion] = useState<ChampionLite | null>(null);
-  const [confirmationWarnings, setConfirmationWarnings] = useState<ConfirmationState | null>(null);
+  const [draggedOverSlot, setDraggedOverSlot] = useState<DraggedOverSlot | null>(null);
+  const [isAnalysisStale, setIsAnalysisStale] = useState(false);
   
   const { profile, addSP, completeMission, addChampionMastery, addRecentFeedback } = useUserProfile();
   const { settings } = useSettings();
   const { addEntry: addPlaybookEntry } = usePlaybook();
-  const [analysisCompleted, setAnalysisCompleted] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'blue' | 'red' | 'ai'>('blue');
-  const [draggedOverSlot, setDraggedOverSlot] = useState<DraggedOverSlot | null>(null);
   
   const advicePanelRef = useRef<HTMLDivElement>(null);
-
-  const [recommendations, setRecommendations] = useState<EnrichedChampionSuggestion[]>([]);
-  const [isRecsLoading, setIsRecsLoading] = useState(false);
-
   const [intelData, setIntelData] = useState<IntelData | null>(null);
-  
   const abortControllerRef = useRef<AbortController | null>(null);
-  
   const draftStateString = useMemo(() => JSON.stringify(draftState), [draftState]);
 
   // Fetch contextual intel data on load
@@ -163,12 +229,8 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
 
             setIntelData({ sTier, buffs, nerfs });
         } catch (err) {
-            // Silently ignore abort errors, as they are expected on unmount or in Strict Mode.
-            if (err instanceof DOMException && err.name === 'AbortError') {
-                return;
-            }
+            if (err instanceof DOMException && err.name === 'AbortError') return;
             console.error("Failed to fetch intel data:", err);
-            // Don't show toast, it's a background task.
         }
     };
     
@@ -185,17 +247,16 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
     return allSlots.every(slot => slot.champion === null);
   }, [draftState]);
 
+  // Mark analysis as stale when draft changes, instead of clearing it
   useEffect(() => {
-    // This effect now runs whenever the draft state changes, ensuring a clean slate
-    // for new analyses without needing to track the previous state manually.
-    setAiAdvice(null);
-    setError(null);
-  }, [draftStateString]);
+    if (aiAdvice) {
+        setIsAnalysisStale(true);
+    }
+  }, [draftStateString, aiAdvice]);
 
   useEffect(() => {
     if (!selectionContext) {
-      setRecommendations([]);
-      setIsRecsLoading(false);
+      dispatch({ type: 'RECS_FETCH_SUCCESS', payload: [] });
       setActiveRole(null);
       return;
     }
@@ -210,8 +271,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
     const { signal } = controller;
 
     const fetchRecs = async () => {
-      setIsRecsLoading(true);
-      setRecommendations([]);
+      dispatch({ type: 'START_RECS_FETCH' });
       try {
         const topMasteryChamps = profile.championMastery
             .sort((a, b) => b.points - a.points)
@@ -229,16 +289,13 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
             })
             .filter((item): item is EnrichedChampionSuggestion => item !== null);
 
-        setRecommendations(enrichedSuggestions);
+        dispatch({ type: 'RECS_FETCH_SUCCESS', payload: enrichedSuggestions });
       } catch (err) {
         if (signal.aborted) return;
         if (!(err instanceof DOMException && err.name === 'AbortError')) {
           console.error("Failed to fetch recommendations:", err);
           toast.error("Could not fetch champion suggestions.");
-        }
-      } finally {
-        if (!signal.aborted) {
-          setIsRecsLoading(false);
+          dispatch({ type: 'RECS_FETCH_ERROR' });
         }
       }
     };
@@ -253,21 +310,17 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
-      // Per code review: reset state on unmount to prevent stale UI on navigation.
-      setIsLoading(false);
-      setError(null);
     };
   }, []);
 
   const handleAnalyze = useCallback(async (signal: AbortSignal) => {
-    setIsLoading(true);
-    setError(null);
+    dispatch({ type: 'START_ANALYSIS' });
+    setIsAnalysisStale(false);
     try {
       const advice = await getDraftAdvice(draftState, settings.primaryRole, profile.skillLevel, signal);
       if (!signal.aborted) {
-        setAiAdvice(advice);
-        setAnalysisCompleted(true);
-        setMobileTab('ai');
+        dispatch({ type: 'ANALYSIS_SUCCESS', payload: advice });
+        
         setTimeout(() => {
             advicePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -282,7 +335,6 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
             });
         }
         
-        // Proactive feedback toast
         if (score && ['C', 'D', 'F'].some(g => score.startsWith(g))) {
             const hasActionableWeakness = weaknesses.some(w => w.keyword && KEYWORDS.some(k => k.term.toLowerCase() === w.keyword!.toLowerCase()));
             if(hasActionableWeakness) {
@@ -336,15 +388,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
         return;
       }
       if (!signal.aborted) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unknown error occurred.');
-        }
-      }
-    } finally {
-      if (!signal.aborted) {
-        setIsLoading(false);
+        dispatch({ type: 'ANALYSIS_ERROR', payload: err instanceof Error ? err.message : 'An unknown error occurred.' });
       }
     }
   }, [draftState, addSP, completeMission, addChampionMastery, addRecentFeedback, profile.lastLabAnalysisDate, settings.primaryRole, profile.skillLevel]);
@@ -371,7 +415,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
     };
 
     if (warnings.length > 0) {
-        setConfirmationWarnings({
+        dispatch({ type: 'SET_CONFIRMATION', payload: {
             title: "Draft Composition Warnings",
             message: (
                 <div className="space-y-2 text-left">
@@ -384,7 +428,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
             onConfirm: performAnalysis,
             confirmVariant: 'primary',
             confirmText: 'Analyze Anyway'
-        });
+        }});
     } else {
         performAnalysis();
     }
@@ -392,35 +436,31 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
 
   const handleSlotClick = (team: TeamSide, type: 'pick' | 'ban', index: number) => {
     if (selectionContext?.team === team && selectionContext?.type === type && selectionContext?.index === index) {
-        setSelectionContext(null);
+        dispatch({ type: 'SET_SELECTION_CONTEXT', payload: null });
     } else {
-        setSelectionContext({ team, type, index });
+        dispatch({ type: 'SET_SELECTION_CONTEXT', payload: { team, type, index } });
     }
   };
 
-  const updateDraftSlot = useCallback((champion: Champion | null, team: TeamSide, type: 'pick' | 'ban', index: number) => {
-    setDraftState(prevState => {
-      const isPick = type === 'pick';
-      const targetArray = isPick ? prevState[team].picks : prevState[team].bans;
-
-      const newArray = targetArray.map((slot, i) =>
-        i === index ? { ...slot, champion } : slot
-      );
-
-      return {
-        ...prevState,
-        [team]: {
-          ...prevState[team],
-          [isPick ? 'picks' : 'bans']: newArray,
-        },
-      };
-    });
-    setAiAdvice(null);
-    setError(null);
-  }, [setDraftState]);
+  const updateDraftSlotAndMarkStale = useCallback((champion: Champion | null, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    setDraftState(prev => updateSlotInDraft(prev, team, type, index, champion));
+    if (aiAdvice) {
+        setIsAnalysisStale(true);
+    }
+  }, [setDraftState, aiAdvice]);
   
   const handleChampionSelect = useCallback((championLite: ChampionLite) => {
     if (!selectionContext) return;
+
+    const allPicksAndBans = [
+        ...draftState.blue.picks, ...draftState.red.picks,
+        ...draftState.blue.bans, ...draftState.red.bans
+    ];
+    const isAlreadyPicked = allPicksAndBans.some(slot => slot.champion?.id === championLite.id);
+    if (isAlreadyPicked) {
+        toast.error(`${championLite.name} is already picked or banned.`);
+        return;
+    }
 
     const champion = champions.find(c => c.id === championLite.id);
     if (!champion) {
@@ -430,13 +470,13 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
     }
     
     const { team, type, index } = selectionContext;
-    updateDraftSlot(champion, team, type, index);
-    setSelectionContext(null);
-  }, [selectionContext, updateDraftSlot, champions]);
+    updateDraftSlotAndMarkStale(champion, team, type, index);
+    dispatch({ type: 'SET_SELECTION_CONTEXT', payload: null });
+  }, [selectionContext, updateDraftSlotAndMarkStale, champions, draftState]);
 
   const handleClearSlot = useCallback((team: TeamSide, type: 'pick' | 'ban', index: number) => {
-    updateDraftSlot(null, team, type, index);
-  }, [updateDraftSlot]);
+    updateDraftSlotAndMarkStale(null, team, type, index);
+  }, [updateDraftSlotAndMarkStale]);
   
   const handleDragStart = (event: React.DragEvent, championId: string) => {
     event.dataTransfer.setData('championId', championId);
@@ -459,18 +499,33 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
   const handleDrop = (event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
       event.preventDefault();
       const championId = event.dataTransfer.getData('championId');
+      
+      const allPicksAndBans = [
+          ...draftState.blue.picks, ...draftState.red.picks,
+          ...draftState.blue.bans, ...draftState.red.bans
+      ];
+      const isAlreadyPicked = allPicksAndBans.some(slot => slot.champion?.id === championId);
+      if (isAlreadyPicked) {
+          const championName = champions.find(c => c.id === championId)?.name || 'Champion';
+          toast.error(`${championName} is already picked or banned.`);
+          setDraggedOverSlot(null);
+          return;
+      }
+
       const champion = champions.find(c => c.id === championId);
       if (champion) {
-          updateDraftSlot(champion, team, type, index);
+          updateDraftSlotAndMarkStale(champion, team, type, index);
       }
       setDraggedOverSlot(null);
-      setSelectionContext(null);
+      dispatch({ type: 'SET_SELECTION_CONTEXT', payload: null });
   };
 
   const handleReset = () => {
     onReset();
-    setSelectionContext(null);
-    setMobileTab('blue');
+    dispatch({ type: 'SET_SELECTION_CONTEXT', payload: null });
+    dispatch({ type: 'CLEAR_ANALYSIS' });
+    setIsAnalysisStale(false);
+    dispatch({ type: 'SET_MOBILE_TAB', payload: 'blue' });
   };
   
   const handleSaveToPlaybook = async () => {
@@ -482,14 +537,13 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
     }
     setDraftNotes(initialNotes);
     
-    // Auto-generate a name
     setDraftName('Generating name...');
     try {
         const tempName = await generateDraftName(draftState);
         setDraftName(tempName || '');
     } catch (e) {
         console.error("Failed to generate draft name:", e);
-        setDraftName(''); // Clear the loading message on error
+        setDraftName('');
         toast.error("Could not suggest a name for the draft.");
     }
   };
@@ -545,7 +599,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
             }
         };
     });
-    setSelectionContext(null);
+    dispatch({ type: 'SET_SELECTION_CONTEXT', payload: null });
   };
 
   const getActiveSlotForTeam = (team: TeamSide) => {
@@ -555,18 +609,36 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
     return null;
   };
   
-  const MobileTabButton = ({ target, children }: { target: 'blue' | 'red' | 'ai', children: React.ReactNode }) => (
+  const MobileTabButton = ({ target, children }: { target: MobileTab, children: React.ReactNode }) => (
     <button 
         id={`mobile-tab-btn-${target}`}
         role="tab"
         aria-selected={mobileTab === target}
         aria-controls={`mobile-tab-panel-${target}`}
-        onClick={() => setMobileTab(target)} 
+        onClick={() => dispatch({ type: 'SET_MOBILE_TAB', payload: target })} 
         className={`px-4 py-3 rounded-md w-full text-center font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent focus-visible:ring-offset-surface-primary ${mobileTab === target ? 'bg-accent text-on-accent' : 'text-text-secondary hover:bg-surface-secondary'}`}
     >
         {children}
     </button>
   );
+
+  const TABS: MobileTab[] = ['blue', 'red', 'ai'];
+  const SWIPE_CONFIDENCE_THRESHOLD = 10000;
+  const handleSwipe = (offset: { x: number; y: number }, velocity: { x: number; y: number }) => {
+    const swipePower = Math.abs(offset.x) * velocity.x;
+    if (swipePower < -SWIPE_CONFIDENCE_THRESHOLD) { // Swiped left
+        const currentIndex = TABS.indexOf(mobileTab);
+        if (currentIndex < TABS.length - 1) {
+            dispatch({ type: 'SET_MOBILE_TAB', payload: TABS[currentIndex + 1] });
+        }
+    } else if (swipePower > SWIPE_CONFIDENCE_THRESHOLD) { // Swiped right
+        const currentIndex = TABS.indexOf(mobileTab);
+        if (currentIndex > 0) {
+            dispatch({ type: 'SET_MOBILE_TAB', payload: TABS[currentIndex - 1] });
+        }
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -578,7 +650,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
         <QuickLookPanel champion={quickLookChampion} onClose={() => setQuickLookChampion(null)} />
          <ConfirmationModal 
             isOpen={!!confirmationWarnings}
-            onClose={() => setConfirmationWarnings(null)}
+            onClose={() => dispatch({ type: 'SET_CONFIRMATION', payload: null })}
             state={confirmationWarnings}
         />
       <div id="draftlab-welcome" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-bg-secondary border border-border-primary p-4 shadow-sm">
@@ -627,7 +699,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
                     </Button>
                 </div>
                 <div id="advice-panel" ref={advicePanelRef}>
-                    <AdvicePanel advice={aiAdvice} isLoading={isLoading} error={error} userRole={settings.primaryRole} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => setAnalysisCompleted(false)} />
+                    <AdvicePanel advice={aiAdvice} isLoading={isLoading} error={error} userRole={settings.primaryRole} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => dispatch({ type: 'SET_ANALYSIS_COMPLETED', payload: false })} isStale={isAnalysisStale} />
                 </div>
             </div>
 
@@ -635,31 +707,44 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
         </div>
 
         {/* Mobile Layout */}
-        <div className="lg:hidden flex flex-col gap-4">
+        <div className="lg:hidden flex flex-col gap-4 overflow-x-hidden">
             <div className="flex items-center gap-2 bg-surface-primary p-1 rounded-lg" role="tablist" aria-label="Draft sections">
                 <MobileTabButton target="blue">Blue Team</MobileTabButton>
                 <MobileTabButton target="red">Red Team</MobileTabButton>
                 <MobileTabButton target="ai">AI Advice</MobileTabButton>
             </div>
             
-            <div hidden={mobileTab !== 'blue'} role="tabpanel" id="mobile-tab-panel-blue" aria-labelledby="mobile-tab-btn-blue">
-                <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={getActiveSlotForTeam('blue')} onClearSlot={handleClearSlot} onDrop={handleDrop} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
-            </div>
-            <div hidden={mobileTab !== 'red'} role="tabpanel" id="mobile-tab-panel-red" aria-labelledby="mobile-tab-btn-red">
-                <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={getActiveSlotForTeam('red')} onClearSlot={handleClearSlot} onDrop={handleDrop} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
-            </div>
-            <div hidden={mobileTab !== 'ai'} role="tabpanel" id="mobile-tab-panel-ai" aria-labelledby="mobile-tab-btn-ai">
-                <div className="flex flex-col gap-4">
-                     <div id="analyze-button-container-mobile" className="bg-bg-secondary border border-border-primary p-4 flex justify-center items-center">
-                        <Button onClick={handleAnalyzeClick} disabled={isLoading} variant="primary" className="text-lg px-8 py-4 w-full">
-                            {isLoading ? 'Analyzing...' : 'Analyze Composition'}
-                        </Button>
-                    </div>
-                    <div ref={advicePanelRef}>
-                        <AdvicePanel advice={aiAdvice} isLoading={isLoading} error={error} userRole={settings.primaryRole} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => setAnalysisCompleted(false)} />
-                    </div>
-                </div>
-            </div>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={mobileTab}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.1}
+                    onDragEnd={(e, { offset, velocity }) => handleSwipe(offset, velocity)}
+                    initial={{ opacity: 0, x: 100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                >
+                    {mobileTab === 'blue' && (
+                        <div role="tabpanel" id="mobile-tab-panel-blue" aria-labelledby="mobile-tab-btn-blue">
+                             <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={getActiveSlotForTeam('blue')} onClearSlot={handleClearSlot} onDrop={handleDrop} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
+                        </div>
+                    )}
+                     {mobileTab === 'red' && (
+                        <div role="tabpanel" id="mobile-tab-panel-red" aria-labelledby="mobile-tab-btn-red">
+                            <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={getActiveSlotForTeam('red')} onClearSlot={handleClearSlot} onDrop={handleDrop} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
+                        </div>
+                    )}
+                     {mobileTab === 'ai' && (
+                        <div role="tabpanel" id="mobile-tab-panel-ai" aria-labelledby="mobile-tab-btn-ai">
+                             <div ref={advicePanelRef}>
+                                <AdvicePanel advice={aiAdvice} isLoading={isLoading} error={error} userRole={settings.primaryRole} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => dispatch({ type: 'SET_ANALYSIS_COMPLETED', payload: false })} isStale={isAnalysisStale} />
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
         </div>
 
 
@@ -731,6 +816,23 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
                 </div>
             </div>
       </Modal>
+
+      {/* Mobile Floating Action Button for Analyze */}
+       <div className="lg:hidden fixed bottom-20 right-4 z-30">
+            <Button
+                onClick={handleAnalyzeClick}
+                disabled={isLoading}
+                variant="primary"
+                className="rounded-full shadow-lg shadow-black/30 w-16 h-16 flex items-center justify-center disabled:bg-surface-tertiary disabled:shadow-none disabled:saturate-50"
+                aria-label="Analyze Composition"
+            >
+                {isLoading ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-on-accent"></div>
+                ) : (
+                    <FlaskConical size={24} />
+                )}
+            </Button>
+        </div>
 
     </div>
   );

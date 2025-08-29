@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Champion } from '../../types';
+import type { Champion, TeamSide } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Ban, X } from 'lucide-react';
 
@@ -13,12 +13,26 @@ interface BanSlotProps {
   onDragLeave?: (e: React.DragEvent) => void;
   isActive?: boolean;
   isDraggedOver?: boolean;
+  side: TeamSide;
+  index: number;
 }
 
-export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false }: BanSlotProps) => {
+export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side, index }: BanSlotProps) => {
   const activeClasses = isActive ? 'ring-2 ring-accent shadow-glow-accent' :
                       isDraggedOver ? 'ring-2 ring-info' :
                       'ring-1 ring-border-primary';
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  const teamName = side.charAt(0).toUpperCase() + side.slice(1);
+  const ariaLabel = champion
+    ? `${teamName} Team Ban ${index + 1}: ${champion.name}. Press Enter or Space to change.`
+    : `${teamName} Team Ban ${index + 1}: Empty. Press Enter or Space to select a champion.`;
   
   return (
     <div 
@@ -27,7 +41,11 @@ export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDrag
       onDragOver={onDragOver}
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
-      className={`w-12 h-12 bg-surface-tertiary cursor-pointer hover:ring-accent/70 transition-all duration-200 flex items-center justify-center relative group ${activeClasses}`}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      className={`w-12 h-12 bg-surface-tertiary cursor-pointer hover:ring-accent/70 transition-all duration-200 flex items-center justify-center relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:scale-105 active:scale-[0.98] ${activeClasses}`}
     >
        {champion && onClear && (
           <button 

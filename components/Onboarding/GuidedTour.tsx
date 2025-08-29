@@ -1,8 +1,8 @@
-
 import React, { useState, useLayoutEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../common/Button';
 import FocusTrap from 'focus-trap-react';
+import toast from 'react-hot-toast';
 
 export interface TourStep {
     selector: string;
@@ -53,6 +53,7 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
             const element = document.querySelector(step.selector);
             
             if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
                 const rect = element.getBoundingClientRect();
                 const margin = 5;
                 setSpotlightStyle({
@@ -62,14 +63,22 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
                     left: rect.left - margin,
                 });
                 setContentStyle(calculatePosition(rect));
-                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                console.warn(`Guided tour element not found for selector: ${step.selector}`);
+                toast.error("An error occurred with the guided tour. It has been stopped.");
+                onClose();
             }
         };
 
-        updatePosition();
+        // Delay slightly to allow for UI to settle after scrolling
+        const timerId = setTimeout(updatePosition, 150);
         window.addEventListener('resize', updatePosition);
-        return () => window.removeEventListener('resize', updatePosition);
-    }, [isOpen, currentStep, steps]);
+
+        return () => {
+            clearTimeout(timerId);
+            window.removeEventListener('resize', updatePosition);
+        };
+    }, [isOpen, currentStep, steps, onClose]);
     
     if (!isOpen) return null;
 

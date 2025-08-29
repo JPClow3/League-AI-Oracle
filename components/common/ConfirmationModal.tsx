@@ -23,7 +23,7 @@ export const ConfirmationModal = ({ isOpen, onClose, state }: ConfirmationModalP
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={state?.title || ''}>
+        <Modal isOpen={isOpen} onClose={onClose} title={state?.title || ''} size="md">
             <div className="p-6 space-y-6">
                 <div className="text-lg text-text-secondary">{state?.message || ''}</div>
                 <div className="flex justify-end gap-4">

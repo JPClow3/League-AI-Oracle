@@ -5,9 +5,9 @@ import { Loader } from '../common/Loader';
 import { Button } from '../common/Button';
 import { SourceList } from '../common/SourceList';
 import { MISSION_IDS } from '../../constants';
-import toast from 'react-hot-toast';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useChampions } from '../../contexts/ChampionContext';
+import { useGeminiData } from '../../hooks/useGemini';
 
 interface IntelProps {
     onLoadChampionInLab: (championId: string, role?: string) => void;
@@ -66,48 +66,22 @@ const PatchNotesDisplay = ({ patchNotes }: { patchNotes: StructuredPatchNotes })
 
 
 export const Intel = ({ onLoadChampionInLab }: IntelProps) => {
-    const [tierList, setTierList] = useState<StructuredTierList | null>(null);
-    const [patchNotes, setPatchNotes] = useState<StructuredPatchNotes | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const { completeMission } = useUserProfile();
     const { championsLite } = useChampions();
 
     const fetchData = useCallback(async (signal: AbortSignal) => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const [tierListData, patchNotesData] = await Promise.all([
-                getTierList(signal),
-                getPatchNotesSummary(signal)
-            ]);
-            if (!signal.aborted) {
-                setTierList(tierListData);
-                setPatchNotes(patchNotesData);
-                completeMission(MISSION_IDS.GETTING_STARTED.CHECK_META);
-            }
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') {
-                return;
-            }
-            setError('Failed to fetch meta intelligence. The Oracle may be busy.');
-        } finally {
-            if (!signal.aborted) {
-                setIsLoading(false);
-            }
+        const [tierListData, patchNotesData] = await Promise.all([
+            getTierList(signal),
+            getPatchNotesSummary(signal)
+        ]);
+        // Only mark mission as complete if both fetches succeed.
+        if (!signal.aborted) {
+            completeMission(MISSION_IDS.GETTING_STARTED.CHECK_META);
         }
+        return { tierList: tierListData, patchNotes: patchNotesData };
     }, [completeMission]);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        fetchData(controller.signal);
-        return () => {
-            controller.abort();
-            // Per code review: reset state on unmount to prevent stale UI on navigation.
-            setIsLoading(false);
-            setError(null);
-        };
-    }, [fetchData]);
+    
+    const { data, isLoading, error, execute: refetch } = useGeminiData(fetchData);
 
     const handleLoadChampion = (championName: string, role: string) => {
         const champion = championsLite.find(c => c.name.toLowerCase() === championName.toLowerCase());
@@ -124,18 +98,15 @@ export const Intel = ({ onLoadChampionInLab }: IntelProps) => {
         return (
             <div className="text-center p-8 bg-surface rounded-lg border border-border">
                 <p className="text-error mb-4">{error}</p>
-                <Button onClick={() => {
-                    const controller = new AbortController();
-                    fetchData(controller.signal);
-                }}>Retry</Button>
+                <Button onClick={() => refetch()}>Retry</Button>
             </div>
         );
     }
 
     return (
          <div className="space-y-6">
-            {tierList && <TierListDisplay tierList={tierList} onLoadChampion={handleLoadChampion} />}
-            {patchNotes && <PatchNotesDisplay patchNotes={patchNotes} />}
+            {data?.tierList && <TierListDisplay tierList={data.tierList} onLoadChampion={handleLoadChampion} />}
+            {data?.patchNotes && <PatchNotesDisplay patchNotes={data.patchNotes} />}
         </div>
     );
 };

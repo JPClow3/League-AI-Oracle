@@ -5,7 +5,7 @@ import { Tooltip } from '../common/Tooltip';
 import { KeywordHighlighter } from '../Academy/KeywordHighlighter';
 import { PowerSpikeTimeline } from './PowerSpikeTimeline';
 import { KEYWORDS } from '../Academy/lessons';
-import { ThumbsUp, ThumbsDown, ChevronDown, Info } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { Button } from '../common/Button';
 
 interface AdvicePanelProps {
@@ -16,6 +16,7 @@ interface AdvicePanelProps {
   navigateToAcademy: (lessonId: string) => void;
   analysisCompleted: boolean;
   onAnimationEnd: () => void;
+  isStale: boolean;
 }
 
 const getAnalysisTitle = (score: string | undefined): { title: string, className: string } => {
@@ -83,7 +84,7 @@ const AdviceSection = ({ title, children, defaultOpen = false }: { title: string
     );
 };
 
-export const AdvicePanel = ({ advice, isLoading, error, userRole, navigateToAcademy, analysisCompleted, onAnimationEnd }: AdvicePanelProps) => {
+export const AdvicePanel = ({ advice, isLoading, error, userRole, navigateToAcademy, analysisCompleted, onAnimationEnd, isStale }: AdvicePanelProps) => {
   const [activeTeam, setActiveTeam] = useState<'blue' | 'red'>('blue');
   const teamAnalysis = advice?.teamAnalysis[activeTeam];
 
@@ -130,6 +131,14 @@ export const AdvicePanel = ({ advice, isLoading, error, userRole, navigateToAcad
         className={`bg-bg-secondary border border-border-primary p-4 space-y-4 transition-shadow duration-1000 ${analysisCompleted ? 'shadow-glow-accent animate-pulse-once' : ''}`}
         onAnimationEnd={onAnimationEnd}
     >
+        {isStale && (
+            <div className="bg-warning/10 text-warning text-sm p-3 rounded-md flex items-center gap-2 border border-warning/20">
+                <AlertTriangle className="h-5 w-5" />
+                <div>
+                    <strong>Analysis is out of date.</strong> The draft has changed. Re-analyze for updated advice.
+                </div>
+            </div>
+        )}
       <div className="text-center">
         <div className="flex justify-center gap-2 mb-2 bg-surface-tertiary p-1">
             <button onClick={() => setActiveTeam('blue')} className={`w-full py-1.5 text-sm font-semibold transition-colors ${activeTeam === 'blue' ? 'bg-bg-secondary shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Blue Team</button>

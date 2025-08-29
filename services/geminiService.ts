@@ -20,6 +20,36 @@ function getAiInstance(): GoogleGenAI | null {
 }
 
 /**
+ * Creates a race between a promise and an AbortSignal.
+ * @param promise The promise to race.
+ * @param signal The AbortSignal.
+ * @returns A new promise that resolves/rejects with the original promise, or rejects if the signal is aborted.
+ */
+const _raceWithAbort = <T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> => {
+    if (!signal) return promise;
+    return new Promise((resolve, reject) => {
+        const abortHandler = () => {
+            signal.removeEventListener('abort', abortHandler);
+            reject(new DOMException('The user aborted a request.', 'AbortError'));
+        };
+
+        signal.addEventListener('abort', abortHandler);
+
+        promise.then(
+            (res) => {
+                signal.removeEventListener('abort', abortHandler);
+                resolve(res);
+            },
+            (err) => {
+                signal.removeEventListener('abort', abortHandler);
+                reject(err);
+            }
+        );
+    });
+};
+
+
+/**
  * A generic retry wrapper for API calls to handle transient errors.
  * Implements exponential backoff with jitter and respects AbortSignal.
  * @param apiCall The async function to call.
@@ -38,7 +68,7 @@ async function _withRetries<T>(
     while (true) {
         signal?.throwIfAborted();
         try {
-            return await apiCall();
+            return await _raceWithAbort(apiCall(), signal);
         } catch (error) {
             // Do not retry if the request was aborted by the client.
             if (error instanceof DOMException && error.name === 'AbortError') {
@@ -53,8 +83,24 @@ async function _withRetries<T>(
                 error.message.includes('unavailable')
             );
             
+            const isNonRetryableClientError = error instanceof Error && (
+                error.message.includes('400') ||
+                error.message.includes('401') ||
+                error.message.includes('403') ||
+                error.message.includes('404')
+            );
+            
             if (!isRetryable || retries >= maxRetries) {
-                throw error;
+                 // After final retry, throw a more user-friendly error for network/server issues.
+                if (isRetryable) {
+                    console.error("API call failed after max retries.", error);
+                    throw new Error('SERVICE_UNAVAILABLE: The AI service is currently unavailable. Please try again later.');
+                }
+                 if (isNonRetryableClientError) {
+                    console.error("Non-retryable client error:", error);
+                    throw new Error('CLIENT_ERROR: There was a problem with the request to the AI. If this persists, please report it.');
+                }
+                throw error; // Throw original error for other issues.
             }
             
             retries++;
@@ -86,7 +132,7 @@ interface GroundingChunk {
 function _parseJsonResponse<T>(responseText: string | undefined, context: string): T {
     let textToParse = responseText?.trim();
     if (!textToParse) {
-        throw new Error(`AI returned an empty response for ${context}.`);
+        throw new Error(`AI_EMPTY_RESPONSE: The AI returned an empty response for ${context}. This might be a temporary issue, please try again.`);
     }
 
     // More robustly find and extract the JSON block
@@ -99,7 +145,7 @@ function _parseJsonResponse<T>(responseText: string | undefined, context: string
         return JSON.parse(textToParse) as T;
     } catch (parseError) {
         console.error(`Failed to parse JSON response for ${context} from Gemini API:`, parseError, `\nReceived text: ${textToParse}`);
-        throw new Error(`AI returned an invalid response format for ${context}.`);
+        throw new Error(`AI_INVALID_FORMAT: The AI's response for ${context} was in an unexpected format. Please try again.`);
     }
 }
 

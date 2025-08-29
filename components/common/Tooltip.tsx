@@ -1,4 +1,5 @@
-import React, { useId } from 'react';
+import React, { useId, useState, useRef, useLayoutEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface TooltipProps {
   content: React.ReactNode;
@@ -7,30 +8,66 @@ interface TooltipProps {
 
 export const Tooltip = ({ content, children }: TooltipProps) => {
   const tooltipId = useId();
+  const [isVisible, setIsVisible] = useState(false);
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  const targetRef = useRef<HTMLElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
-  // Clone the child to add the necessary ARIA attribute for accessibility.
+  useLayoutEffect(() => {
+    if (isVisible && targetRef.current && tooltipRef.current) {
+        const targetRect = targetRef.current.getBoundingClientRect();
+        const tooltipRect = tooltipRef.current.getBoundingClientRect();
+        const margin = 10;
+
+        let top = targetRect.top - tooltipRect.height - margin;
+        let left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+
+        // Adjust for top overflow
+        if (top < margin) {
+            top = targetRect.bottom + margin;
+        }
+
+        // Adjust for horizontal overflow
+        if (left < margin) {
+            left = margin;
+        } else if (left + tooltipRect.width > window.innerWidth - margin) {
+            left = window.innerWidth - tooltipRect.width - margin;
+        }
+
+        setStyle({ top, left });
+    }
+  }, [isVisible]);
+
   const clonedChild = React.cloneElement(children, {
     ...children.props,
     'aria-describedby': tooltipId,
+    ref: targetRef,
+    onMouseEnter: () => setIsVisible(true),
+    onMouseLeave: () => setIsVisible(false),
+    onFocus: () => setIsVisible(true),
+    onBlur: () => setIsVisible(false),
   });
-  
+
   return (
-    <span className="relative group inline-block">
+    <>
       {clonedChild}
-      <div 
-        id={tooltipId}
-        role="tooltip"
-        // The tooltip's visibility is now controlled purely by CSS group-hover and group-focus-within,
-        // making it more reliable, accessible, and aligned with standard web patterns.
-        className="absolute bottom-full mb-3 w-64 text-[hsl(var(--text-secondary))] text-sm p-3 shadow-lg z-10 transform -translate-x-1/2 left-1/2 
-                   translate-y-1 opacity-0 pointer-events-none 
-                   transition-all duration-200 
-                   group-hover:opacity-100 group-hover:translate-y-0 
-                   group-focus-within:opacity-100 group-focus-within:translate-y-0
-                   tooltip-container"
-      >
-        {content}
-      </div>
-    </span>
+      <AnimatePresence>
+        {isVisible && (
+            <motion.div
+                ref={tooltipRef}
+                id={tooltipId}
+                role="tooltip"
+                className="fixed w-max max-w-xs text-text-secondary text-sm p-3 shadow-lg z-50 tooltip-container"
+                style={style}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                transition={{ duration: 0.2 }}
+            >
+                {content}
+            </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };

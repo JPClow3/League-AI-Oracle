@@ -11,16 +11,16 @@ interface ArmoryProps {
     onLoadChampionInLab: (championId: string, role?: string) => void;
 }
 
-const ChampionCard = ({ champion, onClick }: { champion: ChampionLite; onClick: () => void; }) => (
+const ChampionCard = React.memo(({ champion, onClick }: { champion: ChampionLite; onClick: () => void; }) => (
     <button onClick={onClick} className="group relative bg-surface border border-border rounded-lg text-left hover:border-accent/80 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden shadow-md hover:shadow-xl hover:shadow-accent/10">
         <div className="overflow-hidden">
-            <img src={champion.image} alt={champion.name} className="w-full h-32 object-cover object-top transition-transform duration-300 group-hover:scale-110" />
+            <img src={champion.image} alt={champion.name} loading="lazy" className="w-full h-32 object-cover object-top transition-transform duration-300 group-hover:scale-110" />
         </div>
         <div className="p-3">
             <h3 className="font-bold text-text-primary group-hover:text-accent transition-colors truncate">{champion.name}</h3>
         </div>
     </button>
-);
+));
 
 
 export const Armory = ({ initialSearchTerm, onSearchHandled, onLoadChampionInLab }: ArmoryProps) => {

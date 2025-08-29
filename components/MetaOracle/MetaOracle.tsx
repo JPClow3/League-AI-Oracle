@@ -7,11 +7,7 @@ import { SourceList } from '../common/SourceList';
 import { MarkdownRenderer } from '../common/MarkdownRenderer';
 import { TextArea } from '../common/TextArea';
 import { Eye } from 'lucide-react';
-
-interface OracleResponse {
-    text: string;
-    sources: MetaSource[];
-}
+import { useGeminiData } from '../../hooks/useGemini';
 
 const EXAMPLE_PROMPTS = [
     "What's the best build for Yasuo in the current patch?",
@@ -22,62 +18,47 @@ const EXAMPLE_PROMPTS = [
 
 export const MetaOracle = () => {
     const [query, setQuery] = useState('');
-    const [response, setResponse] = useState<OracleResponse | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
+    
+    const fetcher = useCallback((signal: AbortSignal) => {
+        // Ensure the fetcher function has access to the latest query
+        // by not memoizing the query itself inside the callback's dependencies.
+        return getGroundedAnswer(query, signal);
+    }, [query]); // Re-create fetcher when query changes
 
-    // Effect to handle component unmount and abort pending requests
-    useEffect(() => {
-        return () => {
-            abortControllerRef.current?.abort();
-            // Per code review: reset state on unmount to prevent stale UI on navigation.
-            setIsLoading(false);
-            setError(null);
-            setResponse(null);
-        };
-    }, []);
-
-    const handleSubmit = useCallback(async (currentQuery: string) => {
-        if (!currentQuery.trim()) return;
-
-        abortControllerRef.current?.abort();
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-
-        setIsLoading(true);
-        setError(null);
-        setResponse(null);
-
-        try {
-            const result = await getGroundedAnswer(currentQuery, controller.signal);
-            if (!controller.signal.aborted) {
-                setResponse(result);
-            }
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') {
-              console.log("Oracle query aborted.");
-              return;
-            }
-            if (!controller.signal.aborted) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-            }
-        } finally {
-            if (!controller.signal.aborted) {
-                setIsLoading(false);
-            }
-        }
-    }, []);
+    const { data: response, isLoading, error, execute: fetchResponse } = useGeminiData(fetcher, true);
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        handleSubmit(query);
+        if (query.trim()) {
+            fetchResponse();
+        }
     };
 
     const handleExampleClick = (prompt: string) => {
         setQuery(prompt);
-        handleSubmit(prompt);
+        // The fetcher will be updated due to state change,
+        // so we can call fetchResponse right after.
+        // To be safe, we can use an effect or just call it directly
+        // but it's cleaner to just update state and submit.
+        // A direct call might be better for UX here.
+        // Let's create a wrapper.
+        const executeQuery = async (p: string) => {
+             const result = await getGroundedAnswer(p, new AbortController().signal);
+             // a bit hacky to bypass the hook's state, but works for this UX
+        }
+        fetchResponse(); // This will use the latest `fetcher` with the new query.
     };
+    
+    // This effect ensures that when an example is clicked, the fetch is triggered after the state updates.
+    useEffect(() => {
+        if (isLoading) return; // prevent re-fetching if a fetch is already in progress
+        const isExample = EXAMPLE_PROMPTS.includes(query);
+        const wasJustClicked = response === null; // A simple proxy to know if it's the first query
+        if (isExample && wasJustClicked) {
+            fetchResponse();
+        }
+    }, [query, response, isLoading, fetchResponse]);
+
 
     return (
         <div className="space-y-6">
@@ -112,7 +93,7 @@ export const MetaOracle = () => {
                 {error && !isLoading && (
                     <div aria-live="polite" className="text-center p-8">
                         <p className="text-error mb-4">{error}</p>
-                        <Button onClick={() => handleSubmit(query)}>Retry</Button>
+                        <Button onClick={fetchResponse}>Retry</Button>
                     </div>
                 )}
                 
@@ -123,7 +104,7 @@ export const MetaOracle = () => {
                             {EXAMPLE_PROMPTS.map(prompt => (
                                 <button
                                     key={prompt}
-                                    onClick={() => handleExampleClick(prompt)}
+                                    onClick={() => setQuery(prompt)}
                                     className="px-3 py-2 bg-secondary text-sm hover:bg-border transition-colors"
                                 >
                                     "{prompt}"
