@@ -20,7 +20,7 @@ import { FlaskConical } from 'lucide-react';
 import { ConfirmationModal, ConfirmationState } from '../common/ConfirmationModal';
 import { useChampions } from '../../contexts/ChampionContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { updateSlotInDraft, toSavedDraft } from '../../lib/draftUtils';
+import { updateSlotInDraft, toSavedDraft, swapChampionsInDraft } from '../../lib/draftUtils';
 
 interface DraftLabProps {
   startTour?: boolean;
@@ -330,19 +330,40 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
     dispatch({ type: 'SET_SELECTION_CONTEXT', payload: selectionContext?.team === team && selectionContext.type === type && selectionContext.index === index ? null : { team, type, index } });
   }, [selectionContext]);
   
+  const handleDragStart = (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    // Only allow dragging picks for swapping
+    if (type === 'pick') {
+      e.dataTransfer.setData('sourceSlot', JSON.stringify({ team, type, index }));
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
   const handleDrop = useCallback((event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
       event.preventDefault();
+      
+      const sourceSlotJSON = event.dataTransfer.getData('sourceSlot');
       const championId = event.dataTransfer.getData('championId');
-      const allSlots = [...draftState.blue.picks, ...draftState.red.picks, ...draftState.blue.bans, ...draftState.red.bans];
-      if (allSlots.some(s => s.champion?.id === championId)) {
-          toast.error(`${champions.find(c => c.id === championId)?.name || 'Champion'} is already picked or banned.`);
-      } else {
-          const champion = champions.find(c => c.id === championId);
-          if (champion) updateDraftSlot(champion, team, type, index);
+
+      if (sourceSlotJSON) {
+          // It's a swap between pick slots
+          const sourceSlot = JSON.parse(sourceSlotJSON);
+          if (sourceSlot.team === team && sourceSlot.type === 'pick' && type === 'pick') {
+              setDraftState(prev => swapChampionsInDraft(prev, team, sourceSlot.index, index));
+          }
+      } else if (championId) {
+          // It's a drop from the champion grid (existing logic)
+          const allSlots = [...draftState.blue.picks, ...draftState.red.picks, ...draftState.blue.bans, ...draftState.red.bans];
+          if (allSlots.some(s => s.champion?.id === championId)) {
+              toast.error(`${champions.find(c => c.id === championId)?.name || 'Champion'} is already picked or banned.`);
+          } else {
+              const champion = champions.find(c => c.id === championId);
+              if (champion) updateDraftSlot(champion, team, type, index);
+          }
       }
+
       setDraggedOverSlot(null);
       dispatch({ type: 'SET_SELECTION_CONTEXT', payload: null });
-  }, [draftState, champions, updateDraftSlot]);
+  }, [draftState, champions, updateDraftSlot, setDraftState]);
 
   const handleReset = useCallback(() => {
     onReset();
@@ -425,8 +446,8 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
       <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Draft Panels */}
           <div className="lg:col-span-1 space-y-6">
-            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'blue' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} isAnalyzing={isLoading} />
-            <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'red' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} isAnalyzing={isLoading} />
+            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'blue' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragStart={handleDragStart} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} isAnalyzing={isLoading} />
+            <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'red' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragStart={handleDragStart} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} isAnalyzing={isLoading} />
           </div>
 
           {/* Right Column: Controls, Advice, and Champion Grid */}
@@ -450,8 +471,8 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: Draft
           </div>
           <AnimatePresence mode="wait">
               <motion.div key={mobileTab} drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.1} onDragEnd={(e, { offset, velocity }) => handleSwipe(offset, velocity)} initial={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -100 }} transition={{ duration: 0.2 }}>
-                  {mobileTab === 'blue' && <div role="tabpanel"><TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'blue' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} /></div>}
-                  {mobileTab === 'red' && <div role="tabpanel"><TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'red' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} /></div>}
+                  {mobileTab === 'blue' && <div role="tabpanel"><TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'blue' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragStart={handleDragStart} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} /></div>}
+                  {mobileTab === 'red' && <div role="tabpanel"><TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={selectionContext?.team === 'red' ? selectionContext : null} onClearSlot={(...args) => updateDraftSlot(null, ...args)} onDrop={handleDrop} onDragOver={e => e.preventDefault()} onDragStart={handleDragStart} onDragEnter={(e, ...args) => { e.preventDefault(); setDraggedOverSlot({ team: args[0], type: args[1], index: args[2] }); }} onDragLeave={() => setDraggedOverSlot(null)} draggedOverSlot={draggedOverSlot} /></div>}
                   {mobileTab === 'ai' && <div role="tabpanel" ref={advicePanelRef}><AdvicePanel advice={aiAdvice} isLoading={isLoading} error={error} userRole={settings.primaryRole} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => dispatch({ type: 'SET_ANALYSIS_COMPLETED', payload: false })} isStale={isAnalysisStale} /></div>}
               </motion.div>
           </AnimatePresence>

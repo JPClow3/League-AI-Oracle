@@ -135,6 +135,36 @@ export const updateSlotInDraft = (
     };
 };
 
+/**
+ * Swaps two champions within a team's pick order.
+ * This is a pure function that does not mutate the original state.
+ * @param draftState The current draft state.
+ * @param team The team side ('blue' or 'red').
+ * @param sourceIndex The index of the first champion to swap.
+ * @param destinationIndex The index of the second champion to swap.
+ * @returns A new, updated DraftState object with the champions swapped.
+ */
+export const swapChampionsInDraft = (
+    draftState: DraftState,
+    team: TeamSide,
+    sourceIndex: number,
+    destinationIndex: number
+): DraftState => {
+    const teamState = draftState[team];
+    const newPicks = [...teamState.picks];
+    
+    // Simple array swap
+    [newPicks[sourceIndex], newPicks[destinationIndex]] = [newPicks[destinationIndex], newPicks[sourceIndex]];
+
+    return {
+        ...draftState,
+        [team]: {
+            ...teamState,
+            picks: newPicks,
+        },
+    };
+};
+
 
 // --- Data Dragon Transformation Helpers ---
 

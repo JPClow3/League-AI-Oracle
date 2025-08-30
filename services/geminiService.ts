@@ -241,6 +241,19 @@ const teamAnalysisSchema = {
                     event: { type: Type.STRING, description: "The key event happening at this time, e.g., 'Blue team hits 2-item spike'." }
                 }
             }
+        },
+        keyMatchups: {
+            type: Type.ARRAY,
+            description: "An analysis of the 2-3 most critical role vs role matchups in the draft.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    role: { type: Type.STRING },
+                    blueChampion: { type: Type.STRING },
+                    redChampion: { type: Type.STRING },
+                    analysis: { type: Type.STRING, description: "A one-sentence analysis of who has the advantage and why." }
+                }
+            }
         }
     }
 };
@@ -294,9 +307,9 @@ const draftAdviceSchema = {
 
 function formatDraftStateForPrompt(draftState: DraftState): string {
   const formatTeam = (team: 'blue' | 'red') => {
-    const picks = draftState[team].picks.map(p => p.champion?.name || 'None').join(', ');
+    const picks = draftState[team].picks.map((p, i) => `${ROLES[i]}: ${p.champion?.name || 'None'}`).join(', ');
     const bans = draftState[team].bans.map(b => b.champion?.name || 'None').join(', ');
-    return `${team.toUpperCase()} Team:\n- Picks: ${picks}\n- Bans: ${bans}`;
+    return `${team.toUpperCase()} Team:\n- Picks: [${picks}]\n- Bans: [${bans}]`;
   };
   return `${formatTeam('blue')}\n${formatTeam('red')}`;
 }
@@ -308,18 +321,23 @@ export async function getDraftAdvice(draftState: DraftState, userPrimaryRole: st
   const currentDraft = formatDraftStateForPrompt(draftState);
 
   const prompt = `
-    Analyze the following League of Legends draft state.
-    Current Draft:
+    You are a world-class League of Legends draft analyst, similar to those on a professional broadcast. Your analysis must be sharp, insightful, and grounded in high-level competitive knowledge (like pro play, LCK, LPL, etc.) and meta data from sites like op.gg. Use the provided STRATEGIC_PRIMER as your foundational knowledge base.
+
+    Analyze the following draft state. Your analysis must be based on the final champion roles as provided (e.g., Top: Garen, Jungle: Lee Sin). These positions are final after any potential swaps.
     ${currentDraft}
 
-    Your Role: World-class LoL Analyst and Coach.
-    My primary role is ${userPrimaryRole}. My skill level is ${userSkillLevel}.
-    Use the provided STRATEGIC_PRIMER to analyze the draft based on win conditions, power spikes, and team composition archetypes.
-    Provide a concise, expert-level analysis in the specified JSON format.
-    Give actionable advice, especially for my role.
-    The draft highlight should be the single most impactful champion in the draft.
-    Weakness keywords must be one of these, if applicable: Poke, Dive, Split Push, Engage, Disengage, Peel, Wave Management, Power Spike, Vision Control, Objective Control, Tempo.
-    The timeline must have exactly 4 points: Early Game (0-15m), Mid Game (15-25m), Late Game (25m+), and a key item spike event (e.g., '1-Item Spike'). Power levels are on a scale of 1-10.
+    User Profile: Primary Role is ${userPrimaryRole}, Skill Level is ${userSkillLevel}.
+
+    Your Task: Provide a comprehensive, expert-level analysis in the specified JSON format.
+
+    Key Areas of Analysis:
+    1.  **Compositional Identity**: Identify each team's archetype (e.g., Poke, Dive, Protect the Carry). Analyze the direct interaction between these identities. Is one a natural counter to the other?
+    2.  **Win Conditions**: Clearly state each team's primary path to victory. Be specific (e.g., "Blue wins by using their hard engage to force 5v5s around Dragon Soul, while Red wins by split-pushing with Fiora and avoiding full teamfights.").
+    3.  **Power Spikes**: Analyze and compare the teams' power spike timings. Which team is stronger early, mid, and late? The timeline should reflect this.
+    4.  **Key Matchups**: Identify the 2-3 most critical lane or role matchups that will heavily influence the game's outcome. Provide a concise analysis for each.
+    5.  **Strengths & Weaknesses**: List the core strengths and exploitable weaknesses for each team, referencing concepts from the primer.
+    6.  **Draft Score**: Provide an objective grade and a sharp, concise reason that summarizes the draft quality.
+    7.  **Highlight**: Identify the single most pivotal champion in this draft and explain why they are so impactful.
   `;
   
   const apiCall = () => ai.models.generateContent({
@@ -575,21 +593,32 @@ export async function getTrialQuestion(signal: AbortSignal): Promise<TrialQuesti
     return _parseJsonResponse<TrialQuestion>(response.text, "Trial Question");
 }
 
-export async function getBotDraftAction(draftState: DraftState, turn: { team: TeamSide, type: 'pick' | 'ban' }, persona: ArenaBotPersona, availableChampions: ChampionLite[], signal: AbortSignal): Promise<ChampionSuggestion> {
+export async function getBotDraftAction(draftState: DraftState, turn: { team: TeamSide, type: 'pick' | 'ban', index: number }, persona: ArenaBotPersona, availableChampions: ChampionLite[], signal: AbortSignal): Promise<ChampionSuggestion> {
     const ai = getAiInstance();
     if (!ai) throw new Error("AI service not initialized.");
 
     const currentDraft = formatDraftStateForPrompt(draftState);
     const action = turn.type === 'pick' ? 'pick' : 'ban';
+    const roleForTurn = turn.type === 'pick' ? ROLES[turn.index] : 'Ban';
     const availableNames = availableChampions.map(c => c.name).join(', ');
 
     const prompt = `
-        You are a League of Legends AI drafting bot. Your persona is "${persona}".
-        It is your turn to ${action}. The current draft is:
+        You are a world-class League of Legends AI drafting bot. Your persona dictates your strategy. It is your turn to ${action}. You are filling the slot for **${roleForTurn}**.
+
+        **CRITICAL INSTRUCTION**: Your primary goal is to build the strongest overall team composition. You are **not** restricted to picking a champion for the ${roleForTurn} role. If a high-priority champion for another role is available (e.g., a power pick ADC), you should pick them now to secure them. Assume you can swap champion positions later.
+
+        **Persona: "${persona}"**
+        -   **The Strategist**: Your goal is to build the most coherent and synergistic team composition possible, following the STRATEGIC_PRIMER archetypes. You prioritize meta-strong champions, flex picks, and compositional counters.
+        -   **The Aggressor**: You prioritize winning lanes. You will look for direct lane counters and aggressive, early-game champions to create a snowball lead. You are not afraid of risky, high-reward picks.
+        -   **The Trickster**: You aim to disrupt the enemy's draft. You favor flex picks that hide your strategy, unconventional counters, and champions that punish predictable, meta compositions.
+
+        Current Draft State (champions are in their assigned role slots):
         ${currentDraft}
 
-        Choose one champion from this available list: ${availableNames}
-        Provide a concise reason for your choice based on your persona and the STRATEGIC_PRIMER.
+        Your Task:
+        1.  Analyze the draft so far, considering both teams' compositions with their likely roles.
+        2.  Based on your persona, select the single best champion to ${action} from this list of available champions: ${availableNames}.
+        3.  Provide a concise, sharp reasoning for your choice that clearly reflects your persona's strategy.
     `;
     
     const schema = {
@@ -607,6 +636,7 @@ export async function getBotDraftAction(draftState: DraftState, turn: { team: Te
         config: {
             responseMimeType: "application/json",
             responseSchema: schema,
+            thinkingConfig: { thinkingBudget: 0 }
         }
     });
 

@@ -1,5 +1,6 @@
 
 
+
 export type Page = 'Home' | 'Strategy Forge' | 'The Archives' | 'Academy' | 'Draft Arena' | 'The Armory' | 'Daily Challenge' | 'Profile' | 'The Oracle' | 'Live Co-Pilot';
 export type DraftMode = 'competitive' | 'soloq';
 
@@ -79,6 +80,7 @@ export interface TeamAnalysis {
   draftScoreReasoning?: string;
   draftHighlight?: { championName: string; reasoning: string; };
   powerSpikeTimeline?: { time: string; bluePower: number; redPower: number; event: string; }[];
+  keyMatchups?: { role: string; blueChampion: string; redChampion: string; analysis: string; }[];
 }
 
 export interface PickSuggestion {

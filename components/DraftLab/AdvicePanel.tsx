@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import type { AIAdvice } from '../../types';
+import React, { useState, useMemo } from 'react';
+import type { AIAdvice, TeamAnalysis } from '../../types';
 import { Loader } from '../common/Loader';
-import { Tooltip } from '../common/Tooltip';
 import { KeywordHighlighter } from '../Academy/KeywordHighlighter';
 import { PowerSpikeTimeline } from './PowerSpikeTimeline';
-import { KEYWORDS } from '../Academy/lessons';
-import { ThumbsUp, ThumbsDown, ChevronDown, Info, AlertTriangle } from 'lucide-react';
-import { Button } from '../common/Button';
-import { motion } from 'framer-motion';
+import { ThumbsUp, ThumbsDown, Info, AlertTriangle, ChevronsRight, Swords } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AdvicePanelProps {
   advice: AIAdvice | null;
@@ -32,12 +29,11 @@ const getAnalysisTitle = (score: string | undefined): { title: string, className
 const GradeDisplay = ({ score }: { score: string }) => {
     const grade = score.charAt(0);
     const modifier = score.length > 1 ? score.charAt(1) : '';
-    const gradeColor = getAnalysisTitle(score).className;
+    const { className: gradeColor, title } = getAnalysisTitle(score);
     
     return (
-        <div className={`relative flex items-center justify-center p-4 min-h-[100px] ${gradeColor}`}>
+        <div className={`relative flex flex-col items-center justify-center p-4 min-h-[120px] ${gradeColor}`}>
             <div className="absolute inset-0 bg-current opacity-5"></div>
-            <div className="absolute inset-0 border-2 border-current opacity-20"></div>
             <motion.div
                 className="relative flex items-start justify-center"
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -47,71 +43,148 @@ const GradeDisplay = ({ score }: { score: string }) => {
                  <span className="font-display font-black text-7xl" style={{ textShadow: '0 0 10px currentColor' }}>{grade}</span>
                  <span className="font-display font-bold text-2xl mt-2">{modifier}</span>
             </motion.div>
+            <p className="font-semibold text-sm mt-1">{title}</p>
         </div>
     );
 };
 
-const StrengthIcon = () => (
-    <div className="w-6 h-6 flex-shrink-0 bg-success/10 text-success rounded-full flex items-center justify-center">
-        <ThumbsUp className="h-4 w-4" />
+const StaleWarning = () => (
+    <div className="bg-warning/10 text-warning p-3 rounded-md flex items-center gap-3 border-2 border-warning/20 mb-4">
+        <AlertTriangle className="h-8 w-8 flex-shrink-0" />
+        <div>
+            <strong className="font-bold text-base">Analysis is Out of Date</strong>
+            <p className="text-sm">The draft has changed. Re-analyze for updated insights.</p>
+        </div>
     </div>
 );
 
-const WeaknessIcon = () => (
-    <div className="w-6 h-6 flex-shrink-0 bg-error/10 text-error rounded-full flex items-center justify-center">
-        <ThumbsDown className="h-4 w-4" />
+const TabButton = ({ active, onClick, children }: { active: boolean, onClick: () => void, children: React.ReactNode }) => (
+    <button onClick={onClick} className={`relative px-4 py-2 font-semibold transition-colors ${active ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}>
+        {children}
+        {active && <motion.div layoutId="advice-tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />}
+    </button>
+);
+
+const KeyMatchupCard = ({ matchup }: { matchup: NonNullable<TeamAnalysis['keyMatchups']>[0] }) => (
+    <div className="bg-surface-primary p-4 border border-border">
+        <h4 className="font-semibold text-text-secondary text-center mb-2 uppercase text-xs tracking-wider">{matchup.role}</h4>
+        <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
+            <div className="text-center font-bold text-team-blue truncate">{matchup.blueChampion}</div>
+            <Swords className="h-5 w-5 text-text-muted" />
+            <div className="text-center font-bold text-team-red truncate">{matchup.redChampion}</div>
+        </div>
+        <p className="text-xs text-text-secondary mt-2 text-center italic">"<KeywordHighlighter text={matchup.analysis} />"</p>
     </div>
 );
 
-const AdviceSection = ({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) => {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
 
-    useEffect(() => {
-        setIsOpen(defaultOpen);
-    }, [defaultOpen]);
-
-    return (
-      <div className="bg-surface-primary border border-border-primary">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex justify-between items-center p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-          aria-expanded={isOpen}
-          aria-controls={`section-content-${title.replace(/\s+/g, '-')}`}
-        >
-          <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
-           <ChevronDown className={`h-5 w-5 text-text-secondary transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen && (
-          <div id={`section-content-${title.replace(/\s+/g, '-')}`} className="p-4 border-t border-border-primary bg-surface-secondary/30">
-            {children}
-          </div>
-        )}
-      </div>
-    );
-};
-
-export const AdvicePanel = ({ advice, isLoading, error, userRole, navigateToAcademy, analysisCompleted, onAnimationEnd, isStale }: AdvicePanelProps) => {
-  const [activeTeam, setActiveTeam] = useState<'blue' | 'red'>('blue');
-  const teamAnalysis = advice?.teamAnalysis[activeTeam];
-
-  const analysisTitle = getAnalysisTitle(teamAnalysis?.draftScore);
-  
-  const improvementOpportunities = useMemo(() => {
-        if (!teamAnalysis?.weaknesses) return [];
-        const found = new Set<string>();
-        return (teamAnalysis.weaknesses || [])
+const TeamAnalysisContent = ({ analysis, navigateToAcademy }: { analysis: TeamAnalysis, navigateToAcademy: (lessonId: string) => void }) => {
+     const improvementOpportunities = useMemo(() => {
+        return (analysis.weaknesses || [])
             .map(weakness => {
-                const keyword = weakness.keyword ? KEYWORDS.find(kw => kw.term.toLowerCase() === weakness.keyword!.toLowerCase()) : undefined;
-                if (keyword && !found.has(keyword.lessonId)) {
-                    found.add(keyword.lessonId);
+                const keyword = weakness.keyword;
+                if (keyword) {
                     return { weakness: weakness.description, keyword };
                 }
                 return null;
             })
             .filter((item): item is NonNullable<typeof item> => item !== null);
-    }, [teamAnalysis]);
+    }, [analysis.weaknesses]);
+    
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+                {analysis.draftScore && <GradeDisplay score={analysis.draftScore} />}
+                <div className="bg-surface p-3 text-center text-sm italic text-text-secondary">{analysis.draftScoreReasoning}</div>
 
+                <div className="bg-surface p-4 border border-border space-y-2">
+                    <h3 className="font-semibold text-lg text-accent">Summary</h3>
+                     <p className="text-sm"><strong className="font-semibold text-text-primary">Identity:</strong> <KeywordHighlighter text={analysis.teamIdentity} onKeywordClick={navigateToAcademy} /></p>
+                    <p className="text-sm"><strong className="font-semibold text-text-primary">Win Condition:</strong> <KeywordHighlighter text={analysis.winCondition} onKeywordClick={navigateToAcademy} /></p>
+                </div>
+            </div>
+             <div className="space-y-4">
+                 <div className="bg-surface p-4 border border-border space-y-3">
+                    <h3 className="font-semibold text-lg text-accent">Strengths</h3>
+                    <ul className="space-y-2 text-sm">
+                        {(analysis.strengths || []).map((s, i) => (
+                            <li key={`s-${i}`} className="flex items-start gap-2">
+                                <ThumbsUp className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
+                                <KeywordHighlighter text={s} onKeywordClick={navigateToAcademy} />
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="bg-surface p-4 border border-border space-y-3">
+                    <h3 className="font-semibold text-lg text-error">Weaknesses</h3>
+                     <ul className="space-y-2 text-sm">
+                        {(analysis.weaknesses || []).map((w, i) => (
+                            <li key={`w-${i}`} className="flex items-start gap-2">
+                                <ThumbsDown className="h-4 w-4 text-error flex-shrink-0 mt-0.5" />
+                                <KeywordHighlighter text={w.description} onKeywordClick={navigateToAcademy} />
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    );
+};
 
+const HeadToHeadContent = ({ advice, navigateToAcademy }: { advice: AIAdvice, navigateToAcademy: (lessonId: string) => void }) => {
+    return (
+        <div className="space-y-6">
+            <div>
+                 <h3 className="font-semibold text-lg text-accent mb-2">Power Spike Timeline</h3>
+                 <PowerSpikeTimeline timeline={advice.teamAnalysis.blue.powerSpikeTimeline!} />
+            </div>
+
+            {advice.teamAnalysis.blue.keyMatchups && advice.teamAnalysis.blue.keyMatchups.length > 0 && (
+                <div>
+                     <h3 className="font-semibold text-lg text-accent mb-2">Key Matchups</h3>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {advice.teamAnalysis.blue.keyMatchups.map((matchup, i) => (
+                            <KeyMatchupCard key={i} matchup={matchup} />
+                        ))}
+                     </div>
+                </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
+                {advice.pickSuggestions && advice.pickSuggestions.length > 0 && (
+                    <div>
+                        <h3 className="font-semibold text-lg text-accent mb-2">Pick Suggestions</h3>
+                        <div className="space-y-2">
+                            {advice.pickSuggestions.slice(0, 3).map(p => (
+                                <div key={p.championName} className="bg-surface p-3 border border-border">
+                                    <h4 className="font-bold text-text-primary">{p.championName} ({p.role})</h4>
+                                    <p className="text-xs text-text-secondary"><KeywordHighlighter text={p.reasoning} onKeywordClick={navigateToAcademy} /></p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                 {advice.banSuggestions && advice.banSuggestions.length > 0 && (
+                    <div>
+                        <h3 className="font-semibold text-lg text-accent mb-2">Ban Suggestions</h3>
+                        <div className="space-y-2">
+                            {advice.banSuggestions.slice(0, 2).map(b => (
+                                <div key={b.championName} className="bg-surface p-3 border border-border">
+                                    <h4 className="font-bold text-text-primary">{b.championName}</h4>
+                                    <p className="text-xs text-text-secondary"><KeywordHighlighter text={b.reasoning} onKeywordClick={navigateToAcademy} /></p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+export const AdvicePanel = ({ advice, isLoading, error, navigateToAcademy, analysisCompleted, onAnimationEnd, isStale }: AdvicePanelProps) => {
+  const [activeTab, setActiveTab] = useState<'blue' | 'red' | 'head-to-head'>('blue');
+  
   if (isLoading) {
     return <div className="bg-bg-secondary p-4 border border-border-primary h-full"><Loader /></div>;
   }
@@ -128,111 +201,34 @@ export const AdvicePanel = ({ advice, isLoading, error, userRole, navigateToAcad
     );
   }
 
-  const pickSuggestions = userRole && userRole !== 'All' 
-    ? [...(advice.pickSuggestions || [])].sort((a, b) => (a.role === userRole ? -1 : 1) - (b.role === userRole ? -1 : 1))
-    : (advice.pickSuggestions || []);
-
   return (
     <div 
         className={`bg-bg-secondary border border-border-primary p-4 space-y-4 transition-shadow duration-1000 ${analysisCompleted ? 'shadow-glow-accent animate-pulse-once' : ''}`}
         onAnimationEnd={onAnimationEnd}
     >
-        {isStale && (
-            <div className="bg-warning/10 text-warning text-sm p-3 rounded-md flex items-center gap-2 border border-warning/20">
-                <AlertTriangle className="h-5 w-5" />
-                <div>
-                    <strong>Analysis is out of date.</strong> The draft has changed. Re-analyze for updated advice.
-                </div>
-            </div>
-        )}
-      <div className="text-center">
-        <div className="flex justify-center gap-2 mb-2 bg-surface-tertiary p-1">
-            <button onClick={() => setActiveTeam('blue')} className={`w-full py-1.5 text-sm font-semibold transition-colors ${activeTeam === 'blue' ? 'bg-bg-secondary shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Blue Team</button>
-            <button onClick={() => setActiveTeam('red')} className={`w-full py-1.5 text-sm font-semibold transition-colors ${activeTeam === 'red' ? 'bg-bg-secondary shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Red Team</button>
+        {isStale && <StaleWarning />}
+        
+        <div className="border-b border-border flex justify-center">
+            <TabButton active={activeTab === 'blue'} onClick={() => setActiveTab('blue')}>Blue Team Analysis</TabButton>
+            <TabButton active={activeTab === 'head-to-head'} onClick={() => setActiveTab('head-to-head')}>Head-to-Head</TabButton>
+            <TabButton active={activeTab === 'red'} onClick={() => setActiveTab('red')}>Red Team Analysis</TabButton>
         </div>
-        {teamAnalysis?.draftScore ? (
-            <GradeDisplay score={teamAnalysis.draftScore} />
-        ) : (
-            <h2 className={`text-2xl font-bold ${analysisTitle.className}`}>{analysisTitle.title}</h2>
-        )}
-        <p className="font-semibold text-text-secondary text-sm italic mt-1">
-            {teamAnalysis?.draftScoreReasoning}
-        </p>
-      </div>
 
-      <div className="space-y-3">
-        {improvementOpportunities.length > 0 && (
-            <AdviceSection title="Improvement Opportunities" defaultOpen={true}>
-                 <div className="space-y-2">
-                    {improvementOpportunities.map(({ weakness, keyword }) => (
-                         <div key={keyword.lessonId} className="bg-surface-primary p-3 border border-border-primary">
-                            <p className="text-sm text-text-secondary mb-2">"<KeywordHighlighter text={weakness} onKeywordClick={navigateToAcademy} />"</p>
-                            <Button
-                                variant="secondary"
-                                onClick={() => navigateToAcademy(keyword.lessonId)}
-                                className="text-sm mt-2"
-                            >
-                                Learn more about {keyword.term}
-                            </Button>
-                        </div>
-                    ))}
-                 </div>
-            </AdviceSection>
-        )}
-        
-        {teamAnalysis?.powerSpikeTimeline && (
-             <AdviceSection title="Power Spike Timeline" defaultOpen>
-                <PowerSpikeTimeline timeline={teamAnalysis.powerSpikeTimeline} />
-            </AdviceSection>
-        )}
-
-        <AdviceSection title="Team Analysis" defaultOpen>
-            {teamAnalysis && (
-                <ul className="space-y-3 text-sm">
-                    <li className="flex items-start gap-2"><strong className="font-semibold text-text-primary w-28">Identity:</strong> <KeywordHighlighter text={teamAnalysis.teamIdentity} onKeywordClick={navigateToAcademy} /></li>
-                    <li className="flex items-start gap-2"><strong className="font-semibold text-text-primary w-28">Win Condition:</strong> <KeywordHighlighter text={teamAnalysis.winCondition} onKeywordClick={navigateToAcademy} /></li>
-                    {(teamAnalysis.strengths || []).map((s, i) => (
-                        <li key={`s-${i}`} className="flex items-start gap-2">
-                            <StrengthIcon />
-                            <KeywordHighlighter text={s} onKeywordClick={navigateToAcademy} />
-                        </li>
-                    ))}
-                    {(teamAnalysis.weaknesses || []).map((w, i) => (
-                         <li key={`w-${i}`} className="flex items-start gap-2">
-                            <WeaknessIcon />
-                            <KeywordHighlighter text={w.description} onKeywordClick={navigateToAcademy} />
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </AdviceSection>
-
-        {pickSuggestions.length > 0 && (
-             <AdviceSection title="Pick Suggestions">
-                <div className="space-y-3">
-                    {pickSuggestions.slice(0, 3).map(p => (
-                        <div key={p.championName} className="bg-surface-primary p-3 border border-border-primary">
-                            <h4 className="font-bold text-text-primary">{p.championName} ({p.role})</h4>
-                            <p className="text-sm text-text-secondary"><KeywordHighlighter text={p.reasoning} onKeywordClick={navigateToAcademy} /></p>
-                        </div>
-                    ))}
-                </div>
-            </AdviceSection>
-        )}
-        
-        {(advice.banSuggestions || []).length > 0 && (
-             <AdviceSection title="Ban Suggestions">
-                 <div className="space-y-3">
-                    {advice.banSuggestions.slice(0, 2).map(b => (
-                        <div key={b.championName} className="bg-surface-primary p-3 border border-border-primary">
-                            <h4 className="font-bold text-text-primary">{b.championName}</h4>
-                            <p className="text-sm text-text-secondary"><KeywordHighlighter text={b.reasoning} onKeywordClick={navigateToAcademy} /></p>
-                        </div>
-                    ))}
-                </div>
-            </AdviceSection>
-        )}
-      </div>
+        <div className="pt-4 min-h-[400px]">
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    {activeTab === 'blue' && <TeamAnalysisContent analysis={advice.teamAnalysis.blue} navigateToAcademy={navigateToAcademy} />}
+                    {activeTab === 'red' && <TeamAnalysisContent analysis={advice.teamAnalysis.red} navigateToAcademy={navigateToAcademy} />}
+                    {activeTab === 'head-to-head' && <HeadToHeadContent advice={advice} navigateToAcademy={navigateToAcademy} />}
+                </motion.div>
+            </AnimatePresence>
+        </div>
     </div>
   );
 };

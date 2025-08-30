@@ -159,17 +159,21 @@ To run DraftWise AI locally, follow these steps.
 ├── components/
 │   ├── Academy/            # UI for strategic lessons and knowledge base
 │   ├── Arena/              # UI for the draft practice simulator
-│   ├── Armory/             # UI for the champion dossier database
+│   ├── Armory/             # Renders the champion dossier database
 │   ├── common/             # Globally reusable components (Button, Modal, Loader)
 │   ├── DraftLab/           # UI for the core draft sandbox and analyzer
+│   ├── Feedback/           # UI for the user feedback system
 │   ├── Home/               # Landing page and smart dashboard UI
-│   ├── Intel/              # UI for meta intelligence (tier lists, patch notes)
-│   ├── Layout/             # Global layout components (Header, Sidebar, Footer)
+│   ├── Intel/              # Renders meta intelligence (tier lists, patch notes)
+│   ├── Layout/             # Global layout components (Header, Footer, BottomNav)
 │   ├── LiveDraft/          # UI for the real-time co-pilot feature
 │   ├── MetaOracle/         # UI for the grounded Q&A feature
 │   ├── Onboarding/         # UI for the initial user setup flow
 │   ├── Playbook/           # UI for viewing and managing saved drafts
-│   └── Profile/            # UI for user profile, missions, and mastery
+│   ├── Profile/            # UI for user profile, missions, and mastery
+│   ├── Settings/           # UI for settings panels
+│   ├── StrategyHub/        # Container for Armory and Intel tabs
+│   └── Trials/             # UI for the Daily Challenge
 ├── contexts/               # React Context providers for global state
 │   ├── ChampionContext.tsx # Fetches and provides all champion data app-wide
 │   └── DraftContext.tsx    # Manages the transient state for the Strategy Forge
@@ -177,8 +181,11 @@ To run DraftWise AI locally, follow these steps.
 │   └── strategyInsights.ts # The crucial strategic primer injected into AI prompts
 ├── hooks/
 │   ├── useCommands.ts      # Logic for the command palette (Ctrl+K)
+│   ├── useGemini.ts        # Reusable hook for managing Gemini API calls
+│   ├── useModals.ts        # Reducer and hook for managing modal states
 │   ├── usePlaybook.ts      # Business logic for managing saved drafts with IndexedDB
 │   ├── useSettings.ts      # State management for user settings
+│   ├── useTranslation.ts   # Hook for internationalization
 │   └── useUserProfile.ts   # State management for gamification and profile data
 ├── lib/
 │   ├── draftUtils.ts       # Helper functions for draft state manipulation

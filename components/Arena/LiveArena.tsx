@@ -12,7 +12,7 @@ import { COMPETITIVE_SEQUENCE } from './arenaConstants';
 import toast from 'react-hot-toast';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { usePlaybook } from '../../hooks/usePlaybook';
-import { getAvailableChampions, updateSlotInDraft } from '../../lib/draftUtils';
+import { getAvailableChampions, updateSlotInDraft, swapChampionsInDraft } from '../../lib/draftUtils';
 import { QuickLookPanel } from '../DraftLab/QuickLookPanel';
 import { Swords } from 'lucide-react';
 import { useChampions } from '../../contexts/ChampionContext';
@@ -142,7 +142,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
           setLastUpdatedIndex(currentTurnIndex);
           setCurrentTurnIndex(prev => prev + 1); // Skip turn if no champ found
       }
-    }, 1500 + Math.random() * 1000); // Realistic delay
+    }, 500 + Math.random() * 500); // Realistic delay
 
     return () => {
         clearTimeout(timer);
@@ -168,6 +168,24 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   const handleAnalyze = () => {
     onNavigateToForge(draftState);
   };
+
+  const handleDragStart = (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    if (type === 'pick' && team === 'blue') {
+      e.dataTransfer.setData('sourceSlot', JSON.stringify({ team, type, index }));
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDrop = useCallback((event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    event.preventDefault();
+    const sourceSlotJSON = event.dataTransfer.getData('sourceSlot');
+    if (sourceSlotJSON) {
+        const sourceSlot = JSON.parse(sourceSlotJSON);
+        if (sourceSlot.team === team && sourceSlot.type === 'pick' && type === 'pick' && team === 'blue') {
+            setDraftState(prev => swapChampionsInDraft(prev, team, sourceSlot.index, index));
+        }
+    }
+  }, [setDraftState]);
 
   const activeSlotForTeam = (team: TeamSide) => {
       if (currentTurn?.team === team) {
@@ -228,7 +246,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} isTurnActive={!draftFinished && currentTurn?.team === 'blue'} />
+            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} isTurnActive={!draftFinished && currentTurn?.team === 'blue'} onDragStart={handleDragStart} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} />
             <TeamPanel side="red" state={draftState.red} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('red')} isTurnActive={!draftFinished && currentTurn?.team === 'red'} />
         </div>
 

@@ -48,35 +48,63 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
     useLayoutEffect(() => {
         if (!isOpen) return;
 
-        const updatePosition = () => {
-            const step = steps[currentStep];
-            const element = document.querySelector(step.selector);
-            
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                const rect = element.getBoundingClientRect();
-                const margin = 5;
-                setSpotlightStyle({
-                    width: rect.width + margin * 2,
-                    height: rect.height + margin * 2,
-                    top: rect.top - margin,
-                    left: rect.left - margin,
-                });
-                setContentStyle(calculatePosition(rect));
-            } else {
-                console.warn(`Guided tour element not found for selector: ${step.selector}`);
-                toast.error("An error occurred with the guided tour. It has been stopped.");
-                onClose();
-            }
+        let intervalId: number | undefined;
+
+        const tryUpdatePosition = () => {
+            let attempts = 0;
+            const maxAttempts = 40; // Try for ~2 seconds (40 * 50ms)
+
+            if (intervalId) clearInterval(intervalId);
+
+            intervalId = window.setInterval(() => {
+                attempts++;
+                const step = steps[currentStep];
+                const element = document.querySelector<HTMLElement>(step.selector);
+                
+                if (element) {
+                    const rect = element.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        clearInterval(intervalId);
+                        intervalId = undefined;
+
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                        
+                        setTimeout(() => {
+                            // Re-query the element and rect in case resize/reflow happened during scroll
+                            const finalElement = document.querySelector<HTMLElement>(step.selector);
+                            if (!finalElement) return; // Element might have disappeared
+                            
+                            const finalRect = finalElement.getBoundingClientRect();
+                            const margin = 5;
+                            setSpotlightStyle({
+                                width: finalRect.width + margin * 2,
+                                height: finalRect.height + margin * 2,
+                                top: finalRect.top - margin,
+                                left: finalRect.left - margin,
+                            });
+                            setContentStyle(calculatePosition(finalRect));
+                        }, 300); // Wait for smooth scroll to finish
+                        
+                        return;
+                    }
+                }
+                
+                if (attempts >= maxAttempts) {
+                    clearInterval(intervalId);
+                    intervalId = undefined;
+                    console.warn(`Guided tour element not found or not visible for selector: ${step.selector}`);
+                    toast.error("An error occurred with the guided tour. It has been stopped.");
+                    onClose();
+                }
+            }, 50);
         };
 
-        // Delay slightly to allow for UI to settle after scrolling
-        const timerId = setTimeout(updatePosition, 150);
-        window.addEventListener('resize', updatePosition);
+        tryUpdatePosition();
+        window.addEventListener('resize', tryUpdatePosition);
 
         return () => {
-            clearTimeout(timerId);
-            window.removeEventListener('resize', updatePosition);
+            if (intervalId) clearInterval(intervalId);
+            window.removeEventListener('resize', tryUpdatePosition);
         };
     }, [isOpen, currentStep, steps, onClose]);
     

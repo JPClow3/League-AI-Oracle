@@ -17,6 +17,7 @@ import { QuickLookPanel } from '../DraftLab/QuickLookPanel';
 import { Loader } from '../common/Loader';
 import { Signal, Info, Eye, Users, User } from 'lucide-react';
 import { useChampions } from '../../contexts/ChampionContext';
+import { swapChampionsInDraft } from '../../lib/draftUtils';
 
 // A component to display suggestions cleanly and quickly for live drafting.
 const SuggestionPanel = ({ suggestions, isLoading, onSelect }: { suggestions: (ChampionSuggestion & { champion: ChampionLite })[], isLoading: boolean, onSelect: (champion: ChampionLite) => void }) => {
@@ -294,6 +295,26 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
     toast.success('Last action undone.');
   };
 
+  const handleDragStart = (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    // Only allow user to drag their own team's picks
+    if (type === 'pick' && team === 'blue') {
+      e.dataTransfer.setData('sourceSlot', JSON.stringify({ team, type, index }));
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDrop = useCallback((event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    event.preventDefault();
+    const sourceSlotJSON = event.dataTransfer.getData('sourceSlot');
+    if (sourceSlotJSON) {
+        const sourceSlot = JSON.parse(sourceSlotJSON);
+        // Only allow swaps on the user's team
+        if (sourceSlot.team === team && sourceSlot.type === 'pick' && type === 'pick' && team === 'blue') {
+            setDraftState(prev => swapChampionsInDraft(prev, team, sourceSlot.index, index));
+        }
+    }
+  }, [setDraftState]);
+
   const activeSlotForTeam = (team: TeamSide) => {
       if (currentTurn?.team === team) {
           return { type: currentTurn.type, index: currentTurn.index };
@@ -353,7 +374,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} isTurnActive={!draftFinished && currentTurn?.team === 'blue'} />
+            <TeamPanel side="blue" state={draftState.blue} onSlotClick={handleSlotClick} activeSlot={activeSlotForTeam('blue')} isTurnActive={!draftFinished && currentTurn?.team === 'blue'} onDragStart={handleDragStart} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} />
             
             <div className="lg:col-span-1 order-first lg:order-none bg-surface p-4 min-h-[300px] border border-border">
                 {currentTurn?.team === 'blue' ? (

@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import type { Champion, TeamSide } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +9,7 @@ interface PickSlotProps {
   onClick: () => void;
   onClear?: () => void;
   onDrop?: (e: React.DragEvent) => void;
+  onDragStart?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDragEnter?: (e: React.DragEvent) => void;
   onDragLeave?: (e: React.DragEvent) => void;
@@ -20,7 +19,7 @@ interface PickSlotProps {
   isDimmed?: boolean;
 }
 
-export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side, isDimmed = false }: PickSlotProps) => {
+export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side, isDimmed = false }: PickSlotProps) => {
   const activeClasses = isActive ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-accent shadow-glow-accent' :
                       isDraggedOver ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-info' : 
                       'ring-1 ring-border-primary/50';
@@ -35,13 +34,15 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragOver,
 
   const teamName = side.charAt(0).toUpperCase() + side.slice(1);
   const ariaLabel = champion 
-    ? `${teamName} Team ${role} pick: ${champion.name}. Press Enter or Space to change.`
+    ? `${teamName} Team ${role} pick: ${champion.name}. Press Enter or Space to change. Draggable to swap position.`
     : `${teamName} Team ${role} pick: Empty. Press Enter or Space to select a champion.`;
 
   return (
     <div 
       onClick={onClick}
       onDrop={onDrop}
+      onDragStart={champion ? onDragStart : undefined}
+      draggable={!!champion}
       onDragOver={onDragOver}
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}

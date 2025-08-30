@@ -13,6 +13,7 @@ interface TeamPanelProps {
   
   onClearSlot?: (team: TeamSide, type: 'pick' | 'ban', index: number) => void;
   onDrop?: (event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => void;
+  onDragStart?: (event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => void;
   onDragOver?: (event: React.DragEvent) => void;
   onDragEnter?: (event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => void;
   onDragLeave?: () => void;
@@ -21,7 +22,7 @@ interface TeamPanelProps {
   isAnalyzing?: boolean;
 }
 
-export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDragOver, onDragEnter, onDragLeave, activeSlot, draggedOverSlot, isTurnActive = false, isAnalyzing = false }: TeamPanelProps) => {
+export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDragStart, onDragOver, onDragEnter, onDragLeave, activeSlot, draggedOverSlot, isTurnActive = false, isAnalyzing = false }: TeamPanelProps) => {
   const isBlue = side === 'blue';
   const teamColorClass = isBlue ? 'border-team-blue' : 'border-team-red';
   const teamName = isBlue ? 'Blue Team' : 'Red Team';
@@ -51,6 +52,7 @@ export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDra
                     onClick={() => onSlotClick(side, 'pick', index)}
                     onClear={onClearSlot ? () => onClearSlot(side, 'pick', index) : undefined}
                     onDrop={onDrop ? (e) => onDrop(e, side, 'pick', index) : undefined}
+                    onDragStart={onDragStart ? (e) => onDragStart(e, side, 'pick', index) : undefined}
                     onDragOver={onDragOver}
                     onDragEnter={onDragEnter ? (e) => onDragEnter(e, side, 'pick', index) : undefined}
                     onDragLeave={onDragLeave}
