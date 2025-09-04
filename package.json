@@ -17,13 +17,13 @@
     "focus-trap-react": "^11.0.4",
     "react-transition-group": "^4.4.5",
     "react-virtualized-auto-sizer": "^1.0.26",
-    "react-window": "^1.8.11",
-    "lucide-react": "^0.418.0",
+    "react-window": "^2.0.2",
+    "lucide-react": "^0.542.0",
     "dexie": "^4.0.7"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "typescript": "~5.9.2",
+    "vite": "^7.1.4"
   }
 }
