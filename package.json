@@ -18,7 +18,7 @@
     "react-transition-group": "^4.4.5",
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^2.0.2",
-    "lucide-react": "^0.542.0",
+    "lucide-react": "^0.545.0",
     "dexie": "^4.0.7"
   },
   "devDependencies": {
