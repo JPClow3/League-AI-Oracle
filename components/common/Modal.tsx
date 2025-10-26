@@ -12,21 +12,30 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: ModalSize;
+  enableBackdropBlur?: boolean; // Toggle backdrop blur for performance
 }
 
-export const Modal = ({ isOpen, onClose, title, children, size = '4xl' }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBackdropBlur = true }: ModalProps) => {
   const backdropRef = useRef(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const originalOverflowRef = useRef<string>('');
 
   useEffect(() => {
     if (isOpen) {
+      // Store original overflow value only on first open
+      if (!originalOverflowRef.current) {
+        originalOverflowRef.current = document.body.style.overflow || '';
+      }
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      // Restore original overflow value
+      document.body.style.overflow = originalOverflowRef.current || '';
     }
     // Cleanup function to reset on unmount
     return () => {
-      document.body.style.overflow = 'unset';
+      if (document.body.style.overflow === 'hidden') {
+        document.body.style.overflow = originalOverflowRef.current || '';
+      }
     };
   }, [isOpen]);
 
@@ -52,7 +61,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl' }: ModalP
     >
       <div
         ref={backdropRef}
-        className="fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] backdrop-blur-sm flex justify-center items-center z-50 p-4"
+        className={`fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] flex justify-center items-center z-50 p-4 ${enableBackdropBlur ? 'backdrop-blur-sm' : ''}`}
         onClick={onClose}
         aria-modal="true"
         role="dialog"

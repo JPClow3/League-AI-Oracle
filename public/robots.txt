@@ -1,0 +1,11 @@
+# robots.txt for League AI Oracle
+
+User-agent: *
+Allow: /
+
+# Disallow admin/internal paths if any
+# Disallow: /admin/
+
+# Sitemap
+Sitemap: https://yourdomain.com/sitemap.xml
+

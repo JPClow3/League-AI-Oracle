@@ -22,6 +22,8 @@ interface ChampionGridProps {
 const FilterButton = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
     <button
         onClick={onClick}
+        aria-pressed={active}
+        aria-label={`Filter by ${label}`}
         className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors ${
             active ? 'bg-accent text-on-accent' : 'bg-surface-secondary text-text-secondary hover:bg-border'
         }`}
@@ -65,12 +67,13 @@ export const ChampionGrid = ({ onSelect, onQuickLook, draftState, onDragStart }:
     return (
         <div className="bg-surface p-4 flex flex-col h-full border border-border-primary">
             <div className="relative mb-2 flex-shrink-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={20}/>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={20} aria-hidden="true"/>
                 <input
                     type="text"
                     placeholder="Search champions..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
+                    aria-label="Search champions"
                     className="w-full bg-surface-inset border border-border rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
             </div>
@@ -90,9 +93,20 @@ export const ChampionGrid = ({ onSelect, onQuickLook, draftState, onDragStart }:
             </div>
             
             <div className="flex-grow overflow-y-auto pr-2">
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
-                    <AnimatePresence>
-                        {filteredAndSortedChampions.map(champ => (
+                {filteredAndSortedChampions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                        <p className="text-text-secondary text-lg mb-2">No champions available</p>
+                        <p className="text-text-muted text-sm">
+                            {availableChampions.length === 0
+                                ? "All champions have been selected or banned"
+                                : "Try adjusting your search or filters"
+                            }
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
+                        <AnimatePresence>
+                            {filteredAndSortedChampions.map(champ => (
                             <motion.div
                                 key={champ.id}
                                 {...{
@@ -110,17 +124,23 @@ export const ChampionGrid = ({ onSelect, onQuickLook, draftState, onDragStart }:
                                         draggable="true"
                                         onDragStart={(e) => {
                                             const fullChamp = champions.find(c => c.id === champ.id);
-                                            if (fullChamp) onDragStart(e, fullChamp);
+                                            if (fullChamp) {
+                                                onDragStart(e, fullChamp);
+                                            } else {
+                                                e.preventDefault();
+                                            }
                                         }}
+                                        aria-label={`Select ${champ.name}`}
                                         className="w-full aspect-square bg-surface-inset border-2 border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent hover:border-accent transition-colors"
                                     >
                                         <img src={champ.image} alt={champ.name} className="w-full h-full object-cover rounded-md" loading="lazy" />
                                     </button>
                                 </Tooltip>
                             </motion.div>
-                        ))}
-                    </AnimatePresence>
-                </div>
+                            ))}
+                        </AnimatePresence>
+                    </div>
+                )}
             </div>
         </div>
     );

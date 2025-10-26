@@ -5,7 +5,7 @@ type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
 };
 
 export const TextArea = ({ className = '', ...props }: TextAreaProps) => {
-  const baseClasses = 'w-full px-3 py-2 bg-secondary border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed focus:ring-opacity-75';
+  const baseClasses = 'w-full px-3 py-2 bg-[hsl(var(--surface-secondary))] border border-[hsl(var(--border))] text-[hsl(var(--text-primary))] rounded-md focus:outline-none focus:ring-2 focus:ring-[hsl(var(--accent))] focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed';
 
   return (
     <textarea className={`${baseClasses} ${className}`} {...props} />

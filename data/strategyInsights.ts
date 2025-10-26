@@ -56,7 +56,7 @@ Bot (ADC)	Lane crash → map rotation.	- Crash wave @14:20.
 Support	Vision continuity.	- Drop wards along top-side river chain.
 - Block enemy vision with sweeper.
 - Communicate priority of lanes.
-💠 17–20 MIN — ATAKHAN PREP PHASE
+💠 17–20 MIN — BARON NASHOR PREP PHASE
 Role	Focus	Checklist
 Jungle	Vision denial & Smite timing.	- Sweep Baron side @18:00.
 - Control pinks: ramp, river, pit.
@@ -72,7 +72,7 @@ ADC	Item check & fight readiness.	- Hit 2-item spike by 18:30.
 Support	Vision architecture.	- Build “triangle”: river entrance, ramp, pit bush.
 - Use Oracle Lens from 18:00 onward.
 - Coordinate engage lines with top/jungle.
-🪓 20–25 MIN — ATAKHAN FIGHT / HANDOVER → BARON WINDOW
+🪓 20–25 MIN — BARON FIGHT / HANDOVER → BARON WINDOW
 Role	Focus	Checklist
 Jungle	Fight execution.	- Call engage if numbers advantage.
 - Manage Smite + ability combo (~1800–2400 HP threshold).
@@ -81,9 +81,9 @@ Top	Split or join.	- Post-fight, fix side lanes for Baron setup.
 - Keep TP advantage.
 Mid	Transition.	- Hold mid prio → invade enemy top jungle.
 - Maintain vision control mid → Baron.
-ADC	Siege follow-up.	- Use Atakhan buff for wave control.
+ADC	Siege follow-up.	- Use Baron buff for wave control.
 - Rotate lanes to maximize tower DPS.
-Support	Vision link to Baron.	- After Atakhan, re-ward around Baron ramp.
+Support	Vision link to Baron.	- After Nashor, re-ward around Baron ramp.
 - Deny enemy vision chain.
 - Set traps for facecheck fights.
 👑 25+ MIN — BARON & LATE GAME MACRO
@@ -124,8 +124,8 @@ OBJECTIVE_PHASES = {
   "EARLY": [0,5],
   "GRUBS": [5,14],
   "HERALD": [14,17],
-  "ATAKHAN_PREP": [17,20],
-  "ATAKHAN_BARON": [20,25],
+  "BARON_PREP": [17,20],
+  "BARON_FIGHT": [20,25],
   "BARON_LATE": [25,30],
   "ELDER_FINAL": [30,99]
 }

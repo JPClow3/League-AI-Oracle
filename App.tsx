@@ -14,6 +14,7 @@ import { ProfileSetupModal } from './components/Onboarding/ProfileSetupModal';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { ProfileSettingsModal } from './components/Settings/ProfileSettingsModal';
 import { FeedbackModal } from './components/Feedback/FeedbackModal';
+import { KeyboardShortcutsModal } from './components/common/KeyboardShortcutsModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { useCommands } from './hooks/useCommands';
 import { Router } from './components/Router';
@@ -23,6 +24,8 @@ import { useChampions } from './contexts/ChampionContext';
 import { Loader } from './components/common/Loader';
 import { analytics } from './lib/analytics';
 import * as storageService from './services/storageService';
+import { performanceMonitor } from './lib/performanceMonitor';
+import { logAccessibilityAudit } from './lib/accessibility';
 
 const App = () => {
     const [currentPage, setCurrentPage] = useState<Page>('Home');
@@ -59,14 +62,28 @@ const App = () => {
     // Check if onboarding is complete
     useEffect(() => {
         const onboardingComplete = localStorage.getItem('onboardingComplete');
-        if (!onboardingComplete) {
+        if (!onboardingComplete && isHydrated) {
             dispatch({ type: 'OPEN_ONBOARDING' });
         }
-    }, [dispatch]);
+    }, [dispatch, isHydrated]);
 
     // Run cache eviction on startup
     useEffect(() => {
         storageService.evictExpiredCache();
+    }, []);
+
+    // Initialize performance monitoring
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            performanceMonitor.initializeMonitoring();
+
+            // Run accessibility audit in development
+            if (import.meta.env.DEV) {
+                setTimeout(() => {
+                    logAccessibilityAudit();
+                }, 2000); // Wait for initial render
+            }
+        }
     }, []);
 
     const handleOnboardingComplete = (data: { username: string; skillLevel: 'Beginner' | 'Intermediate' | 'Advanced'; avatar: string, goals: string[], favoriteChampions: string[] }) => {
@@ -238,6 +255,10 @@ const App = () => {
                 <SettingsPanel />
                 <ProfileSettingsModal />
                 <FeedbackModal />
+                <KeyboardShortcutsModal
+                    isOpen={modals.keyboardShortcuts}
+                    onClose={() => dispatch({ type: 'CLOSE', payload: 'keyboardShortcuts' })}
+                />
                 <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} commands={commands} />
 
                 <Header currentPage={currentPage} setCurrentPage={setCurrentPage} profile={profile} spForNextLevel={spForNextLevel} />
@@ -254,3 +275,5 @@ const App = () => {
 };
 
 export default App;
+
+

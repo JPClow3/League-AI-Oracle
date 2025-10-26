@@ -1,22 +1,21 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from 'react';
 
 interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 interface State {
   hasError: boolean;
   error?: Error;
-  errorInfo?: ErrorInfo;
+  errorInfo?: React.ErrorInfo;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
-
+export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
+    this.state = { hasError: false };
     this.handleReset = this.handleReset.bind(this);
   }
 
@@ -24,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('Error caught by ErrorBoundary:', error, errorInfo);
 
     this.setState({ errorInfo });
@@ -38,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.logErrorToService(error, errorInfo);
   }
 
-  private logErrorToService(error: Error, errorInfo: ErrorInfo) {
+  private logErrorToService(error: Error, errorInfo: React.ErrorInfo) {
     // Log to Sentry if available
     try {
       // Dynamic import to avoid issues if logger is not yet initialized
@@ -73,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   }
 
-  render(): ReactNode {
+  render(): React.ReactNode {
     if (this.state.hasError) {
       // Use custom fallback if provided
       if (this.props.fallback) {

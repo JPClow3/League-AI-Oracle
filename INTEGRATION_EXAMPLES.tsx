@@ -369,7 +369,7 @@ export const ArenaExample = () => {
       const requestId = offlineService.queueRequest(
         '/api/arena/save',
         'POST',
-        matchData
+        matchData as any // Type assertion for offline service compatibility
       );
 
       logger.info('Arena match queued', { requestId });
@@ -382,7 +382,12 @@ export const ArenaExample = () => {
       body: JSON.stringify(matchData),
     });
 
-    analytics.trackArenaMatch(matchData.duration, matchData.winner);
+    // Type-safe analytics tracking
+    const duration = typeof matchData.duration === 'number' ? matchData.duration : 0;
+    const winner = (matchData.winner === 'blue' || matchData.winner === 'red') ? matchData.winner : undefined;
+    if (winner) {
+      analytics.trackArenaMatch(duration, winner);
+    }
   };
 
   return <div>{/* Arena UI */}</div>;

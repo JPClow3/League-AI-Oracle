@@ -19,6 +19,7 @@ export default defineConfig({
   },
 
   projects: [
+    // Desktop Browsers
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
@@ -30,6 +31,39 @@ export default defineConfig({
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'edge',
+      use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    },
+
+    // Mobile Browsers
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 13'] },
+    },
+    {
+      name: 'mobile-safari-landscape',
+      use: {
+        ...devices['iPhone 13 landscape'],
+      },
+    },
+    {
+      name: 'tablet',
+      use: { ...devices['iPad Pro'] },
+    },
+
+    // Accessibility Testing
+    {
+      name: 'chromium-accessibility',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Dedicated browser for accessibility testing
+      },
     },
   ],
 

@@ -1,18 +1,23 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import type { Page, DraftState } from '../types';
+import { LoadingSpinner } from './common/LoadingSpinner';
+import { FeatureErrorBoundary } from './common/FeatureErrorBoundary';
 
+// Eager load Home for instant initial render
 import { Home } from './Home/Home';
-import { DraftLab } from './DraftLab/DraftLab';
-import { Playbook } from './Playbook/Playbook';
-import { Academy } from './Academy/Academy';
-import { LiveArena } from './Arena/LiveArena';
-import { LiveDraft } from './LiveDraft/LiveDraft';
-import { StrategyHub } from './StrategyHub/StrategyHub';
-import { DailyTrial } from './Trials/DailyTrial';
-import { Profile } from './Profile/Profile';
-import { MetaOracle } from './MetaOracle/MetaOracle';
-import { DraftScenarios } from './Scenarios/DraftScenarios';
+
+// Lazy load all other routes for better code splitting
+const DraftLab = React.lazy(() => import('./DraftLab/DraftLab').then(m => ({ default: m.DraftLab })));
+const Playbook = React.lazy(() => import('./Playbook/Playbook').then(m => ({ default: m.Playbook })));
+const Academy = React.lazy(() => import('./Academy/Academy').then(m => ({ default: m.Academy })));
+const LiveArena = React.lazy(() => import('./Arena/LiveArena').then(m => ({ default: m.LiveArena })));
+const LiveDraft = React.lazy(() => import('./LiveDraft/LiveDraft').then(m => ({ default: m.LiveDraft })));
+const StrategyHub = React.lazy(() => import('./StrategyHub/StrategyHub').then(m => ({ default: m.StrategyHub })));
+const DailyTrial = React.lazy(() => import('./Trials/DailyTrial').then(m => ({ default: m.DailyTrial })));
+const Profile = React.lazy(() => import('./Profile/Profile').then(m => ({ default: m.Profile })));
+const MetaOracle = React.lazy(() => import('./MetaOracle/MetaOracle').then(m => ({ default: m.MetaOracle })));
+const DraftScenarios = React.lazy(() => import('./Scenarios/DraftScenarios').then(m => ({ default: m.DraftScenarios })));
 
 interface RouterProps {
     currentPage: Page;
@@ -48,33 +53,73 @@ export const Router = (props: RouterProps) => {
         switch (currentPage) {
             case 'Home':
                 return <Home setCurrentPage={props.setCurrentPage} navigateToArmory={props.navigateToArmory} />;
-            case 'Strategy Forge':
+                return (
+                    <FeatureErrorBoundary componentName="Draft Lab" onReset={props.handleTourComplete}>
+                        <DraftLab startTour={props.startLabTour} onTourComplete={props.handleTourComplete} navigateToAcademy={props.navigateToAcademy} />
+                    </FeatureErrorBoundary>
+                );
                 return <DraftLab startTour={props.startLabTour} onTourComplete={props.handleTourComplete} navigateToAcademy={props.navigateToAcademy} />;
-            case 'Live Co-Pilot':
+                return (
+                    <FeatureErrorBoundary componentName="Live Draft" onReset={props.resetLiveDraft}>
+                        <LiveDraft draftState={props.liveDraftState} setDraftState={props.setLiveDraftState} onReset={props.resetLiveDraft} />
+                    </FeatureErrorBoundary>
+                );
                 return <LiveDraft draftState={props.liveDraftState} setDraftState={props.setLiveDraftState} onReset={props.resetLiveDraft} />;
-            case 'Draft Arena':
+                return (
+                    <FeatureErrorBoundary componentName="Draft Arena" onReset={props.resetArena}>
+                        <LiveArena draftState={props.arenaDraftState} setDraftState={props.setArenaDraftState} onReset={props.resetArena} onNavigateToForge={props.loadDraftAndNavigate} />
+                    </FeatureErrorBoundary>
+                );
                 return <LiveArena draftState={props.arenaDraftState} setDraftState={props.setArenaDraftState} onReset={props.resetArena} onNavigateToForge={props.loadDraftAndNavigate} />;
-            case 'The Archives':
+                return (
+                    <FeatureErrorBoundary componentName="Playbook">
+                        <Playbook onLoadDraft={props.loadDraftAndNavigate} setCurrentPage={props.setCurrentPage} navigateToAcademy={props.navigateToAcademy} />
+                    </FeatureErrorBoundary>
+                );
                 return <Playbook onLoadDraft={props.loadDraftAndNavigate} setCurrentPage={props.setCurrentPage} navigateToAcademy={props.navigateToAcademy} />;
-            case 'Academy':
+                return (
+                    <FeatureErrorBoundary componentName="Academy">
+                        <Academy initialLessonId={props.academyInitialLessonId} onHandled={() => props.setAcademyInitialLessonId(undefined)} loadChampionsAndNavigateToForge={props.loadChampionsAndNavigateToForge} />
+                    </FeatureErrorBoundary>
+                );
                 return <Academy initialLessonId={props.academyInitialLessonId} onHandled={() => props.setAcademyInitialLessonId(undefined)} loadChampionsAndNavigateToForge={props.loadChampionsAndNavigateToForge} />;
-            case 'The Armory':
-                return <StrategyHub
-                    initialTab={props.strategyHubInitialTab}
-                    initialSearchTerm={props.strategyHubInitialSearch}
-                    onLoadChampionInLab={props.loadChampionToLab}
-                    onHandled={() => {
-                        props.setStrategyHubInitialTab('champions');
-                        props.setStrategyHubInitialSearch(null);
-                    }}
+                return (
+                    <FeatureErrorBoundary componentName="Strategy Hub">
+                        <StrategyHub
+                            initialTab={props.strategyHubInitialTab}
+                            initialSearchTerm={props.strategyHubInitialSearch}
+                            onLoadChampionInLab={props.loadChampionToLab}
+                            onHandled={() => {
+                                props.setStrategyHubInitialTab('champions');
+                                props.setStrategyHubInitialSearch(null);
+                            }}
+                        />
+                    </FeatureErrorBoundary>
+                );
                 />;
-            case 'The Oracle':
+                return (
+                    <FeatureErrorBoundary componentName="Meta Oracle">
+                        <MetaOracle />
+                    </FeatureErrorBoundary>
+                );
                 return <MetaOracle />;
-            case 'Daily Challenge':
+                return (
+                    <FeatureErrorBoundary componentName="Daily Trial">
+                        <DailyTrial navigateToAcademy={props.navigateToAcademy} />
+                    </FeatureErrorBoundary>
+                );
                 return <DailyTrial navigateToAcademy={props.navigateToAcademy} />;
-            case 'Draft Scenarios':
+                return (
+                    <FeatureErrorBoundary componentName="Draft Scenarios">
+                        <DraftScenarios />
+                    </FeatureErrorBoundary>
+                );
                 return <DraftScenarios />;
-            case 'Profile':
+                return (
+                    <FeatureErrorBoundary componentName="Profile">
+                        <Profile setCurrentPage={props.setCurrentPage} navigateToAcademy={props.navigateToAcademy} />
+                    </FeatureErrorBoundary>
+                );
                 return <Profile setCurrentPage={props.setCurrentPage} navigateToAcademy={props.navigateToAcademy} />;
             default:
                 return <Home setCurrentPage={props.setCurrentPage} navigateToArmory={props.navigateToArmory} />;
@@ -82,8 +127,20 @@ export const Router = (props: RouterProps) => {
     };
 
     const nodeRef = pageRefs.current[currentPage] ?? (pageRefs.current[currentPage] = React.createRef());
-
-    return (
+                    <Suspense fallback={
+                        <div className="flex items-center justify-center h-full min-h-[400px]">
+                            <LoadingSpinner size="lg" />
+                        </div>
+                    }>
+                        {renderPage()}
+                    </Suspense>
+                    <Suspense fallback={
+                        <div className="flex items-center justify-center h-full min-h-[400px]">
+                            <LoadingSpinner size="lg" />
+                        </div>
+                    }>
+                        {renderPage()}
+                    </Suspense>
         <TransitionGroup>
             <CSSTransition key={currentPage} nodeRef={nodeRef} timeout={300} classNames="page">
                 <div ref={nodeRef} className="page-container">

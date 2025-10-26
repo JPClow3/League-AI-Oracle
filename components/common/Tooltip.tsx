@@ -4,9 +4,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 interface TooltipProps {
   content: React.ReactNode;
   children: React.ReactElement<any>; // Enforce a single element to apply ARIA attributes
+  delay?: number; // Delay in milliseconds before showing tooltip (default: 300ms)
 }
 
-export const Tooltip = ({ content, children }: TooltipProps) => {
+export const Tooltip = ({ content, children, delay = 300 }: TooltipProps) => {
   const tooltipId = useId();
   const [isVisible, setIsVisible] = useState(false);
   const [style, setStyle] = useState<React.CSSProperties>({});
@@ -16,33 +17,41 @@ export const Tooltip = ({ content, children }: TooltipProps) => {
 
   useLayoutEffect(() => {
     if (isVisible && targetRef.current && tooltipRef.current) {
-        const targetRect = targetRef.current.getBoundingClientRect();
-        const tooltipRect = tooltipRef.current.getBoundingClientRect();
-        const margin = 10;
+        const calculatePosition = () => {
+            if (!targetRef.current || !tooltipRef.current) return;
 
-        let top = targetRect.top - tooltipRect.height - margin;
-        let left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+            const targetRect = targetRef.current.getBoundingClientRect();
+            const tooltipRect = tooltipRef.current.getBoundingClientRect();
+            const margin = 10;
 
-        // Adjust for top overflow
-        if (top < margin) {
-            top = targetRect.bottom + margin;
-        }
+            let top = targetRect.top - tooltipRect.height - margin;
+            let left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
 
-        // Adjust for horizontal overflow
-        if (left < margin) {
-            left = margin;
-        } else if (left + tooltipRect.width > window.innerWidth - margin) {
-            left = window.innerWidth - tooltipRect.width - margin;
-        }
+            // Adjust for top overflow
+            if (top < margin) {
+                top = targetRect.bottom + margin;
+            }
 
-        setStyle({ top, left });
+            // Adjust for horizontal overflow
+            if (left < margin) {
+                left = margin;
+            } else if (left + tooltipRect.width > window.innerWidth - margin) {
+                left = window.innerWidth - tooltipRect.width - margin;
+            }
+
+            setStyle({ top, left });
+        };
+
+        // Use RAF to avoid layout thrashing
+        const rafId = requestAnimationFrame(calculatePosition);
+        return () => cancelAnimationFrame(rafId);
     }
   }, [isVisible]);
   
   const handleMouseEnter = () => {
     showTimeout.current = window.setTimeout(() => {
         setIsVisible(true);
-    }, 300); // 300ms delay before showing
+    }, delay);
   };
 
   const handleMouseLeave = () => {

@@ -31,11 +31,16 @@ const NavItem = ({
     return (
         <button
             onClick={() => onClick(pageName)}
-            className={`flex flex-col items-center justify-center gap-1 w-full pt-2 pb-1 transition-colors duration-200 relative ${isActive ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))]'}`}
+            className={`flex flex-col items-center justify-center gap-1 w-full pt-2 pb-1 transition-all duration-200 relative ${
+                isActive 
+                    ? 'text-[hsl(var(--accent))] bg-[hsl(var(--accent)_/_0.1)]' 
+                    : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--surface)_/_0.5)]'
+            }`}
+            aria-current={isActive ? 'page' : undefined}
         >
-            {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[hsl(var(--accent))] rounded-full" />}
+            {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-[hsl(var(--accent))] rounded-b-full shadow-glow-accent" />}
             {ICONS[pageName]}
-            <span className="text-xs">{label}</span>
+            <span className={`text-xs font-medium ${isActive ? 'font-semibold' : ''}`}>{label}</span>
         </button>
     );
 };

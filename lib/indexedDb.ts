@@ -50,7 +50,7 @@ function initializeDB(): IDraftWiseDB | null {
         // Now, cast the configured instance to our interface and export it.
         return dexieDb as IDraftWiseDB;
     } catch (error) {
-        console.error('Failed to initialize IndexedDB:', error);
+        console.error('Failed to initialize IndexedDB:', error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
@@ -70,7 +70,7 @@ export class SafeStorage {
                 // Use IndexedDB
                 await db.userProfile.put({ id: key, ...value });
             } catch (error) {
-                console.warn('IndexedDB write failed, falling back to localStorage:', error);
+                console.warn('IndexedDB write failed, falling back to localStorage:', error instanceof Error ? error.message : 'Unknown error');
                 this.setLocalStorage(key, value);
             }
         } else {
@@ -86,7 +86,7 @@ export class SafeStorage {
             try {
                 return await db.userProfile.get(key);
             } catch (error) {
-                console.warn('IndexedDB read failed, falling back to localStorage:', error);
+                console.warn('IndexedDB read failed, falling back to localStorage:', error instanceof Error ? error.message : 'Unknown error');
                 return this.getLocalStorage(key);
             }
         } else {

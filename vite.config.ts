@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
         VitePWA({
           registerType: 'autoUpdate',
           workbox: {
-            globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg}'],
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,jpg,jpeg,woff2}'],
             runtimeCaching: [
               {
                 urlPattern: /^https:\/\/ddragon\.leagueoflegends\.com\/.*/i,
@@ -42,7 +42,33 @@ export default defineConfig(({ mode }) => {
                   },
                 },
               },
+              {
+                urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'google-fonts-static',
+                  expiration: {
+                    maxEntries: 30,
+                    maxAgeSeconds: 365 * 24 * 60 * 60,
+                  },
+                },
+              },
+              // Cache API responses
+              {
+                urlPattern: /\/api\/.*/i,
+                handler: 'NetworkFirst',
+                options: {
+                  cacheName: 'api-cache',
+                  expiration: {
+                    maxEntries: 50,
+                    maxAgeSeconds: 5 * 60, // 5 minutes
+                  },
+                  networkTimeoutSeconds: 10,
+                },
+              },
             ],
+            // Increase maximum cache size
+            maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
           },
           manifest: {
             name: 'League AI Oracle',
@@ -73,7 +99,94 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
-        }
+        },
+      },
+      css: {
+        postcss: {
+          plugins: [
+            {
+              postcssPlugin: 'add-shimmer-keyframes',
+              Once(root) {
+                root.append(`
+                  @keyframes shimmer {
+                    0% { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                  }
+                `);
+              },
+            },
+          ],
+        },
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              // Vendor chunks
+              'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
+              'framer-motion': ['framer-motion'],
+              'ui-vendor': ['react-hot-toast', 'lucide-react'],
+              
+              // Feature chunks
+              'draft-lab': [
+                './components/DraftLab/DraftLab',
+                './components/DraftLab/ChampionGrid',
+                './components/DraftLab/TeamPanel',
+                './components/DraftLab/AdvicePanel'
+              ],
+              'arena': ['./components/Arena/LiveArena'],
+              'playbook': ['./components/Playbook/Playbook'],
+              'academy': ['./components/Academy/Academy'],
+              
+              // AI/Services
+              'ai-services': ['./services/geminiService', '@google/genai'],
+              
+              // Data
+              'champion-data': ['./contexts/ChampionContext', './data/championRoles'],
+            }
+          },
+          treeshake: {
+            moduleSideEffects: false,
+            propertyReadSideEffects: false,
+            tryCatchDeoptimization: false
+          }
+        },
+        chunkSizeWarningLimit: 1000,
+        sourcemap: false,
+        minify: 'terser',
+        terserOptions: {
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+            passes: 2,
+            pure_funcs: ['console.log', 'console.info', 'console.debug'],
+            dead_code: true,
+            unused: true
+          },
+          mangle: {
+            safari10: true
+          }
+        },
+        // Optimize CSS
+        cssCodeSplit: true,
+        cssMinify: true,
+        // Improve module preload
+        modulePreload: {
+          polyfill: false
+        },
+        // Report compressed size
+        reportCompressedSize: true,
+        // Optimize chunks
+        assetsInlineLimit: 4096, // Inline assets < 4kb
+      },
+      // Optimize dependencies
+      optimizeDeps: {
+        include: [
+          'react',
+          'react-dom',
+          'react/jsx-runtime'
+        ],
+        exclude: ['@google/genai']
       }
     };
 });

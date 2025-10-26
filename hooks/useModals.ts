@@ -6,6 +6,7 @@ export type ModalState = {
     settingsPanel: boolean;
     feedback: boolean;
     onboarding: boolean;
+    keyboardShortcuts: boolean;
 };
 
 export type ModalAction =
@@ -13,6 +14,7 @@ export type ModalAction =
     | { type: 'OPEN_SETTINGS_PANEL' }
     | { type: 'OPEN_FEEDBACK' }
     | { type: 'OPEN_ONBOARDING' }
+    | { type: 'OPEN_KEYBOARD_SHORTCUTS' }
     | { type: 'CLOSE_ALL' }
     | { type: 'CLOSE', payload: keyof ModalState };
 
@@ -21,6 +23,7 @@ const initialModalState: ModalState = {
     settingsPanel: false,
     feedback: false,
     onboarding: false,
+    keyboardShortcuts: false,
 };
 
 const modalReducer = (state: ModalState, action: ModalAction): ModalState => {
@@ -33,6 +36,8 @@ const modalReducer = (state: ModalState, action: ModalAction): ModalState => {
             return { ...initialModalState, feedback: true };
         case 'OPEN_ONBOARDING':
             return { ...initialModalState, onboarding: true };
+        case 'OPEN_KEYBOARD_SHORTCUTS':
+            return { ...initialModalState, keyboardShortcuts: true };
         case 'CLOSE':
             return { ...state, [action.payload]: false };
         case 'CLOSE_ALL':

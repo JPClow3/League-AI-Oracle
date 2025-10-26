@@ -69,13 +69,11 @@ export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProp
             onClose();
         }
     };
-    
-    let commandIndex = -1;
 
     return (
         <div 
-            className={`fixed inset-0 z-50 transition-opacity duration-300 ${isOpen ? 'bg-background/90' : 'pointer-events-none opacity-0'}`} 
-            onClick={onClose} 
+            className={`fixed inset-0 z-50 transition-opacity duration-300 cursor-pointer ${isOpen ? 'bg-[hsl(var(--bg-primary)_/_0.9)] hover:bg-[hsl(var(--bg-primary)_/_0.95)]' : 'pointer-events-none opacity-0'}`}
+            onClick={onClose}
             aria-hidden={!isOpen}
         >
             <FocusTrap
@@ -114,9 +112,8 @@ export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProp
                             <li key={section} role="presentation">
                                 <div className="px-2 pt-2 pb-1 text-xs font-semibold text-text-secondary uppercase">{section}</div>
                                 <ul role="presentation">
-                                    {/* FIX: Explicitly cast `cmds` to `Command[]` to prevent potential type inference issues. */}
                                     {(cmds as Command[]).map((cmd) => {
-                                        commandIndex++;
+                                        const commandIndex = flatCommands.findIndex(c => c.id === cmd.id);
                                         const isSelected = commandIndex === activeIndex;
                                         return (
                                             <li
@@ -125,7 +122,7 @@ export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProp
                                                 ref={isSelected ? activeItemRef : null}
                                                 onClick={() => { cmd.action(); onClose(); }}
                                                 onMouseMove={() => setActiveIndex(commandIndex)}
-                                                className={`p-2 rounded-md cursor-pointer text-text-primary ${isSelected ? 'bg-accent text-on-accent' : 'hover:bg-secondary'}`}
+                                                className={`p-2 rounded-md cursor-pointer text-text-primary ${isSelected ? 'bg-accent text-on-accent' : 'hover:bg-surface-secondary'}`}
                                                 role="option"
                                                 aria-selected={isSelected}
                                             >

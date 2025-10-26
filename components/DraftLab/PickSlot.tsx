@@ -24,12 +24,23 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
                       isDraggedOver ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-info' : 
                       'ring-1 ring-border-primary/50';
   const dimmedClasses = isDimmed ? 'opacity-50 pointer-events-none' : '';
+  const clearingRef = React.useRef(false);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick();
     }
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clearingRef.current || !onClear) return;
+    clearingRef.current = true;
+    onClear();
+    setTimeout(() => {
+      clearingRef.current = false;
+    }, 200);
   };
 
   const teamName = side.charAt(0).toUpperCase() + side.slice(1);
@@ -54,7 +65,7 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
     >
        {champion && onClear && (
           <button 
-            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            onClick={handleClear}
             className="absolute top-1 right-1 z-20 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center text-white/70 hover:bg-error hover:text-white transition-all opacity-0 group-hover:opacity-100"
             aria-label={`Clear ${champion.name}`}
           >

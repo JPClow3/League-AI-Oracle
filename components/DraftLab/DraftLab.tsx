@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { DraftState, Champion, TeamSide, ChampionLite, AIAdvice, Page, ChampionSuggestion } from '../../types';
+import type { DraftState, Champion, TeamSide, ChampionLite, AIAdvice, ChampionSuggestion } from '../../types';
 import { getDraftAdvice, getBotDraftAction, getTeambuilderSuggestion } from '../../services/geminiService';
 import { TeamPanel } from './TeamPanel';
 import { ChampionGrid } from './ChampionGrid';
@@ -57,6 +57,13 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
         setIsTourOpen(startTour);
     }, [startTour]);
     
+    // Cleanup abort controller on unmount
+    useEffect(() => {
+        return () => {
+            abortControllerRef.current?.abort();
+        };
+    }, []);
+
     const isDraftComplete = draftState.blue.picks.every(p => p.champion) && draftState.red.picks.every(p => p.champion);
     const isStale = advice && JSON.stringify(draftState) !== advice.draftId;
 
@@ -315,3 +322,5 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
         </div>
     );
 };
+
+

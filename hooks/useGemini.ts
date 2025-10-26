@@ -64,7 +64,8 @@ export function useGeminiData<T, TArgs extends any[]>(
         return () => {
             abortControllerRef.current?.abort();
         };
-    }, [lazy, execute]);
-    
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lazy]);
+
     return { data, isLoading, error, execute };
 }

@@ -43,9 +43,13 @@ const callGemini = async (
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
     // The .text property is the recommended way to get the string output.
-    // FIX: Added optional chaining and fallback to empty string to prevent errors if text is not present.
+    // Added optional chaining and fallback to empty string to prevent errors if text is not present.
     const text = response.text ?? '';
     
+    if (!text) {
+        throw new Error("The AI returned an empty response. Please try again.");
+    }
+
     if (isJson) {
         // Clean the response to ensure it's valid JSON
         const jsonString = text.replace(/^```json/, '').replace(/```$/, '').trim();

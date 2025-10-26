@@ -23,12 +23,23 @@ export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDrag
                       isDraggedOver ? 'ring-2 ring-info' :
                       'ring-1 ring-border-primary';
   const dimmedClasses = isDimmed ? 'opacity-50 pointer-events-none' : '';
+  const clearingRef = React.useRef(false);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick();
     }
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clearingRef.current || !onClear) return;
+    clearingRef.current = true;
+    onClear();
+    setTimeout(() => {
+      clearingRef.current = false;
+    }, 200);
   };
 
   const teamName = side.charAt(0).toUpperCase() + side.slice(1);
@@ -51,7 +62,7 @@ export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDrag
     >
        {champion && onClear && (
           <button 
-            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            onClick={handleClear}
             className="absolute top-0 right-0 z-20 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center text-white/70 hover:bg-error hover:text-white transition-all opacity-0 group-hover:opacity-100"
             aria-label={`Clear ban ${champion.name}`}
           >

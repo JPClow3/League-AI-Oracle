@@ -4,52 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DraftWise AI</title>
+
+    <!-- DNS Prefetch for external resources -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://ddragon.leagueoflegends.com">
+
+    <!-- Preconnect to critical origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'bg-primary': 'hsl(var(--bg-primary) / <alpha-value>)',
-              'bg-secondary': 'hsl(var(--bg-secondary) / <alpha-value>)',
-              'surface': 'hsl(var(--surface) / <alpha-value>)',
-              'surface-secondary': 'hsl(var(--surface-secondary) / <alpha-value>)',
-              'surface-tertiary': 'hsl(var(--surface-tertiary) / <alpha-value>)',
-              'surface-inset': 'hsl(var(--surface-inset) / <alpha-value>)',
-              'border': 'hsl(var(--border) / <alpha-value>)',
-              'border-primary': 'hsl(var(--border-primary) / <alpha-value>)',
-              'border-secondary': 'hsl(var(--border-secondary) / <alpha-value>)',
-              'text-primary': 'hsl(var(--text-primary) / <alpha-value>)',
-              'text-secondary': 'hsl(var(--text-secondary) / <alpha-value>)',
-              'text-muted': 'hsl(var(--text-muted) / <alpha-value>)',
-              'accent': 'hsl(var(--accent) / <alpha-value>)',
-              'on-accent': 'hsl(var(--on-accent) / <alpha-value>)',
-              'secondary-accent': 'hsl(var(--secondary-accent) / <alpha-value>)',
-              'info': 'hsl(var(--info) / <alpha-value>)',
-              'success': 'hsl(var(--success) / <alpha-value>)',
-              'warning': 'hsl(var(--warning) / <alpha-value>)',
-              'error': 'hsl(var(--error) / <alpha-value>)',
-              'team-blue': 'hsl(var(--team-blue) / <alpha-value>)',
-              'team-red': 'hsl(var(--team-red) / <alpha-value>)',
-              // Aliases for classes that were used inconsistently
-              'gold': 'hsl(var(--accent) / <alpha-value>)',
-              'gold-bright': 'hsl(var(--accent) / <alpha-value>)',
-              'on-gold': 'hsl(var(--on-accent) / <alpha-value>)',
-              'turquoise': 'hsl(var(--secondary-accent) / <alpha-value>)',
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              display: ['Teko', 'sans-serif'],
-            }
-          }
-        }
-      }
-    </script>
-    
+    <link rel="preconnect" href="https://ddragon.leagueoflegends.com">
+
+    <!-- Preload critical fonts -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+    </noscript>
+
     <script type="importmap">
     {
       "imports": {
@@ -127,6 +99,11 @@
         --success: 135 60% 35%;
         --warning: 38 92% 45%;
         --error: 354 70% 48%;
+
+        --team-blue: 205 100% 40%;
+        --team-red: 0 85% 50%;
+
+        --focus-ring: 42 100% 36%; /* Dark Gold */
       }
 
       body {
