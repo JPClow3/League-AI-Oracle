@@ -5,6 +5,7 @@ import { ROLES } from '../../constants';
 import { Button } from '../common/Button';
 import { useModals } from '../../hooks/useModals';
 import { useChampions } from '../../contexts/ChampionContext';
+import type { DashboardCardSetting } from '../../types';
 
 
 export const ProfileSettingsModal = () => {
@@ -18,6 +19,13 @@ export const ProfileSettingsModal = () => {
             ? settings.favoriteChampions.filter(id => id !== championId)
             : [...settings.favoriteChampions, championId];
         setSettings({ favoriteChampions: newFavorites });
+    };
+
+    const handleDashboardCardToggle = (cardId: DashboardCardSetting['id']) => {
+        const newDashboardCards = settings.dashboardCards.map(card =>
+            card.id === cardId ? { ...card, enabled: !card.enabled } : card
+        );
+        setSettings({ dashboardCards: newDashboardCards });
     };
 
     const onClose = () => dispatch({ type: 'CLOSE', payload: 'profileSettings' });
@@ -54,6 +62,22 @@ export const ProfileSettingsModal = () => {
                             </select>
                         </div>
                      </div>
+                </div>
+
+                {/* Dashboard Settings */}
+                <div className="space-y-2">
+                    <h3 className="font-semibold text-lg text-text-primary">Dashboard Cards</h3>
+                    <p className="text-sm text-text-muted">Choose which cards appear on your Home dashboard.</p>
+                    <div className="space-y-2">
+                        {settings.dashboardCards.map(card => (
+                            <div key={card.id} className="flex items-center justify-between bg-surface-secondary p-3 rounded-lg">
+                                <label htmlFor={`${card.id}-toggle`} className="text-sm text-text-muted capitalize">{card.id.replace('-', ' ')}</label>
+                                <button onClick={() => handleDashboardCardToggle(card.id)} id={`${card.id}-toggle`} role="switch" aria-checked={card.enabled} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-secondary focus:ring-accent ${card.enabled ? 'bg-accent' : 'bg-border-secondary'}`}>
+                                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${card.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
                 
                 {/* Audio Settings */}

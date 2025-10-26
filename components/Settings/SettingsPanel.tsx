@@ -66,18 +66,22 @@ export const SettingsPanel = () => {
         <AnimatePresence>
             {modals.settingsPanel && (
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    {...{
+                        initial: { opacity: 0 },
+                        animate: { opacity: 1 },
+                        exit: { opacity: 0 },
+                        transition: { duration: 0.2 },
+                    }}
                     className="fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.8)] backdrop-blur-sm z-50 flex items-start justify-end"
                     onClick={onClose}
                 >
                     <motion.div
-                        initial={{ x: '100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '100%' }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        {...{
+                            initial: { x: '100%' },
+                            animate: { x: 0 },
+                            exit: { x: '100%' },
+                            transition: { type: 'spring', stiffness: 300, damping: 30 },
+                        }}
                         className="w-full max-w-sm bg-[hsl(var(--bg-secondary))] border-l border-[hsl(var(--border))] h-full shadow-2xl"
                         onClick={e => e.stopPropagation()}
                     >

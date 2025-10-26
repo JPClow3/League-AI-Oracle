@@ -12,6 +12,7 @@ import { StrategyHub } from './StrategyHub/StrategyHub';
 import { DailyTrial } from './Trials/DailyTrial';
 import { Profile } from './Profile/Profile';
 import { MetaOracle } from './MetaOracle/MetaOracle';
+import { DraftScenarios } from './Scenarios/DraftScenarios';
 
 interface RouterProps {
     currentPage: Page;
@@ -35,6 +36,7 @@ interface RouterProps {
     strategyHubInitialTab: 'champions' | 'intel';
     strategyHubInitialSearch: string | null;
     loadChampionToLab: (championId: string, role?: string) => void;
+    loadChampionsAndNavigateToForge: (championIds: string[]) => void;
     setStrategyHubInitialTab: (tab: 'champions' | 'intel') => void;
     setStrategyHubInitialSearch: (term: string | null) => void;
 }
@@ -55,7 +57,7 @@ export const Router = (props: RouterProps) => {
             case 'The Archives':
                 return <Playbook onLoadDraft={props.loadDraftAndNavigate} setCurrentPage={props.setCurrentPage} navigateToAcademy={props.navigateToAcademy} />;
             case 'Academy':
-                return <Academy initialLessonId={props.academyInitialLessonId} onHandled={() => props.setAcademyInitialLessonId(undefined)} />;
+                return <Academy initialLessonId={props.academyInitialLessonId} onHandled={() => props.setAcademyInitialLessonId(undefined)} loadChampionsAndNavigateToForge={props.loadChampionsAndNavigateToForge} />;
             case 'The Armory':
                 return <StrategyHub
                     initialTab={props.strategyHubInitialTab}
@@ -70,6 +72,8 @@ export const Router = (props: RouterProps) => {
                 return <MetaOracle />;
             case 'Daily Challenge':
                 return <DailyTrial navigateToAcademy={props.navigateToAcademy} />;
+            case 'Draft Scenarios':
+                return <DraftScenarios />;
             case 'Profile':
                 return <Profile setCurrentPage={props.setCurrentPage} navigateToAcademy={props.navigateToAcademy} />;
             default:

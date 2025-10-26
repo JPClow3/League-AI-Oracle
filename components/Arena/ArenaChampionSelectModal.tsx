@@ -9,20 +9,21 @@ interface ArenaChampionSelectModalProps {
     onSelect: (champion: ChampionLite) => void;
     onQuickLook: (champion: ChampionLite) => void;
     draftState: DraftState;
+    title?: string;
 }
 
-export const ArenaChampionSelectModal = ({ isOpen, onClose, onSelect, onQuickLook, draftState }: ArenaChampionSelectModalProps) => {
+export const ArenaChampionSelectModal = ({ isOpen, onClose, onSelect, onQuickLook, draftState, title = "Select your Champion" }: ArenaChampionSelectModalProps) => {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Select your Champion">
+        <Modal isOpen={isOpen} onClose={onClose} title={title}>
             <div className="h-[550px]">
                 <ChampionGrid 
                     onSelect={onSelect} 
                     onQuickLook={onQuickLook} 
+                    onWhyThisPick={() => {}}
                     recommendations={[]} 
                     isRecsLoading={false} 
                     activeRole={null} 
                     draftState={draftState} 
-                    intelData={null}
                     onDragStart={() => {}}
                 />
             </div>

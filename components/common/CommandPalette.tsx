@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import FocusTrap from 'focus-trap-react';
 
@@ -35,7 +34,7 @@ export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProp
         ? commands.filter(cmd => cmd.title.toLowerCase().includes(searchTerm.toLowerCase()))
         : commands, [commands, searchTerm]);
 
-    const groupedCommands = useMemo(() => filteredCommands.reduce((acc, cmd) => {
+    const groupedCommands = useMemo(() => filteredCommands.reduce<Record<string, Command[]>>((acc, cmd) => {
         (acc[cmd.section] = acc[cmd.section] || []).push(cmd);
         return acc;
     }, {} as Record<string, Command[]>), [filteredCommands]);
@@ -115,7 +114,8 @@ export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProp
                             <li key={section} role="presentation">
                                 <div className="px-2 pt-2 pb-1 text-xs font-semibold text-text-secondary uppercase">{section}</div>
                                 <ul role="presentation">
-                                    {cmds.map((cmd) => {
+                                    {/* FIX: Explicitly cast `cmds` to `Command[]` to prevent potential type inference issues. */}
+                                    {(cmds as Command[]).map((cmd) => {
                                         commandIndex++;
                                         const isSelected = commandIndex === activeIndex;
                                         return (

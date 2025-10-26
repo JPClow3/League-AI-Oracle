@@ -1,5 +1,3 @@
-
-
 import React, { useMemo } from 'react';
 import type { UserProfile } from '../../types';
 import { ProgressBar } from '../common/ProgressBar';

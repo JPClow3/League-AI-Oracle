@@ -49,6 +49,9 @@ export const translations = {
     home_card_oracle_title: 'The Oracle',
     home_card_oracle_desc: 'Ask any question about the meta and receive an answer grounded in the latest data.',
     home_card_oracle_action: 'Consult The Oracle',
+    // Footer
+    footer_tagline: 'DraftWise AI - Your Ultimate Strategic Co-Pilot',
+    footer_disclaimer: 'Not affiliated with Riot Games, Inc. or LoL Esports.',
   },
   pt: {
     // Navigation
@@ -100,5 +103,8 @@ export const translations = {
     home_card_oracle_title: 'O Oráculo',
     home_card_oracle_desc: 'Faça qualquer pergunta sobre o meta e receba uma resposta baseada nos dados mais recentes.',
     home_card_oracle_action: 'Consultar O Oráculo',
+    // Footer
+    footer_tagline: 'DraftWise AI - Seu Co-piloto Estratégico Definitivo',
+    footer_disclaimer: 'Não afiliado à Riot Games, Inc. ou LoL Esports.',
   },
 };

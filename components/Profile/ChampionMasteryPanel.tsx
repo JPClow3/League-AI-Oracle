@@ -43,7 +43,9 @@ export const ChampionMasteryPanel = ({ mastery }: ChampionMasteryPanelProps) => 
             {sortedMastery.length > 0 ? (
                 <div className="flex flex-wrap gap-4">
                     {sortedMastery.map(item => (
-                        <MasteryCard key={item.championId} masteryItem={item} />
+                        <React.Fragment key={item.championId}>
+                            <MasteryCard masteryItem={item} />
+                        </React.Fragment>
                     ))}
                 </div>
             ) : (

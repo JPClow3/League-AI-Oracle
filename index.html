@@ -183,6 +183,10 @@
       .animate-gentle-pulse { animation: gentle-pulse 2.5s ease-in-out infinite; }
       
       /* Tour Spotlight */
+      @keyframes tour-glow {
+        0%, 100% { box-shadow: 0 0 0 9999px hsla(0, 0%, 0%, 0.7), 0 0 10px 5px hsl(var(--accent)); }
+        50% { box-shadow: 0 0 0 9999px hsla(0, 0%, 0%, 0.7), 0 0 25px 10px hsl(var(--accent)); }
+      }
       .tour-spotlight {
         position: fixed;
         border-radius: 6px;
@@ -190,6 +194,7 @@
         z-index: 1001;
         transition: all 0.3s ease-in-out;
         pointer-events: none;
+        animation: tour-glow 2s ease-in-out infinite;
       }
       
       /* Page Transitions */
@@ -232,6 +237,20 @@
       }
       .analyzing-glow {
         animation: scanner-border 1.5s ease-in-out infinite;
+      }
+      
+      /* New Hextech Loader Animations */
+      @keyframes rotate-outer {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes rotate-inner {
+        from { transform: rotate(360deg); }
+        to { transform: rotate(0deg); }
+      }
+      @keyframes pulse-core {
+        0%, 100% { opacity: 0.7; transform: scale(0.95); }
+        50% { opacity: 1; transform: scale(1.05); }
       }
     </style>
 <link rel="stylesheet" href="/index.css">

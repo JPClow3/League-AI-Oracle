@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTierList, getPatchNotesSummary } from '../../services/geminiService';
-import type { StructuredTierList, StructuredPatchNotes } from '../../types';
+import { getTierList, getPatchNotesSummary, getPersonalizedPatchSummary } from '../../services/geminiService';
+import type { StructuredTierList, StructuredPatchNotes, PersonalizedPatchSummary } from '../../types';
 import { Loader } from '../common/Loader';
 import { Button } from '../common/Button';
 import { SourceList } from '../common/SourceList';
@@ -8,6 +8,9 @@ import { MISSION_IDS } from '../../constants';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useChampions } from '../../contexts/ChampionContext';
 import { useGeminiData } from '../../hooks/useGemini';
+import { PersonalizedPatchNotesDisplay } from './PersonalizedPatchNotesDisplay';
+import { useSettings } from '../../hooks/useSettings';
+import * as storageService from '../../services/storageService';
 
 interface IntelProps {
     onLoadChampionInLab: (championId: string, role?: string) => void;
@@ -66,22 +69,52 @@ const PatchNotesDisplay = ({ patchNotes }: { patchNotes: StructuredPatchNotes })
 
 
 export const Intel = ({ onLoadChampionInLab }: IntelProps) => {
-    const { completeMission } = useUserProfile();
-    const { championsLite } = useChampions();
+    const { profile, completeMission } = useUserProfile();
+    const { championsLite, latestVersion } = useChampions();
+    const { settings } = useSettings();
 
-    const fetchData = useCallback(async (signal: AbortSignal) => {
-        const [tierListData, patchNotesData] = await Promise.all([
-            getTierList(signal),
-            getPatchNotesSummary(signal)
-        ]);
-        // Only mark mission as complete if both fetches succeed.
-        if (!signal.aborted) {
-            completeMission(MISSION_IDS.GETTING_STARTED.CHECK_META);
+    // Fetch Tier List with cache
+    const memoizedTierListFetcher = useCallback(async (signal: AbortSignal) => {
+        if (!latestVersion) throw new Error("DDragon version not available to validate cache.");
+        const fetcher = () => getTierList(signal);
+        return storageService.fetchWithCache('tierList', fetcher, latestVersion, signal);
+    }, [latestVersion]);
+    const { data: tierList, isLoading: isTierListLoading, error: tierListError, execute: refetchTierList } = useGeminiData(memoizedTierListFetcher);
+
+    // Fetch General Patch Notes with cache
+    const memoizedPatchNotesFetcher = useCallback(async (signal: AbortSignal) => {
+        if (!latestVersion) throw new Error("DDragon version not available to validate cache.");
+        
+        // Check cache manually to handle side-effect correctly.
+        // fetchWithCache isn't used here because the side-effect (completeMission) should ONLY run on a fresh fetch.
+        const cached = storageService.getCache<StructuredPatchNotes>('patchNotes', latestVersion);
+        if (cached) {
+            return cached;
         }
-        return { tierList: tierListData, patchNotes: patchNotesData };
-    }, [completeMission]);
-    
-    const { data, isLoading, error, execute: refetch } = useGeminiData(fetchData);
+
+        const notes = await getPatchNotesSummary(signal);
+        if (!signal.aborted) {
+            // This is a fresh fetch, so we run the side-effect and cache the result.
+            completeMission(MISSION_IDS.GETTING_STARTED.CHECK_META);
+            storageService.setCache('patchNotes', notes, latestVersion);
+        }
+        return notes;
+    }, [completeMission, latestVersion]);
+    const { data: patchNotes, isLoading: isPatchLoading, error: patchError, execute: refetchPatchNotes } = useGeminiData(memoizedPatchNotesFetcher);
+
+
+    // Fetch Personalized Patch Notes (lazy, dependent on general notes)
+    const fetchPersonalizedSummary = useCallback(async (signal: AbortSignal, notes: StructuredPatchNotes) => {
+        return getPersonalizedPatchSummary(profile, settings, notes, championsLite, signal);
+    }, [profile, settings, championsLite]);
+    const { data: personalizedSummary, isLoading: isPersonalizedLoading, error: personalizedError, execute: fetchPersonalized } = useGeminiData(fetchPersonalizedSummary, true);
+
+    // Chain the personalized fetch to run after the general patch notes are loaded
+    useEffect(() => {
+        if (patchNotes) {
+            fetchPersonalized(patchNotes);
+        }
+    }, [patchNotes, fetchPersonalized]);
 
     const handleLoadChampion = (championName: string, role: string) => {
         const champion = championsLite.find(c => c.name.toLowerCase() === championName.toLowerCase());
@@ -90,6 +123,9 @@ export const Intel = ({ onLoadChampionInLab }: IntelProps) => {
         }
     };
     
+    const isLoading = isTierListLoading || isPatchLoading;
+    const error = tierListError || patchError;
+
     if (isLoading) {
         return <div className="flex justify-center items-center h-full py-16"><Loader messages={["Analyzing meta trends...", "Summarizing patch notes..."]} /></div>;
     }
@@ -98,15 +134,22 @@ export const Intel = ({ onLoadChampionInLab }: IntelProps) => {
         return (
             <div className="text-center p-8 bg-surface rounded-lg border border-border">
                 <p className="text-error mb-4">{error}</p>
-                <Button onClick={() => refetch()}>Retry</Button>
+                <Button onClick={() => { refetchTierList(); refetchPatchNotes(); }}>Retry</Button>
             </div>
         );
     }
 
     return (
-         <div className="space-y-6">
-            {data?.tierList && <TierListDisplay tierList={data.tierList} onLoadChampion={handleLoadChampion} />}
-            {data?.patchNotes && <PatchNotesDisplay patchNotes={data.patchNotes} />}
+         <div className="space-y-8">
+            <PersonalizedPatchNotesDisplay
+                summary={personalizedSummary}
+                isLoading={isPersonalizedLoading}
+                error={personalizedError}
+                onLoadChampionInLab={onLoadChampionInLab}
+                onRetry={patchNotes ? () => fetchPersonalized(patchNotes) : undefined}
+            />
+            {tierList && <TierListDisplay tierList={tierList} onLoadChampion={handleLoadChampion} />}
+            {patchNotes && <PatchNotesDisplay patchNotes={patchNotes} />}
         </div>
     );
 };

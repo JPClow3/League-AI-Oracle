@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import type { ArenaBotPersona, DraftState } from '../../types';
+import type { ArenaBotPersona, DraftState, TeamSide } from '../../types';
 import { usePlaybook } from '../../hooks/usePlaybook';
+import { TagInput } from '../common/TagInput';
 
 interface ArenaSaveModalProps {
     isOpen: boolean;
     onClose: () => void;
     draftState: DraftState;
     botPersona: ArenaBotPersona;
+    userSide: TeamSide;
 }
 
-export const ArenaSaveModal = ({ isOpen, onClose, draftState, botPersona }: ArenaSaveModalProps) => {
+export const ArenaSaveModal = ({ isOpen, onClose, draftState, botPersona, userSide }: ArenaSaveModalProps) => {
     const [isSaving, setIsSaving] = useState(false);
     const [draftName, setDraftName] = useState('');
+    const [draftTags, setDraftTags] = useState<string[]>([]);
     const { addEntry: addPlaybookEntry, latestEntry } = usePlaybook();
 
     useEffect(() => {
@@ -21,13 +24,14 @@ export const ArenaSaveModal = ({ isOpen, onClose, draftState, botPersona }: Aren
             const defaultName = `Arena Practice vs ${botPersona}`;
             const existingEntry = latestEntry?.name.startsWith(defaultName);
             setDraftName(existingEntry ? `${defaultName} #${(Math.random() * 100).toFixed(0)}` : defaultName);
+            setDraftTags([`vs ${botPersona}`]);
         }
     }, [isOpen, botPersona, latestEntry]);
     
     const handleConfirmSave = async () => {
         if (draftName.trim() && !isSaving) {
             setIsSaving(true);
-            const success = await addPlaybookEntry(draftName.trim(), draftState, null);
+            const success = await addPlaybookEntry(draftName.trim(), draftState, null, `Practice draft against the ${botPersona} AI.`, userSide, draftTags);
             setIsSaving(false);
             if (success) {
                 onClose();
@@ -52,6 +56,10 @@ export const ArenaSaveModal = ({ isOpen, onClose, draftState, botPersona }: Aren
                         placeholder="e.g., Arena Practice vs Dive"
                         className="w-full mt-1 px-3 py-2 bg-surface-secondary border border-border-primary focus:outline-none focus:ring-2 focus:ring-accent"
                     />
+                </div>
+                 <div>
+                    <label htmlFor="draftTags" className="block text-sm font-medium text-text-secondary">Tags</label>
+                    <TagInput tags={draftTags} setTags={setDraftTags} placeholder="e.g. Practice, Counter-Engage" />
                 </div>
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>

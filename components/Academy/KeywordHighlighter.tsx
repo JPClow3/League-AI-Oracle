@@ -16,6 +16,7 @@ export const KeywordHighlighter = ({ text, onKeywordClick }: KeywordHighlighterP
 
   const regex = React.useMemo(() => {
     // Use word boundaries (\b) to ensure only whole words are matched.
+    // The forward slash in the replace regex must be escaped.
     const pattern = `\\b(${KEYWORDS.map(k => k.term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})\\b`;
     return new RegExp(pattern, 'gi');
   }, []);
@@ -37,14 +38,16 @@ export const KeywordHighlighter = ({ text, onKeywordClick }: KeywordHighlighterP
             </div>
           );
           return (
-            <Tooltip key={index} content={content}>
-              <button
-                onClick={() => onKeywordClick?.(keywordData.lessonId)}
-                className="inline p-0 m-0 border-b border-dotted border-accent/70 text-accent font-semibold cursor-pointer text-left bg-transparent hover:text-accent/80"
-              >
-                {part}
-              </button>
-            </Tooltip>
+            <React.Fragment key={index}>
+              <Tooltip content={content}>
+                <button
+                  onClick={() => onKeywordClick?.(keywordData.lessonId)}
+                  className="inline p-0 m-0 border-b border-dotted border-accent/70 text-accent font-semibold cursor-pointer text-left bg-transparent hover:text-accent/80"
+                >
+                  {part}
+                </button>
+              </Tooltip>
+            </React.Fragment>
           );
         }
         return <React.Fragment key={index}>{part}</React.Fragment>;

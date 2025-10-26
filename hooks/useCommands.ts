@@ -1,5 +1,3 @@
-
-
 import { useMemo } from 'react';
 import type { Page } from '../types';
 import { Command } from '../components/common/CommandPalette';
@@ -32,6 +30,7 @@ export const useCommands = ({
             { id: 'nav-live-draft', title: 'Go to Live Co-Pilot', section: 'Navigation', action: () => setCurrentPage('Live Co-Pilot') },
             { id: 'nav-draft-lab', title: 'Go to Strategy Forge', section: 'Navigation', action: () => setCurrentPage('Strategy Forge') },
             { id: 'nav-arena', title: 'Go to Draft Arena', section: 'Navigation', action: () => setCurrentPage('Draft Arena') },
+            { id: 'nav-scenarios', title: 'Go to Draft Scenarios', section: 'Navigation', action: () => setCurrentPage('Draft Scenarios') },
             { id: 'nav-playbook', title: 'Go to The Archives', section: 'Navigation', action: () => setCurrentPage('The Archives') },
             { id: 'nav-strategy-hub', title: 'Go to The Armory', section: 'Navigation', action: () => setCurrentPage('The Armory') },
             { id: 'nav-academy', title: 'Go to Academy', section: 'Navigation', action: () => setCurrentPage('Academy') },

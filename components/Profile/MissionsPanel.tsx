@@ -52,12 +52,13 @@ export const MissionsPanel = ({ missions }: MissionsPanelProps) => {
                 <div className="mb-6 space-y-4 p-4 bg-surface-secondary rounded-lg border border-accent/20">
                      <h3 className="text-lg font-semibold text-accent">Getting Started</h3>
                      {missions.gettingStarted.map(mission => (
-                        <MissionItem 
-                            key={mission.id} 
-                            mission={mission} 
-                            isNewlyCompleted={mission.id === lastCompletedMissionId}
-                            onAnimationEnd={clearLastCompletedMissionId}
-                        />
+                        <React.Fragment key={mission.id}>
+                            <MissionItem 
+                                mission={mission} 
+                                isNewlyCompleted={mission.id === lastCompletedMissionId}
+                                onAnimationEnd={clearLastCompletedMissionId}
+                            />
+                        </React.Fragment>
                     ))}
                 </div>
             )}
@@ -66,23 +67,25 @@ export const MissionsPanel = ({ missions }: MissionsPanelProps) => {
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-info">Daily Missions</h3>
                     {missions.daily.map(mission => (
-                        <MissionItem 
-                            key={mission.id} 
-                            mission={mission}
-                            isNewlyCompleted={mission.id === lastCompletedMissionId}
-                            onAnimationEnd={clearLastCompletedMissionId}
-                        />
+                        <React.Fragment key={mission.id}>
+                            <MissionItem 
+                                mission={mission}
+                                isNewlyCompleted={mission.id === lastCompletedMissionId}
+                                onAnimationEnd={clearLastCompletedMissionId}
+                            />
+                        </React.Fragment>
                     ))}
                 </div>
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-accent">Weekly Missions</h3>
                      {missions.weekly.map(mission => (
-                        <MissionItem 
-                            key={mission.id} 
-                            mission={mission} 
-                            isNewlyCompleted={mission.id === lastCompletedMissionId}
-                            onAnimationEnd={clearLastCompletedMissionId}
-                        />
+                        <React.Fragment key={mission.id}>
+                            <MissionItem 
+                                mission={mission} 
+                                isNewlyCompleted={mission.id === lastCompletedMissionId}
+                                onAnimationEnd={clearLastCompletedMissionId}
+                            />
+                        </React.Fragment>
                     ))}
                 </div>
             </div>

@@ -54,13 +54,14 @@ export const BottomNav = ({ currentPage, setCurrentPage }: BottomNavProps) => {
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[hsl(var(--bg-secondary)_/_0.9)] backdrop-blur-sm border-t border-[hsl(var(--border))] z-50">
             <div className="flex justify-around items-center h-full">
                 {navItems.map(item => (
-                    <NavItem
-                        key={item.page}
-                        pageName={item.page}
-                        label={item.shortLabel}
-                        currentPage={currentPage}
-                        onClick={setCurrentPage}
-                    />
+                    <React.Fragment key={item.page}>
+                        <NavItem
+                            pageName={item.page}
+                            label={item.shortLabel}
+                            currentPage={currentPage}
+                            onClick={setCurrentPage}
+                        />
+                    </React.Fragment>
                 ))}
             </div>
         </nav>

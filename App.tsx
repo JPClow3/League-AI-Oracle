@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import type { Page, DraftState, Settings } from './types';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { BottomNav } from './components/Layout/BottomNav';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { SEO } from './components/common/SEO';
+import { OfflineIndicator } from './components/common/OfflineIndicator';
 import { useSettings } from './hooks/useSettings';
 import { useUserProfile } from './hooks/useUserProfile';
 import { getInitialDraftState, useDraft } from './contexts/DraftContext';
@@ -16,19 +18,20 @@ import { CommandPalette } from './components/common/CommandPalette';
 import { useCommands } from './hooks/useCommands';
 import { Router } from './components/Router';
 import { useModals } from './hooks/useModals';
-import { fromSavedDraft } from './lib/draftUtils';
 import { ROLES } from './constants';
 import { useChampions } from './contexts/ChampionContext';
 import { Loader } from './components/common/Loader';
+import { analytics } from './lib/analytics';
+import * as storageService from './services/storageService';
 
 const App = () => {
     const [currentPage, setCurrentPage] = useState<Page>('Home');
     const { settings, setSettings } = useSettings();
-    const { profile, checkStreak, initializeNewProfile, spForNextLevel } = useUserProfile();
+    const { profile, checkStreak, initializeNewProfile, spForNextLevel, isHydrated } = useUserProfile();
     const { modals, dispatch } = useModals();
     const { champions, isLoading: isChampionsLoading, error: championsError } = useChampions();
 
-    const { draftState, setDraftState, resetDraft } = useDraft();
+    const { setDraftState, resetDraft } = useDraft();
     const [liveDraftState, setLiveDraftState] = useState<DraftState>(getInitialDraftState());
     const [arenaDraftState, setArenaDraftState] = useState<DraftState>(getInitialDraftState());
 
@@ -48,6 +51,11 @@ const App = () => {
         document.documentElement.setAttribute('data-theme', settings.theme);
     }, [settings.theme]);
 
+    // Track page views
+    useEffect(() => {
+        analytics.pageView(currentPage);
+    }, [currentPage]);
+
     // Check if onboarding is complete
     useEffect(() => {
         const onboardingComplete = localStorage.getItem('onboardingComplete');
@@ -55,6 +63,11 @@ const App = () => {
             dispatch({ type: 'OPEN_ONBOARDING' });
         }
     }, [dispatch]);
+
+    // Run cache eviction on startup
+    useEffect(() => {
+        storageService.evictExpiredCache();
+    }, []);
 
     const handleOnboardingComplete = (data: { username: string; skillLevel: 'Beginner' | 'Intermediate' | 'Advanced'; avatar: string, goals: string[], favoriteChampions: string[] }) => {
         initializeNewProfile(data);
@@ -75,8 +88,10 @@ const App = () => {
 
     // Daily streak check
     useEffect(() => {
-        checkStreak();
-    }, [checkStreak]);
+        if (isHydrated) { // Only check streak after profile is loaded
+            checkStreak();
+        }
+    }, [checkStreak, isHydrated]);
 
     // Command Palette Hotkey
     useEffect(() => {
@@ -127,6 +142,19 @@ const App = () => {
         setCurrentPage('Strategy Forge');
     };
 
+    const loadChampionsAndNavigateToForge = (championIds: string[]) => {
+        const blueprintChamps = championIds.map(id => champions.find(c => c.id === id) || null);
+        
+        const newDraft = getInitialDraftState();
+        newDraft.blue.picks = newDraft.blue.picks.map((slot, i) =>
+            i < blueprintChamps.length ? { ...slot, champion: blueprintChamps[i] } : slot
+        );
+
+        setDraftState(newDraft);
+        setCurrentPage('Strategy Forge');
+        toast.success('Blueprint loaded into the Strategy Forge!');
+    };
+
     const commands = useCommands({
         setCurrentPage,
         resetDraft,
@@ -137,10 +165,10 @@ const App = () => {
     });
 
     const renderContent = () => {
-        if (isChampionsLoading) {
+        if (isChampionsLoading || !isHydrated) {
             return (
                 <div className="flex-grow flex items-center justify-center">
-                    <Loader messages={["Loading Champion Database...", "Syncing with Data Dragon..."]} />
+                    <Loader messages={["Loading Champion Database...", "Personalizing Your Experience..."]} />
                 </div>
             );
         }
@@ -179,6 +207,7 @@ const App = () => {
                     strategyHubInitialTab={strategyHubInitialTab}
                     strategyHubInitialSearch={strategyHubInitialSearch}
                     loadChampionToLab={loadChampionToLab}
+                    loadChampionsAndNavigateToForge={loadChampionsAndNavigateToForge}
                     setStrategyHubInitialTab={setStrategyHubInitialTab}
                     setStrategyHubInitialSearch={setStrategyHubInitialSearch}
                 />
@@ -188,6 +217,7 @@ const App = () => {
     
     return (
         <ErrorBoundary>
+            <SEO />
             <div className="flex flex-col min-h-screen">
                 <Toaster
                     position="bottom-right"
@@ -216,6 +246,7 @@ const App = () => {
                 
                 <Footer />
                 <BottomNav currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                <OfflineIndicator />
                 <div className="pb-16 md:pb-0" /> {/* Spacer for BottomNav */}
             </div>
         </ErrorBoundary>

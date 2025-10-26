@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { HistoryEntry, DraftState, PlaybookPlusDossier } from '../../types';
 import { Modal } from '../common/Modal';
@@ -8,6 +6,8 @@ import { AdvicePanel } from '../DraftLab/AdvicePanel';
 import { fromSavedDraft } from '../../lib/draftUtils';
 import toast from 'react-hot-toast';
 import { useChampions } from '../../contexts/ChampionContext';
+import { TagInput } from '../common/TagInput';
+import { Check, X, Minus } from 'lucide-react';
 
 interface PlaybookDetailModalProps {
     isOpen: boolean;
@@ -15,7 +15,7 @@ interface PlaybookDetailModalProps {
     entry: HistoryEntry | null;
     onLoad: (draft: DraftState) => void;
     onDelete: (id: string) => void;
-    onSaveNotes: (id: string, notes: string) => void;
+    onUpdateEntry: (id: string, updates: Partial<Omit<HistoryEntry, 'id'>>) => void;
     navigateToAcademy: (lessonId: string) => void;
 }
 
@@ -82,15 +82,18 @@ const DraftDisplay = ({ draft, analysis }: { draft: DraftState, analysis: Histor
     );
 };
 
-export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, onSaveNotes, navigateToAcademy }: PlaybookDetailModalProps) => {
+export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, onUpdateEntry, navigateToAcademy }: PlaybookDetailModalProps) => {
     const [userNotes, setUserNotes] = useState('');
+    const [tags, setTags] = useState<string[]>([]);
+    const [result, setResult] = useState<HistoryEntry['result']>(undefined);
     const [activeTab, setActiveTab] = useState<'analysis' | 'dossier'>('analysis');
     const { champions } = useChampions();
 
     useEffect(() => {
         if (entry) {
             setUserNotes(entry.userNotes || '');
-            // Prioritize dossier view if available
+            setTags(entry.tags || []);
+            setResult(entry.result);
             setActiveTab(entry.dossier ? 'dossier' : 'analysis');
         }
     }, [entry]);
@@ -111,18 +114,73 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
         onClose();
     };
 
-    const handleSaveNotes = () => {
+    const handleSaveChanges = () => {
         if (entry) {
-            onSaveNotes(entry.id, userNotes);
-            toast.success("Notes saved!");
+            onUpdateEntry(entry.id, { userNotes, tags, result });
         }
     };
     
+    const getFormattedDraftText = () => {
+        if (!fullDraft || !entry) return '';
+
+        const formatTeam = (side: 'blue' | 'red') => {
+            const team = fullDraft[side];
+            const picks = team.picks.map(p => p.champion?.name || 'N/A').join(', ');
+            const bans = team.bans.map(b => b.champion?.name || 'N/A').join(', ');
+            return `${side.toUpperCase()} PICKS: ${picks}\n${side.toUpperCase()} BANS: ${bans}`;
+        };
+        
+        let text = `Draft: ${entry.name}\n\n`;
+        text += `${formatTeam('blue')}\n\n`;
+        text += `${formatTeam('red')}\n\n`;
+
+        if (entry.userNotes) {
+            text += `--- MY NOTES ---\n${entry.userNotes}\n\n`;
+        }
+        if(entry.analysis) {
+             text += `--- AI ANALYSIS ---\n`;
+             text += `Blue Score: ${entry.analysis.teamAnalysis.blue.draftScore}\n`;
+             text += `Red Score: ${entry.analysis.teamAnalysis.red.draftScore}\n`;
+        }
+
+        return text;
+    };
+
+    const handleCopyToClipboard = () => {
+        const text = getFormattedDraftText();
+        navigator.clipboard.writeText(text)
+            .then(() => toast.success("Draft copied to clipboard!"))
+            .catch(() => toast.error("Failed to copy draft."));
+    };
+
+    const handleExportAsText = () => {
+        if (!entry) return;
+        const text = getFormattedDraftText();
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${entry.name.replace(/\s+/g, '_')}_draft.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const TabButton = ({ tab, children, disabled }: { tab: 'analysis' | 'dossier', children: React.ReactNode, disabled?: boolean }) => (
         <button onClick={() => !disabled && setActiveTab(tab)} disabled={disabled} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeTab === tab ? 'bg-accent text-on-accent' : 'bg-secondary text-text-secondary hover:bg-border'} disabled:opacity-50 disabled:cursor-not-allowed`}>
             {children}
         </button>
     );
+
+    const ResultButton = ({ value, children }: { value: NonNullable<HistoryEntry['result']>, children: React.ReactNode }) => {
+        const isActive = result === value;
+        const color = value === 'win' ? 'border-success hover:bg-success/10' : value === 'loss' ? 'border-error hover:bg-error/10' : 'border-border hover:bg-border/10';
+        const activeColor = value === 'win' ? 'bg-success/20 border-success' : value === 'loss' ? 'bg-error/20 border-error' : 'bg-border/20 border-border';
+        return (
+             <Button variant="secondary" onClick={() => setResult(result === value ? undefined : value)} className={`!border-2 ${isActive ? activeColor : color}`}>
+                {children}
+            </Button>
+        );
+    }
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={entry ? `Archives: ${entry.name}` : 'Archived Entry'} size="6xl">
@@ -130,6 +188,18 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
                  <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4 flex flex-col">
                         <DraftDisplay draft={fullDraft} analysis={entry.analysis} />
+                        <div className="space-y-2">
+                             <h3 className="font-display text-xl font-bold text-accent tracking-wide">Record Outcome</h3>
+                             <div className="flex gap-2">
+                                <ResultButton value="win"><Check className="h-4 w-4 mr-1"/> Win</ResultButton>
+                                <ResultButton value="loss"><X className="h-4 w-4 mr-1"/> Loss</ResultButton>
+                                <ResultButton value="remake"><Minus className="h-4 w-4 mr-1"/> Remake</ResultButton>
+                             </div>
+                        </div>
+                        <div className="space-y-2">
+                             <h3 className="font-display text-xl font-bold text-accent tracking-wide">Tags</h3>
+                             <TagInput tags={tags} setTags={setTags} />
+                        </div>
                         <div className="flex-grow flex flex-col">
                             <h3 className="font-display text-xl font-bold text-accent tracking-wide mb-2">My Notes</h3>
                             <textarea
@@ -139,11 +209,15 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
                                 placeholder="Add your personal notes and reflections on this draft..."
                                 className="w-full p-2 bg-secondary border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent text-sm flex-grow"
                             />
-                             <Button onClick={handleSaveNotes} className="mt-2 w-full sm:w-auto">Save Notes</Button>
                         </div>
-                        <div className="pt-4 border-t border-border flex flex-wrap gap-2">
-                            <Button variant="primary" onClick={handleLoad}>Load to Forge</Button>
-                            <Button variant="danger" onClick={handleDelete}>Delete Strategy</Button>
+                        <div className="pt-4 border-t border-border flex flex-wrap gap-2 justify-between">
+                            <div className="flex flex-wrap gap-2">
+                                <Button variant="primary" onClick={handleLoad}>Load to Forge</Button>
+                                <Button variant="secondary" onClick={handleCopyToClipboard}>Copy</Button>
+                                <Button variant="secondary" onClick={handleExportAsText}>Export</Button>
+                                <Button variant="danger" onClick={handleDelete}>Delete</Button>
+                            </div>
+                            <Button onClick={handleSaveChanges} className="w-full sm:w-auto">Save Changes</Button>
                         </div>
                     </div>
     
@@ -155,7 +229,6 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
                         
                         {activeTab === 'dossier' && entry.dossier && <DossierDisplay dossier={entry.dossier} />}
                         
-                        {/* FIX: Added the required 'isStale' prop. For a saved entry, the analysis is never stale. */}
                         {activeTab === 'analysis' && <AdvicePanel advice={entry.analysis || null} isLoading={false} error={null} navigateToAcademy={navigateToAcademy} analysisCompleted={false} onAnimationEnd={() => {}} isStale={false} />}
 
                         {activeTab === 'dossier' && !entry.dossier && (

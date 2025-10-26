@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { BLUEPRINTS } from '../../constants';
 import type { Blueprint } from '../../constants';
@@ -29,7 +30,9 @@ export const BlueprintPanel = ({ onLoad }: BlueprintPanelProps) => {
             <h2 className="font-display text-2xl font-semibold text-text-primary mb-4">Composition Blueprints</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {BLUEPRINTS.map(bp => (
-                    <BlueprintCard key={bp.name} blueprint={bp} onLoad={onLoad} />
+                    <React.Fragment key={bp.name}>
+                      <BlueprintCard blueprint={bp} onLoad={onLoad} />
+                    </React.Fragment>
                 ))}
             </div>
         </div>

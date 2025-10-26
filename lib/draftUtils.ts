@@ -1,5 +1,6 @@
 import type { DraftState, SavedDraft, Champion, DraftSlot, SavedTeamState, ChampionLite, TeamSide, Ability } from '../types';
 import toast from 'react-hot-toast';
+import { CHAMPION_ROLES } from '../data/championRoles';
 
 // --- Hardened LocalStorage Utilities ---
 const QUOTA_EXCEEDED_MESSAGE = "Could not save data. Your browser's storage may be full or disabled. Please clear some space and try again.";
@@ -194,34 +195,8 @@ const deriveStatLevel = (text: string, heavyKeywords: string[], mediumKeywords: 
     return 'Low';
 };
 
-const ROLE_OVERRIDES: Record<string, string[]> = {
-    'Graves': ['Jungle'],
-    'Kindred': ['Jungle'],
-    'Quinn': ['Top'],
-    'Vayne': ['ADC'],
-    'TwistedFate': ['Mid'],
-    'Pyke': ['Support'],
-    'Senna': ['Support', 'ADC'],
-    'TahmKench': ['Support', 'Top'],
-    'Pantheon': ['Jungle', 'Mid', 'Support'],
-    'Sett': ['Top', 'Support'],
-};
-
-const deriveRoles = (tags: string[], id: string): string[] => {
-    if (ROLE_OVERRIDES[id]) {
-        return ROLE_OVERRIDES[id];
-    }
-    const roles = new Set<string>();
-    if (tags.includes('Support')) roles.add('Support');
-    if (tags.includes('Marksman')) roles.add('ADC');
-    if (tags.includes('Mage')) { roles.add('Mid'); roles.add('Support'); }
-    if (tags.includes('Assassin')) { roles.add('Mid'); roles.add('Jungle'); }
-    if (tags.includes('Tank')) { roles.add('Top'); roles.add('Support'); }
-    if (tags.includes('Fighter')) { roles.add('Top'); roles.add('Jungle'); }
-
-    // Fallback for champs with no clear role tags (unlikely)
-    if (roles.size === 0) return ['Fighter'];
-    return Array.from(roles);
+const deriveRoles = (id: string): string[] => {
+    return CHAMPION_ROLES[id] || ['Top']; // Sensible fallback for unmapped champions
 };
 
 export const transformDdragonData = (ddragonData: any, version: string): Champion[] => {
@@ -241,7 +216,7 @@ export const transformDdragonData = (ddragonData: any, version: string): Champio
             splashUrl: `https://ddragon.leagueoflegends.com/cdn/img/splash/${champ.id}_0.jpg`,
             loadingScreenUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champ.id}_0.jpg`,
             playstyle: champ.blurb, // Use blurb as a proxy for playstyle
-            roles: deriveRoles(champ.tags, champ.id),
+            roles: deriveRoles(champ.id),
             class: champ.tags,
             subclass: [], // Subclass is too specific to derive accurately
             damageType: deriveDamageType(champ.info),

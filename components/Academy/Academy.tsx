@@ -8,11 +8,12 @@ import { generateLessonStream } from '../../services/geminiService';
 import toast from 'react-hot-toast';
 import { MarkdownRenderer } from '../common/MarkdownRenderer';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { GraduationCap, ThumbsUp, ThumbsDown, FlaskConical } from 'lucide-react';
 
 interface AcademyProps {
     initialLessonId?: string;
     onHandled: () => void;
+    loadChampionsAndNavigateToForge: (championIds: string[]) => void;
 }
 
 const FeedbackBox = ({ onFeedback, feedbackState }: { onFeedback: (rating: 'up' | 'down') => void, feedbackState?: 'up' | 'down' }) => {
@@ -35,7 +36,7 @@ const FeedbackBox = ({ onFeedback, feedbackState }: { onFeedback: (rating: 'up' 
     );
 };
 
-export const Academy = ({ initialLessonId, onHandled }: AcademyProps) => {
+export const Academy = ({ initialLessonId, onHandled, loadChampionsAndNavigateToForge }: AcademyProps) => {
     const [selectedLessonId, setSelectedLessonId] = useState<string>(initialLessonId || 'team-comp-archetypes');
     const [searchTerm, setSearchTerm] = useState('');
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -187,6 +188,13 @@ export const Academy = ({ initialLessonId, onHandled }: AcademyProps) => {
                             {selectedLesson ? (
                                 <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-headings:text-accent prose-strong:text-text-primary">
                                     <h1>{selectedLesson.title}</h1>
+                                    {selectedLesson.practiceChampionIds && (
+                                        <div className="not-prose my-4">
+                                            <Button variant="primary" onClick={() => loadChampionsAndNavigateToForge(selectedLesson.practiceChampionIds!)}>
+                                                <FlaskConical size={16} className="mr-2" /> Practice this Concept
+                                            </Button>
+                                        </div>
+                                    )}
                                     <MarkdownRenderer text={selectedLesson.content} />
                                     {isGenerating && currentGenerationId === selectedLesson.id && <div className="blinking-cursor" />}
                                     {generationError && currentGenerationId === selectedLesson.id && <p className="text-error">{generationError}</p>}

@@ -50,5 +50,8 @@ export const MISSION_IDS = {
         ARENA_CONTENDER: 'w1',
         EXPAND_PLAYBOOK: 'w2',
         PERFECT_COMP: 'w3',
+        META_BREAKER: 'w4', // New skill-based mission
+        POKE_MASTER: 'w5', // New skill-based mission
+        SCENARIO_MASTER: 'w6', // New scenarios mission
     },
 };

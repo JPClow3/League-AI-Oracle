@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { UserProfile, Mission, ChampionMastery, Champion, RecentFeedback } from '../types';
 import toast from 'react-hot-toast';
-import { safeGetLocalStorage, safeRemoveLocalStorage, safeSetLocalStorage } from '../lib/draftUtils';
+import * as storageService from '../services/storageService';
 import { MISSION_IDS } from '../constants';
 
 // --- Default Data for a New User ---
@@ -20,10 +20,14 @@ const getInitialMissions = (): UserProfile['missions'] => ({
         { id: MISSION_IDS.WEEKLY.ARENA_CONTENDER, title: 'Arena Contender', description: 'Complete 5 drafts in the Arena.', progress: 0, target: 5, rewardSP: 250, completed: false },
         { id: MISSION_IDS.WEEKLY.EXPAND_PLAYBOOK, title: 'Expand the Playbook', description: 'Save 3 new drafts to your Playbook.', progress: 0, target: 3, rewardSP: 150, completed: false },
         { id: MISSION_IDS.WEEKLY.PERFECT_COMP, title: 'The Perfect Comp', description: 'Achieve an S-grade draft analysis in the Lab.', progress: 0, target: 1, rewardSP: 300, completed: false },
+        { id: MISSION_IDS.WEEKLY.META_BREAKER, title: 'Meta Breaker', description: 'Achieve an S-Rank analysis with at least 3 non-meta champions.', progress: 0, target: 1, rewardSP: 300, completed: false },
+        { id: MISSION_IDS.WEEKLY.POKE_MASTER, title: 'Master of Poke', description: 'Win an Arena match with a Poke comp against "The Strategist" bot.', progress: 0, target: 1, rewardSP: 300, completed: false },
+        { id: MISSION_IDS.WEEKLY.SCENARIO_MASTER, title: 'Scenario Master', description: 'Complete 3 Draft Scenarios successfully.', progress: 0, target: 3, rewardSP: 200, completed: false },
     ]
 });
 
 const defaultProfile: UserProfile = {
+    id: 'currentUser',
     username: 'Rookie',
     avatar: 'garen', // Default avatar
     skillLevel: 'Beginner',
@@ -40,11 +44,12 @@ const defaultProfile: UserProfile = {
     arenaStats: {
         averageScore: 0,
         difficulty: 'Beginner',
+        winRateVsBot: 0,
+        totalArenaGames: 0,
     },
-    recentFeedback: []
+    recentFeedback: [],
+    dynamicProTip: undefined,
 };
-
-const PROFILE_STORAGE_KEY = 'userProfile';
 
 // --- Helper Functions ---
 const getRankForLevel = (level: number): string => {
@@ -66,9 +71,19 @@ const MASTERY_POINTS_FROM_GRADE: Record<string, number> = {
 };
 const STARTER_MASTERY_POINTS = 50;
 
+// Helper to get the date of the last Monday
+const getStartOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    return new Date(d.setDate(diff));
+};
+
+
 // --- Context Definition ---
 interface UserProfileContextType {
     profile: UserProfile;
+    isHydrated: boolean; // Flag to indicate if profile has been loaded from storage
     spForNextLevel: number;
     lastCompletedMissionId: string | null;
     clearLastCompletedMissionId: () => void;
@@ -77,6 +92,7 @@ interface UserProfileContextType {
     completeMission: (missionId: string) => boolean; // Returns true if mission was completed
     addChampionMastery: (champions: Champion[], grade: string) => void;
     addRecentFeedback: (feedback: Omit<RecentFeedback, 'id' | 'timestamp'>) => void;
+    updateArenaStats: (draftScore: string, botPersona: string, teamIdentity: string) => void;
     checkStreak: () => void;
     initializeNewProfile: (data: {
         username: string;
@@ -91,54 +107,55 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(und
 
 /**
  * Provides user profile and gamification state to its children.
- * Manages loading and saving the user profile to localStorage, handling level-ups,
+ * Manages loading and saving the user profile to IndexedDB, handling level-ups,
  * missions, and other progression systems.
  */
 export const UserProfileProvider = ({ children }: { children: React.ReactNode }) => {
     const [profile, setProfileState] = useState<UserProfile>(defaultProfile);
+    const [isHydrated, setIsHydrated] = useState(false);
     const [lastCompletedMissionId, setLastCompletedMissionId] = useState<string | null>(null);
 
-    const loadProfile = useCallback(() => {
-        try {
-            const storedProfile = safeGetLocalStorage(PROFILE_STORAGE_KEY);
-            if (storedProfile) {
-                const parsed = JSON.parse(storedProfile);
-                const defaultMissions = getInitialMissions();
-                const missions = {
-                    gettingStarted: parsed.missions?.gettingStarted || defaultMissions.gettingStarted,
-                    daily: parsed.missions?.daily || defaultMissions.daily,
-                    weekly: parsed.missions?.weekly || defaultMissions.weekly,
-                };
-                setProfileState({ ...defaultProfile, ...parsed, missions });
-            } else {
-                setProfileState(defaultProfile);
-            }
-        } catch (error) {
-            console.error('Failed to parse user profile from localStorage', error);
-            toast.error('Your profile data was corrupted and have been reset.');
-            safeRemoveLocalStorage(PROFILE_STORAGE_KEY);
-            setProfileState(defaultProfile);
-        }
-    }, []);
-
+    // Load profile from IndexedDB on initial mount
     useEffect(() => {
-        loadProfile();
-        const handleStorageChange = (event: StorageEvent) => {
-            if (event.key === PROFILE_STORAGE_KEY) {
-                loadProfile();
+        const loadProfile = async () => {
+            try {
+                const storedProfile = await storageService.getUserProfile();
+                if (storedProfile) {
+                    const defaultMissions = getInitialMissions();
+                    // Merge missions to handle cases where new missions are added in an update
+                    const missions = {
+                        gettingStarted: storedProfile.missions?.gettingStarted || defaultMissions.gettingStarted,
+                        daily: storedProfile.missions?.daily || defaultMissions.daily,
+                        weekly: defaultMissions.weekly.map(dm => storedProfile.missions?.weekly.find(sm => sm.id === dm.id) || dm),
+                    };
+                    setProfileState({ ...defaultProfile, ...storedProfile, missions });
+                } else {
+                    // No profile found, could be a first-time user who needs to do onboarding.
+                    // The defaultProfile state is already set.
+                }
+            } catch (error) {
+                console.error('Failed to load user profile from IndexedDB', error);
+                toast.error('Could not load your profile data.');
+                setProfileState(defaultProfile);
+            } finally {
+                setIsHydrated(true); // Signal that the loading attempt is complete
             }
         };
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, [loadProfile]);
+        loadProfile();
+    }, []);
 
+    // Save profile to IndexedDB whenever it changes
     useEffect(() => {
-        safeSetLocalStorage(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-    }, [profile]);
+        // Don't save the default profile on initial load, or if it hasn't changed.
+        // We check if the user has a real username to determine if it's a "real" profile.
+        if (isHydrated && profile && profile.username !== 'Rookie') {
+            storageService.saveUserProfile(profile);
+        }
+    }, [profile, isHydrated]);
 
-    const setProfile = (newProfileData: Partial<UserProfile>) => {
+    const setProfile = useCallback((newProfileData: Partial<UserProfile>) => {
         setProfileState(prev => ({ ...prev, ...newProfileData }));
-    };
+    }, []);
 
     const addSP = useCallback((amount: number, reason?: string) => {
         if (reason) {
@@ -188,6 +205,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
 
         setProfileState(prev => ({
             ...prev,
+            id: 'currentUser',
             username: data.username,
             avatar: data.avatar,
             skillLevel: data.skillLevel,
@@ -281,30 +299,102 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
             return { ...prev, recentFeedback: updatedFeedback };
         });
     }, []);
+    
+    const updateArenaStats = useCallback((draftScore: string, botPersona: string, teamIdentity: string) => {
+        const grade = draftScore.charAt(0);
+        const didWin = ['S', 'A', 'B'].includes(grade);
+
+        if (didWin && botPersona === 'The Strategist' && teamIdentity.toLowerCase().includes('poke')) {
+            completeMission(MISSION_IDS.WEEKLY.POKE_MASTER);
+        }
+
+        setProfileState(prev => {
+            const newTotalGames = prev.arenaStats.totalArenaGames + 1;
+            const currentWins = (prev.arenaStats.winRateVsBot / 100) * prev.arenaStats.totalArenaGames;
+            const newWins = didWin ? currentWins + 1 : currentWins;
+            const newWinRate = (newWins / newTotalGames) * 100;
+            
+            const gradeScores: Record<string, number> = { S: 100, A: 85, B: 70, C: 50, D: 30, F: 10 };
+            const scoreValue = gradeScores[grade] || 50;
+            const newAverageScore = ((prev.arenaStats.averageScore * prev.arenaStats.totalArenaGames) + scoreValue) / newTotalGames;
+            
+            let newDifficulty = prev.arenaStats.difficulty;
+            if (newTotalGames >= 5) {
+                if (newWinRate > 70 && prev.arenaStats.difficulty === 'Beginner') {
+                    newDifficulty = 'Intermediate';
+                    toast.success('Bot difficulty increased to Intermediate!', { icon: '📈' });
+                } else if (newWinRate > 60 && prev.arenaStats.difficulty === 'Intermediate') {
+                    newDifficulty = 'Advanced';
+                     toast.success('Bot difficulty increased to Advanced!', { icon: '🚀' });
+                } else if (newWinRate < 30 && prev.arenaStats.difficulty === 'Advanced') {
+                    newDifficulty = 'Intermediate';
+                } else if (newWinRate < 30 && prev.arenaStats.difficulty === 'Intermediate') {
+                    newDifficulty = 'Beginner';
+                }
+            }
+
+            return {
+                ...prev,
+                arenaStats: {
+                    totalArenaGames: newTotalGames,
+                    winRateVsBot: newWinRate,
+                    averageScore: newAverageScore,
+                    difficulty: newDifficulty,
+                }
+            };
+        });
+    }, [completeMission]);
 
     const checkStreak = useCallback(() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
-        
-        const lastActive = new Date(profile.lastActiveDate);
-        lastActive.setHours(0, 0, 0, 0); // Normalize last active date
+        setProfileState(prev => {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const lastActiveDate = new Date(prev.lastActiveDate);
+            const lastActiveStr = lastActiveDate.toISOString().split('T')[0];
 
-        if (today.getTime() === lastActive.getTime()) return; // Already active today
+            if (lastActiveStr === todayStr) {
+                return prev; // Already active today, no change needed.
+            }
+            
+            const startOfThisWeek = getStartOfWeek(now);
+            const startOfLastActiveWeek = getStartOfWeek(lastActiveDate);
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        
-        // Reset daily missions if it's a new day
-        const resetDailies = profile.missions.daily.map(m => ({ ...m, progress: 0, completed: false }));
+            let newMissions = { ...prev.missions };
+            let didResetWeeklies = false;
 
-        const msInDay = 1000 * 60 * 60 * 24;
-        const dayDifference = (today.getTime() - lastActive.getTime()) / msInDay;
+            // Reset weekly missions if the last active day was before the start of this week.
+            if (startOfLastActiveWeek < startOfThisWeek) {
+                newMissions.weekly = getInitialMissions().weekly;
+                didResetWeeklies = true;
+            }
 
-        if (dayDifference === 1) {
-             setProfile({ streak: profile.streak + 1, lastActiveDate: todayStr, missions: {...profile.missions, daily: resetDailies} });
-        } else {
-             setProfile({ streak: 1, lastActiveDate: todayStr, missions: {...profile.missions, daily: resetDailies} });
-        }
-    }, [profile.lastActiveDate, profile.streak, profile.missions]);
+            // Reset daily missions if it's a new day
+            const resetDailies = prev.missions.daily.map(m => ({ ...m, progress: 0, completed: false }));
+            newMissions.daily = resetDailies;
+
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            let newStreak;
+            if (lastActiveStr === yesterdayStr) {
+                newStreak = prev.streak + 1; // Streak continues
+            } else {
+                newStreak = 1; // Streak broken or first day
+            }
+            
+            if (didResetWeeklies) {
+                toast.success("Your weekly missions have been reset!", { icon: '📅' });
+            }
+
+            return {
+                ...prev,
+                streak: newStreak,
+                lastActiveDate: todayStr,
+                missions: newMissions
+            };
+        });
+    }, []);
 
     const spForNextLevel = getSPForNextLevel(profile.level);
 
@@ -314,6 +404,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
 
     const contextValue = useMemo(() => ({
         profile,
+        isHydrated,
         spForNextLevel,
         lastCompletedMissionId,
         clearLastCompletedMissionId,
@@ -322,15 +413,13 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         completeMission,
         addChampionMastery,
         addRecentFeedback,
+        updateArenaStats,
         checkStreak,
         initializeNewProfile,
-    }), [profile, spForNextLevel, lastCompletedMissionId, clearLastCompletedMissionId, addSP, completeMission, addChampionMastery, addRecentFeedback, checkStreak, initializeNewProfile]);
+    }), [profile, isHydrated, spForNextLevel, lastCompletedMissionId, clearLastCompletedMissionId, setProfile, addSP, completeMission, addChampionMastery, addRecentFeedback, updateArenaStats, checkStreak, initializeNewProfile]);
 
-    return React.createElement(
-        UserProfileContext.Provider,
-        { value: contextValue },
-        children
-    );
+    // FIX: Replaced JSX with React.createElement because this is a .ts file, not a .tsx file.
+    return React.createElement(UserProfileContext.Provider, { value: contextValue }, children);
 };
 
 /**

@@ -12,6 +12,7 @@ export const Tooltip = ({ content, children }: TooltipProps) => {
   const [style, setStyle] = useState<React.CSSProperties>({});
   const targetRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const showTimeout = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     if (isVisible && targetRef.current && tooltipRef.current) {
@@ -37,13 +38,26 @@ export const Tooltip = ({ content, children }: TooltipProps) => {
         setStyle({ top, left });
     }
   }, [isVisible]);
+  
+  const handleMouseEnter = () => {
+    showTimeout.current = window.setTimeout(() => {
+        setIsVisible(true);
+    }, 300); // 300ms delay before showing
+  };
+
+  const handleMouseLeave = () => {
+    if (showTimeout.current) {
+        clearTimeout(showTimeout.current);
+    }
+    setIsVisible(false);
+  };
 
   const clonedChild = React.cloneElement(children, {
     ...children.props,
     'aria-describedby': tooltipId,
     ref: targetRef,
-    onMouseEnter: () => setIsVisible(true),
-    onMouseLeave: () => setIsVisible(false),
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
     onFocus: () => setIsVisible(true),
     onBlur: () => setIsVisible(false),
   });
@@ -59,10 +73,12 @@ export const Tooltip = ({ content, children }: TooltipProps) => {
                 role="tooltip"
                 className="fixed w-max max-w-xs text-text-secondary text-sm p-3 shadow-lg z-50 tooltip-container"
                 style={style}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 5 }}
-                transition={{ duration: 0.2 }}
+                {...{
+                    initial: { opacity: 0, y: 5 },
+                    animate: { opacity: 1, y: 0 },
+                    exit: { opacity: 0, y: 5 },
+                    transition: { duration: 0.2 },
+                }}
             >
                 {content}
             </motion.div>

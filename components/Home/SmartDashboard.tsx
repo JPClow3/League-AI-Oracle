@@ -1,7 +1,8 @@
 import React from 'react';
-import type { Page, UserProfile, HistoryEntry } from '../../types';
+import type { Page, UserProfile, HistoryEntry, DashboardCardSetting } from '../../types';
 import { Button } from '../common/Button';
 import { Sun, Library, FlaskConical } from 'lucide-react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface SmartDashboardProps {
     profile: UserProfile;
@@ -35,48 +36,62 @@ const SmartCard = ({
 );
 
 export const SmartDashboard = ({ profile, latestPlaybookEntry, setCurrentPage }: SmartDashboardProps) => {
+    const { settings } = useSettings();
     const isTrialCompleted = profile.missions.daily.find(m => m.id === 'd2')?.completed ?? false;
 
-    const cards = [];
+    const potentialCards: { id: DashboardCardSetting['id']; condition: boolean; component: React.ReactNode }[] = [
+        {
+            id: 'trial',
+            condition: !isTrialCompleted,
+            component: (
+                <SmartCard
+                    title="Daily Trial"
+                    description="Your daily strategic challenge is ready."
+                    actionText="Begin Trial"
+                    onClick={() => setCurrentPage('Daily Challenge')}
+                    icon={<Sun size={28} strokeWidth={1.5} />}
+                />
+            ),
+        },
+        {
+            id: 'playbook',
+            condition: !!latestPlaybookEntry,
+            component: (
+                <SmartCard
+                    title="Latest Playbook Entry"
+                    description={`Review your "${latestPlaybookEntry?.name}" strategy.`}
+                    actionText="View"
+                    onClick={() => setCurrentPage('The Archives')}
+                    icon={<Library size={28} strokeWidth={1.5} />}
+                />
+            ),
+        },
+    ];
+    
+    const enabledCardIds = new Set(settings.dashboardCards?.filter(c => c.enabled).map(c => c.id) || []);
+    
+    let cards = potentialCards
+        .filter(card => enabledCardIds.has(card.id))
+        .filter(card => card.condition)
+        .map(c => <React.Fragment key={c.id}>{c.component}</React.Fragment>);
 
-    if (!isTrialCompleted) {
-        cards.push(
-            <SmartCard
-                key="trial"
-                title="Daily Trial"
-                description="Your daily strategic challenge is ready."
-                actionText="Begin Trial"
-                onClick={() => setCurrentPage('Daily Challenge')}
-                icon={<Sun size={28} strokeWidth={1.5} />}
-            />
-        );
-    }
-    
-    if (latestPlaybookEntry) {
-         cards.push(
-            <SmartCard
-                key="playbook"
-                title="Latest Playbook Entry"
-                description={`Review your "${latestPlaybookEntry.name}" strategy.`}
-                actionText="View"
-                onClick={() => setCurrentPage('The Archives')}
-                icon={<Library size={28} strokeWidth={1.5} />}
-            />
-        );
-    }
-    
     // Fallback card if no other smart actions are available
-    if (cards.length === 0) {
+    if (cards.length === 0 && enabledCardIds.has('draft-lab')) {
         cards.push(
-            <SmartCard
-                key="draft-lab"
-                title="Start a New Draft"
-                description="Theory-craft your next masterpiece in the Lab."
-                actionText="Enter Lab"
-                onClick={() => setCurrentPage('Strategy Forge')}
-                icon={<FlaskConical size={28} strokeWidth={1.5} />}
-            />
+            <React.Fragment key="draft-lab">
+                <SmartCard
+                    title="Start a New Draft"
+                    description="Theory-craft your next masterpiece in the Lab."
+                    actionText="Enter Lab"
+                    onClick={() => setCurrentPage('Strategy Forge')}
+                    icon={<FlaskConical size={28} strokeWidth={1.5} />}
+                />
+            </React.Fragment>
         );
+    }
+
+    if (cards.length === 0) {
+        return null;
     }
 
     return (

@@ -58,6 +58,7 @@ A strong **Team Composition** is more than just five strong champions; it's a co
             {
                 id: 'poke-composition',
                 title: 'Mastering the Poke Composition',
+                practiceChampionIds: ['Aatrox', 'XinZhao', 'Zoe', 'Ezreal', 'Lulu'],
                 content: `
 A **Poke** composition's philosophy is "win the fight before it starts." By controlling space and applying constant, long-range pressure, you force the enemy into a reactive state, unable to safely contest objectives.
 
@@ -87,6 +88,7 @@ A successful poke comp needs more than just damage; it requires layers of utilit
             {
                 id: 'dive-composition',
                 title: 'Executing the Perfect Dive',
+                practiceChampionIds: ['Irelia', 'LeeSin', 'Akali', 'Lucian', 'Nautilus'],
                 content: `
 A **Dive** composition is an exercise in coordinated aggression. It's about identifying the enemy's most critical member and executing a flawless, multi-pronged attack to eliminate them from the fight instantly.
 
@@ -169,6 +171,7 @@ Disengage is the art of saying "no." It's the counter to aggressive Engage and D
             {
                 id: 'protect-the-carry',
                 title: 'Protect the Carry: The Late-Game Wager',
+                practiceChampionIds: ['Sett', 'Warwick', 'Lulu', 'Vayne', 'Alistar'],
                 content: `
 The **Protect the Carry** composition, often called "1-3-1" in terms of threat distribution (one hyper-carry as the win condition), is a high-stakes bet on the late game. You are intentionally sacrificing early-game pressure for an almost unbeatable 5v5 teamfight once your carry comes online.
 

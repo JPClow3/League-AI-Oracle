@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useMemo } from 'react';
 
 // --- Modal State Management ---
@@ -57,11 +56,8 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
 
     const contextValue = useMemo(() => ({ modals, dispatch }), [modals]);
 
-    return React.createElement(
-        ModalContext.Provider,
-        { value: contextValue },
-        children
-    );
+    // FIX: Replaced JSX with React.createElement because this is a .ts file, not a .tsx file.
+    return React.createElement(ModalContext.Provider, { value: contextValue }, children);
 };
 
 export const useModals = (): ModalContextType => {

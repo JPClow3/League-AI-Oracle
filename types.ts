@@ -1,8 +1,12 @@
+import type { Icon } from 'lucide-react';
 
-
-
-export type Page = 'Home' | 'Strategy Forge' | 'The Archives' | 'Academy' | 'Draft Arena' | 'The Armory' | 'Daily Challenge' | 'Profile' | 'The Oracle' | 'Live Co-Pilot';
+export type Page = 'Home' | 'Strategy Forge' | 'The Archives' | 'Academy' | 'Draft Arena' | 'The Armory' | 'Daily Challenge' | 'Profile' | 'The Oracle' | 'Live Co-Pilot' | 'Draft Scenarios';
 export type DraftMode = 'competitive' | 'soloq';
+
+export interface DashboardCardSetting {
+    id: 'trial' | 'playbook' | 'draft-lab';
+    enabled: boolean;
+}
 
 export interface Settings {
     theme: 'light' | 'dark';
@@ -11,6 +15,7 @@ export interface Settings {
     favoriteChampions: string[]; // Champion IDs
     language: 'en' | 'pt';
     enableSound: boolean;
+    dashboardCards: DashboardCardSetting[];
 }
 
 export interface Ability {
@@ -47,6 +52,25 @@ export interface ChampionLite {
 
 export type TeamSide = 'blue' | 'red';
 
+export interface DraftTurn {
+  team: TeamSide;
+  type: 'ban' | 'pick';
+  index: number;
+}
+
+export interface ChampionMatchup {
+  championName: string;
+  tip?: string;
+  reasoning?: string;
+}
+
+export interface GroundingChunk {
+  web?: {
+    title?: string;
+    uri?: string;
+  };
+}
+
 export interface DraftSlot {
   champion: Champion | null;
   isActive: boolean;
@@ -69,6 +93,11 @@ export interface DraftWeakness {
     keyword?: string;
 }
 
+export interface SynergyDetail {
+    championNames: string[];
+    reasoning: string;
+}
+
 export interface TeamAnalysis {
   strengths: string[];
   weaknesses: DraftWeakness[];
@@ -81,6 +110,8 @@ export interface TeamAnalysis {
   draftHighlight?: { championName: string; reasoning: string; };
   powerSpikeTimeline?: { time: string; bluePower: number; redPower: number; event: string; }[];
   keyMatchups?: { role: string; blueChampion: string; redChampion: string; analysis: string; }[];
+  synergies?: SynergyDetail[];
+  antiSynergies?: SynergyDetail[];
 }
 
 export interface PickSuggestion {
@@ -97,11 +128,21 @@ export interface BanSuggestion {
   reasoning: string;
 }
 
-export interface ItemSuggestion {
-  championName: string;
-  coreItems: string[];
-  situationalItems: string[];
+export interface RuneSuggestion {
+    primaryPath: string;
+    keystone: string;
+    secondaryPath: string;
 }
+
+export interface ItemAndRuneSuggestion {
+    championName: string;
+    role: string;
+    coreItems: string[];
+    situationalItems: { item: string; reason: string }[];
+    runes: RuneSuggestion;
+    reasoning: string;
+}
+
 
 export interface AIAdvice {
   draftId?: string; // ID of the draft state this advice was generated for
@@ -111,7 +152,7 @@ export interface AIAdvice {
   };
   pickSuggestions: PickSuggestion[];
   banSuggestions: BanSuggestion[];
-  itemSuggestions: ItemSuggestion[];
+  buildSuggestions?: ItemAndRuneSuggestion[];
 }
 
 // New type for contextual champion suggestions
@@ -143,11 +184,14 @@ export interface HistoryEntry {
   id: string;
   name: string;
   draft: SavedDraft; // Use the lightweight draft structure
+  userSide: TeamSide; // Track which side the user played for stats
   analysis?: AIAdvice | null;
   userNotes?: string; // For Playbook+
   dossier?: PlaybookPlusDossier;
   createdAt: string;
   status?: 'pending' | 'saved' | 'error';
+  tags?: string[]; // New field for user-defined tags
+  result?: 'win' | 'loss' | 'remake'; // New field for win/loss tracking
 }
 
 export interface MetaSource {
@@ -199,6 +243,18 @@ export interface StructuredPatchNotes {
     sources: MetaSource[];
 }
 // --- End Intel Hub Types ---
+// --- New Personalized Patch Notes Types ---
+export interface PersonalizedPatchChange {
+    name: string; // Champion or item name
+    change: string; // Description of the change
+    reasoning: string; // Why this is relevant to the user
+}
+export interface PersonalizedPatchSummary {
+    summary: string; // Personalized high-level summary
+    relevantBuffs: PersonalizedPatchChange[];
+    relevantNerfs: PersonalizedPatchChange[];
+}
+// --- End Personalized Patch Notes Types ---
 
 
 export interface TierList {
@@ -225,6 +281,7 @@ export interface Lesson {
   id: string;
   title: string;
   content: string;
+  practiceChampionIds?: string[];
 }
 
 export interface LessonCategory {
@@ -250,11 +307,13 @@ export interface ChampionMastery {
     highestGrade: string; // e.g., "S+", "A-"
 }
 
-export type ArenaBotPersona = 'The Aggressor' | 'The Strategist' | 'The Trickster';
+export type ArenaBotPersona = 'The Aggressor' | 'The Strategist' | 'The Trickster' | 'The Meta Slave' | 'The One-Trick' | 'The Chaos Draft' | 'The Guardian' | 'The Split Pusher';
 export interface ArenaStats {
     averageScore: number; // Stored as a percentile, e.g., 85.5
     difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
     preferredPersona?: ArenaBotPersona;
+    winRateVsBot: number; // Win rate as a percentage, e.g., 55.5
+    totalArenaGames: number;
 }
 
 export interface RecentFeedback {
@@ -267,6 +326,7 @@ export interface RecentFeedback {
 export type TeamfightRole = 'Engage' | 'Disengage' | 'Peel' | 'Damage Dealer' | 'Utility';
 
 export interface UserProfile {
+    id: string; // Primary key for IndexedDB
     username: string;
     avatar: string; // Champion ID
     skillLevel: 'Beginner' | 'Intermediate' | 'Advanced';
@@ -287,6 +347,10 @@ export interface UserProfile {
     arenaStats: ArenaStats;
     recentFeedback: RecentFeedback[];
     teamfightRole?: TeamfightRole;
+    dynamicProTip?: {
+        tip: string;
+        generatedAt: string; // ISO date string
+    };
 }
 // --- End Gamification Types ---
 
@@ -330,3 +394,24 @@ export interface MatchupAnalysis {
     strongAgainstTips: { championName: string; tip: string; }[];
     weakAgainstTips: { championName: string; tip: string; }[];
 }
+// --- End Matchup Analysis Type ---
+
+// --- New Draft Scenarios Type ---
+export interface DraftScenario {
+    id: string;
+    title: string;
+    description: string;
+    draft: SavedDraft;
+    userContext: {
+        side: TeamSide;
+        type: 'pick'; // For now, only support pick scenarios
+        index: number;
+    };
+    options: {
+        championId: string;
+        isCorrect: boolean;
+        explanation: string; // Explanation for this specific choice
+    }[];
+    correctChoiceExplanation: string; // Overall explanation for the correct answer
+}
+// --- End Draft Scenarios Type ---

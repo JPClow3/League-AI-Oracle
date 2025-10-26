@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { HistoryEntry, DraftState, AIAdvice } from '../types';
+import type { HistoryEntry, DraftState, AIAdvice, TeamSide } from '../types';
 import { toSavedDraft } from '../lib/draftUtils';
 import { generatePlaybookPlusDossier } from '../services/geminiService';
 import toast from 'react-hot-toast';
@@ -48,18 +48,22 @@ export const usePlaybook = () => {
      * @param draftState The full draft state to be saved.
      * @param analysis The AI analysis associated with the draft (if any).
      * @param userNotes Optional user-provided notes.
+     * @param userSide The team the user played on.
+     * @param tags Optional array of user-defined tags.
      * @returns A promise that resolves to true if the entry was successfully saved.
      */
-    const addEntry = async (name: string, draftState: DraftState, analysis: AIAdvice | null, userNotes?: string): Promise<boolean> => {
+    const addEntry = async (name: string, draftState: DraftState, analysis: AIAdvice | null, userNotes: string | undefined, userSide: TeamSide, tags: string[] = []): Promise<boolean> => {
         const tempId = `temp-${Date.now()}`;
         const newEntry: HistoryEntry = {
             id: tempId,
             name,
             draft: toSavedDraft(draftState),
+            userSide,
             analysis: analysis,
             userNotes: userNotes || '',
             createdAt: new Date().toISOString(),
             status: 'pending',
+            tags,
         };
 
         // Optimistically update UI
@@ -72,7 +76,7 @@ export const usePlaybook = () => {
         abortControllerRef.current = controller;
 
         try {
-            const dossier = analysis ? await generatePlaybookPlusDossier(draftState, controller.signal) : null;
+            const dossier = analysis ? await generatePlaybookPlusDossier(draftState, userSide, controller.signal) : null;
             if (controller.signal.aborted) return false;
             
             const finalId = new Date().toISOString(); // Use final timestamp as permanent ID
@@ -135,16 +139,16 @@ export const usePlaybook = () => {
     };
     
     /**
-     * Updates the user notes for a specific playbook entry.
+     * Updates a specific playbook entry with new data.
      * @param id The ID of the entry to update.
-     * @param notes The new notes to save.
+     * @param updates A partial HistoryEntry object with the fields to update.
      */
-    const updateNotes = async (id: string, notes: string): Promise<void> => {
-        await db.history.update(id, { userNotes: notes });
+    const updateEntry = async (id: string, updates: Partial<Omit<HistoryEntry, 'id'>>): Promise<void> => {
+        await db.history.update(id, updates);
         setEntries(prev => prev.map(entry => 
-            entry.id === id ? { ...entry, userNotes: notes } : entry
+            entry.id === id ? { ...entry, ...updates } : entry
         ));
     };
 
-    return { entries, isLoading, addEntry, deleteEntry, updateNotes, latestEntry: entries[0] };
+    return { entries, isLoading, addEntry, deleteEntry, updateEntry, latestEntry: entries[0] };
 };

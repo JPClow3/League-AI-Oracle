@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useEffect } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { CSSTransition } from 'react-transition-group';
@@ -66,17 +64,17 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl' }: ModalP
           unmountOnExit
           nodeRef={contentRef}
         >
-          <div 
-            ref={contentRef}
-            tabIndex={-1}
-            className={`bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full max-h-[90vh] flex flex-col m-4 focus:outline-none border border-[hsl(var(--border))] ${sizeClasses[size]}`}
-            onClick={(e) => e.stopPropagation()}
+          <FocusTrap
+            active={isOpen}
+            focusTrapOptions={{
+              fallbackFocus: () => contentRef.current || document.body,
+            }}
           >
-            <FocusTrap
-              active={isOpen}
-              focusTrapOptions={{
-                fallbackFocus: () => contentRef.current || document.body,
-              }}
+            <div 
+              ref={contentRef}
+              tabIndex={-1}
+              className={`bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full max-h-[90vh] flex flex-col m-4 focus:outline-none border border-[hsl(var(--border))] ${sizeClasses[size]}`}
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center p-6 border-b border-[hsl(var(--border))] flex-shrink-0">
@@ -89,8 +87,8 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl' }: ModalP
                     {children}
                 </div>
               </div>
-            </FocusTrap>
-          </div>
+            </div>
+          </FocusTrap>
         </CSSTransition>
       </div>
     </CSSTransition>

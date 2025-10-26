@@ -15,7 +15,7 @@ const renderLine = (line: string) => {
                     return <strong key={i}>{part.slice(2, -2)}</strong>;
                 }
                 // Wrap plain text segments with the keyword highlighter
-                return <KeywordHighlighter key={i} text={part} />;
+                return <React.Fragment key={i}><KeywordHighlighter text={part} /></React.Fragment>;
             })}
         </>
     );

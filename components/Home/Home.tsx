@@ -5,7 +5,7 @@ import { usePlaybook } from '../../hooks/usePlaybook';
 import { SmartDashboard } from './SmartDashboard';
 import { useTranslation, TranslationKey } from '../../hooks/useTranslation';
 import { Button } from '../common/Button';
-import { FlaskConical, Signal, Swords, Shield, GraduationCap, FileText, Library, Eye } from 'lucide-react';
+import { FlaskConical, Signal, Swords, Shield, GraduationCap, FileText, Library, Eye, Sparkles, BrainCircuit } from 'lucide-react';
 
 interface HomeProps {
   setCurrentPage: (page: Page) => void;
@@ -46,7 +46,8 @@ const ICONS = {
     ACADEMY: <GraduationCap size={28} strokeWidth={1.5} />,
     INTEL: <FileText size={28} strokeWidth={1.5} />,
     PLAYBOOK: <Library size={28} strokeWidth={1.5} />,
-    ORACLE: <Eye size={28} strokeWidth={1.5} />,
+    BUILDER: <Sparkles size={28} strokeWidth={1.5} />,
+    SCENARIOS: <BrainCircuit size={28} strokeWidth={1.5} />,
 }
 
 export const Home = ({ setCurrentPage, navigateToArmory }: HomeProps) => {
@@ -97,12 +98,26 @@ export const Home = ({ setCurrentPage, navigateToArmory }: HomeProps) => {
           actionText={t('home_card_forge_action')}
           onClick={() => setCurrentPage('Strategy Forge')}
         />
+         <FeatureCard
+          title="Team Builder Assistant"
+          description="Let the AI guide you step-by-step in creating a powerful composition around a core champion or strategy."
+          icon={ICONS.BUILDER}
+          actionText="Start Building"
+          onClick={() => setCurrentPage('Strategy Forge')}
+        />
         <FeatureCard
           title={t('home_card_arena_title')}
           description={t('home_card_arena_desc')}
           icon={ICONS.ARENA}
           actionText={t('home_card_arena_action')}
           onClick={() => setCurrentPage('Draft Arena')}
+        />
+        <FeatureCard
+          title="Draft Scenarios"
+          description="Test your knowledge in specific, tricky draft situations and get instant AI feedback on your choices."
+          icon={ICONS.SCENARIOS}
+          actionText="Train Your Skills"
+          onClick={() => setCurrentPage('Draft Scenarios')}
         />
         <FeatureCard
           title={t('home_card_archives_title')}
@@ -117,20 +132,6 @@ export const Home = ({ setCurrentPage, navigateToArmory }: HomeProps) => {
           icon={ICONS.ARMORY}
           actionText={t('home_card_dossiers_action')}
           onClick={() => navigateToArmory('champions')}
-        />
-        <FeatureCard
-          title={t('home_card_intel_title')}
-          description={t('home_card_intel_desc')}
-          icon={ICONS.INTEL}
-          actionText={t('home_card_intel_action')}
-          onClick={() => navigateToArmory('intel')}
-        />
-         <FeatureCard
-          title={t('home_card_oracle_title')}
-          description={t('home_card_oracle_desc')}
-          icon={ICONS.ORACLE}
-          actionText={t('home_card_oracle_action')}
-          onClick={() => setCurrentPage('The Oracle')}
         />
       </div>
     </div>

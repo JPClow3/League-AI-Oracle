@@ -38,9 +38,11 @@ const ProgressBar = ({ step, total }: { step: number; total: number }) => (
     <div className="w-full bg-surface-inset h-2.5">
         <motion.div
             className="bg-gradient-to-r from-gold to-gold-bright h-2.5"
-            initial={{ width: 0 }}
-            animate={{ width: `${((step - 1) / total) * 100}%` }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            {...{
+                initial: { width: 0 },
+                animate: { width: `${((step - 1) / total) * 100}%` },
+                transition: { duration: 0.5, ease: "easeInOut" },
+            }}
         />
     </div>
 );
@@ -78,31 +80,19 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
         }
     }, [isOpen, resetState]);
 
-    useEffect(() => {
-        // Clear favorite champions when role changes to avoid irrelevant selections.
-        setFavoriteChampions([]);
-    }, [primaryRole]);
-
-    const paginate = (newDirection: number) => {
-        setDirection(newDirection);
-        setStep(step + newDirection);
+    const nextStep = () => {
+        setDirection(1);
+        setStep(s => Math.min(s + 1, TOTAL_STEPS));
     };
 
-    const handleFavoriteToggle = (id: string) => {
-        setFavoriteChampions(prev => {
-            if (prev.includes(id)) return prev.filter(champId => champId !== id);
-            if (prev.length < 3) return [...prev, id];
-            return prev;
-        });
+    const prevStep = () => {
+        setDirection(-1);
+        setStep(s => Math.max(s - 1, 1));
     };
-
-    const handleGoalToggle = (goal: string) => {
-        setGoals(prev => prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]);
-    };
-
+    
     const handleComplete = () => {
         onComplete({
-            username: username.trim() || 'Rookie',
+            username,
             primaryRole,
             favoriteChampions,
             skillLevel,
@@ -111,192 +101,163 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
         });
     };
 
-    const handleSkip = () => {
-        onComplete({
-            username: 'Rookie',
-            primaryRole: 'All',
-            favoriteChampions: [],
-            skillLevel: 'Beginner',
-            goals: [],
-            avatar: 'Garen',
-        });
-    };
-    
-    const isNextDisabled = step === 1 && !username.trim();
-    
-    const variants = {
-        enter: (direction: number) => ({
-            x: direction > 0 ? 100 : -100,
-            opacity: 0,
-        }),
-        center: {
-            zIndex: 1,
-            x: 0,
-            opacity: 1,
-        },
-        exit: (direction: number) => ({
-            zIndex: 0,
-            x: direction < 0 ? 100 : -100,
-            opacity: 0,
-        }),
-    };
-    
-    const filteredChampions = useMemo(() => {
-        let champs = primaryRole === 'All' ? championsLite : championsLite.filter(c => c.roles.includes(primaryRole));
-        if (champSearch) {
-            champs = champs.filter(c => c.name.toLowerCase().includes(champSearch.toLowerCase()));
+    const toggleFavorite = (id: string) => {
+        setFavoriteChampions(prev =>
+            prev.includes(id) ? prev.filter(champId => champId !== id) : [...prev, id]
+        );
+        if (favoriteChampions.length === 0) {
+            setAvatar(id);
         }
-        return champs;
-    }, [primaryRole, championsLite, champSearch]);
+    };
+    
+    const toggleGoal = (goal: string) => {
+        setGoals(prev =>
+            prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]
+        );
+    };
+
+    const isNextDisabled = (): boolean => {
+        switch (step) {
+            case 1: return !username.trim();
+            case 2: return false; // Optional
+            case 3: return false; // Optional
+            case 4: return goals.length === 0;
+            case 5: return !avatar;
+            default: return true;
+        }
+    };
+
+    const filteredChamps = useMemo(() =>
+        championsLite.filter(c => c.name.toLowerCase().includes(champSearch.toLowerCase())),
+        [championsLite, champSearch]
+    );
+
+    const variants = {
+        enter: (direction: number) => ({ x: direction > 0 ? '100%' : '-100%', opacity: 0 }),
+        center: { x: 0, opacity: 1 },
+        exit: (direction: number) => ({ x: direction < 0 ? '100%' : '-100%', opacity: 0 }),
+    };
 
     return (
-        <Modal isOpen={isOpen} onClose={handleSkip} title="Strategist Profile Setup">
-            <div className="p-4 sm:p-6 bg-secondary relative overflow-hidden">
-                <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(0, 194, 255, 0.05), transparent 30%), radial-gradient(circle at 75% 75%, rgba(200, 155, 60, 0.05), transparent 30%)' }}></div>
-                <div className="relative z-10 space-y-6">
-                    <AnimatePresence initial={false} custom={direction} mode="wait">
+        <Modal isOpen={isOpen} onClose={() => {}} title="Welcome to DraftWise AI!" size="3xl">
+            <div className="flex flex-col h-[70vh]">
+                <ProgressBar step={step} total={TOTAL_STEPS} />
+                <div className="flex-grow p-6 overflow-y-auto relative">
+                    <AnimatePresence mode="wait" custom={direction}>
                         <motion.div
+                            key={step}
                             {...{
-                                key: step,
                                 custom: direction,
                                 variants: variants,
                                 initial: "enter",
                                 animate: "center",
                                 exit: "exit",
-                                transition: {
-                                    x: { type: "spring", stiffness: 300, damping: 30 },
-                                    opacity: { duration: 0.2 }
-                                },
+                                transition: { type: "tween", ease: "easeInOut", duration: 0.3 },
                             }}
-                            className="min-h-[350px] flex flex-col justify-center"
                         >
                             {step === 1 && (
-                                <div className="text-center">
-                                    <h3 className="text-2xl font-semibold text-text-primary mb-2">Welcome to DraftWise AI!</h3>
-                                    <p className="text-sm text-text-muted mb-6">Let's set up your profile. What should we call you?</p>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-center mb-2">Let's Get Started!</h2>
+                                    <p className="text-text-secondary text-center mb-6">First, what should we call you?</p>
                                     <input
                                         type="text"
                                         value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        placeholder="Enter your username"
-                                        className="w-full max-w-sm mx-auto px-4 py-3 bg-surface-inset border border-border-primary focus:outline-none focus:ring-2 focus:ring-gold"
-                                        maxLength={16}
+                                        onChange={e => setUsername(e.target.value)}
+                                        placeholder="Your username"
+                                        className="w-full max-w-sm mx-auto block px-4 py-3 bg-surface border border-border rounded-lg text-lg text-center focus:outline-none focus:ring-2 focus:ring-accent"
+                                        autoFocus
                                     />
                                 </div>
                             )}
                             {step === 2 && (
                                 <div>
-                                    <h3 className="text-2xl font-semibold text-text-primary mb-2 text-center">What's your primary role?</h3>
-                                    <p className="text-sm text-text-muted mb-6 text-center">This helps us tailor suggestions for you.</p>
-                                    <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
+                                    <h2 className="text-2xl font-bold text-center mb-2">What's Your Primary Role?</h2>
+                                    <p className="text-text-secondary text-center mb-6">This helps us tailor suggestions, but you can always change it later.</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                         {['All', ...ROLES].map(role => (
                                             <button
                                                 key={role}
                                                 onClick={() => setPrimaryRole(role)}
-                                                className={`flex flex-col items-center justify-center gap-2 p-3 border-2 transition-all aspect-square ${primaryRole === role ? 'bg-secondary border-gold shadow-md shadow-gold/30 text-gold' : 'bg-surface border-border-primary hover:border-gold/70 text-text-secondary'}`}
+                                                className={`p-4 border rounded-lg flex flex-col items-center gap-2 transition-all ${primaryRole === role ? 'bg-accent/10 border-accent' : 'bg-surface hover:border-border'}`}
                                             >
                                                 {ROLE_ICONS[role]}
-                                                <span className="font-semibold text-lg text-text-primary">{role}</span>
+                                                <span className="font-semibold">{role}</span>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                             )}
-                            {step === 3 && (
-                                 <div>
-                                    <h3 className="text-2xl font-semibold text-text-primary mb-2 text-center">Choose up to 3 favorite champions.</h3>
-                                    <p className="text-sm text-text-muted mb-4 text-center">This grants you starter Draft Mastery points for them.</p>
+                             {step === 3 && (
+                                <div>
+                                    <h2 className="text-2xl font-bold text-center mb-2">Any Favorite Champions?</h2>
+                                    <p className="text-text-secondary text-center mb-4">Select a few of your favorites to get a head start on mastery. This is optional!</p>
                                     <input
                                         type="text"
                                         value={champSearch}
-                                        onChange={(e) => setChampSearch(e.target.value)}
+                                        onChange={e => setChampSearch(e.target.value)}
                                         placeholder="Search champions..."
-                                        className="w-full px-3 py-2 bg-surface-inset border border-border-primary focus:outline-none focus:ring-2 focus:ring-gold mb-2"
+                                        className="w-full mb-4 px-3 py-2 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                                     />
-                                    <div className="flex justify-center flex-wrap gap-3 max-h-[250px] overflow-y-auto p-2 bg-surface-inset">
-                                        {filteredChampions.length > 0 ? filteredChampions.map(champ => (
-                                            <button
-                                                key={champ.id}
-                                                onClick={() => handleFavoriteToggle(champ.id)}
-                                                className={`p-1 transition-all rounded-md ${favoriteChampions.includes(champ.id) ? 'ring-2 ring-gold shadow-md shadow-gold/30' : ''}`}
-                                            >
-                                                <img src={champ.image} alt={champ.name} className="w-16 h-16 rounded-md" />
+                                    <div className="max-h-60 overflow-y-auto flex flex-wrap gap-2 p-2 bg-surface-inset border border-border">
+                                        {filteredChamps.map(champ => (
+                                            <button key={champ.id} onClick={() => toggleFavorite(champ.id)} className={`p-1 rounded-lg ${favoriteChampions.includes(champ.id) ? 'ring-2 ring-accent' : ''}`}>
+                                                <img src={champ.image} alt={champ.name} className="w-12 h-12 rounded-md" />
                                             </button>
-                                        )) : (
-                                            <p className="text-text-muted p-8">No champions found.</p>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
                             )}
-                            {step === 4 && (
-                                <div>
-                                    <h3 className="text-2xl font-semibold text-text-primary mb-2 text-center">What are your goals?</h3>
-                                    <p className="text-sm text-text-muted mb-6 text-center">Select your skill level and what you want to improve.</p>
-                                    <div className="space-y-3 max-w-md mx-auto">
-                                        {(['Beginner', 'Intermediate', 'Advanced'] as const).map(level => (
-                                            <button key={level} onClick={() => setSkillLevel(level)} className={`w-full text-left p-4 border-2 transition-all ${skillLevel === level ? 'bg-secondary border-gold shadow-md shadow-gold/30' : 'bg-surface border-border-primary hover:border-gold/70'}`}>
-                                                <p className="font-bold text-text-primary">{level}</p>
-                                            </button>
-                                        ))}
+                             {step === 4 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-center mb-4">What's Your Skill Level?</h2>
+                                        <div className="flex flex-col gap-3">
+                                            {(['Beginner', 'Intermediate', 'Advanced'] as const).map(level => (
+                                                <button key={level} onClick={() => setSkillLevel(level)} className={`p-3 border rounded-lg text-left ${skillLevel === level ? 'bg-accent/10 border-accent' : 'bg-surface hover:border-border'}`}>
+                                                    <span className="font-semibold">{level}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="flex justify-center flex-wrap gap-2 mt-4">
-                                        {GOALS.map(goal => (
-                                            <button key={goal} onClick={() => handleGoalToggle(goal)} className={`px-3 py-1.5 text-sm font-semibold transition-colors ${goals.includes(goal) ? 'bg-gold-bright text-on-gold' : 'bg-secondary text-text-secondary hover:bg-surface-tertiary'}`}>
-                                                {goal}
-                                            </button>
-                                        ))}
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-center mb-4">What Are Your Goals?</h2>
+                                        <div className="flex flex-col gap-3">
+                                            {GOALS.map(goal => (
+                                                <button key={goal} onClick={() => toggleGoal(goal)} className={`p-3 border rounded-lg text-left flex items-center gap-3 ${goals.includes(goal) ? 'bg-accent/10 border-accent' : 'bg-surface hover:border-border'}`}>
+                                                    <div className={`w-5 h-5 border-2 rounded-sm flex items-center justify-center ${goals.includes(goal) ? 'bg-accent border-accent' : 'border-border'}`}>
+                                                        {goals.includes(goal) && <motion.div {...{ initial: { scale: 0 }, animate: { scale: 1 } }} className="w-3 h-3 bg-on-accent rounded-sm" />}
+                                                    </div>
+                                                    <span className="font-semibold">{goal}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             )}
                             {step === 5 && (
                                 <div>
-                                    <h3 className="text-2xl font-semibold text-text-primary mb-3 text-center">Customize your look</h3>
-                                    <p className="text-sm text-text-muted mb-4 text-center">Choose a profile avatar.</p>
-                                     <input
-                                        type="text"
-                                        value={champSearch}
-                                        onChange={(e) => setChampSearch(e.target.value)}
-                                        placeholder="Search champions..."
-                                        className="w-full px-3 py-2 bg-surface-inset border border-border-primary focus:outline-none focus:ring-2 focus:ring-gold mb-2"
-                                    />
-                                     <div className="flex justify-center flex-wrap gap-3 mb-6 max-h-[200px] overflow-y-auto p-2 bg-surface-inset">
-                                        {filteredChampions.map(champ => (
-                                            <button key={champ.id} onClick={() => setAvatar(champ.id)} className={`p-1 rounded-full transition-all ${avatar === champ.id ? 'ring-2 ring-gold shadow-md shadow-gold/30' : ''}`}>
-                                                <img src={champ.image} alt={champ.name} className="w-16 h-16 rounded-full" />
+                                    <h2 className="text-2xl font-bold text-center mb-2">Choose Your Avatar</h2>
+                                    <p className="text-text-secondary text-center mb-4">This will represent you on your profile. Click to select.</p>
+                                    <div className="max-h-80 overflow-y-auto flex flex-wrap gap-2 p-2 bg-surface-inset border border-border">
+                                        {championsLite.map(champ => (
+                                            <button key={champ.id} onClick={() => setAvatar(champ.id)} className={`p-1 rounded-lg ${avatar === champ.id ? 'ring-2 ring-accent' : ''}`}>
+                                                <img src={champ.image} alt={champ.name} className="w-16 h-16 rounded-md" />
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                             )}
-                            {step === 6 && (
-                                <div className="text-center">
-                                     <h3 className="text-2xl font-bold text-text-primary mb-3">Welcome, {username || 'Rookie'}!</h3>
-                                     <p className="text-text-primary">Your profile is set up and you've been awarded your first <strong className="text-gold-bright">{250} SP</strong> and the <strong className="text-turquoise">Rookie Strategist</strong> badge!</p>
-                                     <p className="mt-4 text-text-muted">You're ready to master the draft. We'll start with a quick tour of the Strategy Forge.</p>
-                                </div>
-                            )}
                         </motion.div>
                     </AnimatePresence>
-
-                    <div className="space-y-4">
-                        <ProgressBar step={step} total={TOTAL_STEPS + 1} />
-                        <div className="flex justify-between items-center">
-                            <div>
-                                {step > 1 && step < TOTAL_STEPS + 1 && <Button variant="secondary" onClick={() => paginate(-1)}>Back</Button>}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {step < TOTAL_STEPS + 1 ? (
-                                    <>
-                                        <Button variant="secondary" onClick={handleSkip}>Skip for Now</Button>
-                                        <Button variant="primary" onClick={() => paginate(1)} disabled={isNextDisabled}>
-                                            {step === TOTAL_STEPS ? 'Finish' : 'Next'}
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <Button variant="primary" className="px-6 py-3" onClick={handleComplete}>Start Your Journey</Button>
-                                )}
-                            </div>
-                        </div>
+                </div>
+                <div className="p-4 border-t border-border flex justify-between items-center flex-shrink-0">
+                    <div>
+                        <span className="text-sm text-text-muted">Step {step} of {TOTAL_STEPS}</span>
+                    </div>
+                    <div className="flex gap-2">
+                        {step > 1 && <Button variant="secondary" onClick={prevStep}>Back</Button>}
+                        {step < TOTAL_STEPS && <Button variant="primary" onClick={nextStep} disabled={isNextDisabled()}>Next</Button>}
+                        {step === TOTAL_STEPS && <Button variant="primary" onClick={handleComplete} disabled={isNextDisabled()}>Finish Setup</Button>}
                     </div>
                 </div>
             </div>

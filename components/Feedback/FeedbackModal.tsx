@@ -1,12 +1,12 @@
-
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import type { FeedbackCategory, DraftState } from '../../types';
+import type { FeedbackCategory } from '../../types';
 import { toSavedDraft } from '../../lib/draftUtils';
 import toast from 'react-hot-toast';
 import { useModals } from '../../hooks/useModals';
 import { useDraft } from '../../contexts/DraftContext';
+import { TextArea } from '../common/TextArea';
 
 interface FeedbackModalProps {}
 
@@ -56,7 +56,7 @@ export const FeedbackModal = (props: FeedbackModalProps) => {
 
     return (
         <Modal isOpen={modals.feedback} onClose={onClose} title="Give Feedback">
-            <div className="p-4 space-y-4">
+            <div className="p-6 space-y-4">
                 <div>
                     <label htmlFor="feedback-category" className="block text-sm font-medium text-text-secondary mb-1">
                         Feedback Category
@@ -65,7 +65,7 @@ export const FeedbackModal = (props: FeedbackModalProps) => {
                         id="feedback-category"
                         value={category}
                         onChange={(e) => setCategory(e.target.value as FeedbackCategory)}
-                        className="w-full bg-secondary p-2 rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="w-full bg-secondary p-2 rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-accent"
                     >
                         {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
@@ -74,30 +74,30 @@ export const FeedbackModal = (props: FeedbackModalProps) => {
                     <label htmlFor="feedback-comments" className="block text-sm font-medium text-text-secondary mb-1">
                         Comments
                     </label>
-                    <textarea
+                    <TextArea
                         id="feedback-comments"
                         rows={6}
                         value={comments}
                         onChange={(e) => setComments(e.target.value)}
                         placeholder="Please be as detailed as possible. What were you doing? What did you expect to happen?"
-                        className="w-full p-2 bg-secondary border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-sm"
                     />
                 </div>
                 <div className="flex items-center gap-2">
                     <input
-                        type="checkbox"
                         id="include-draft"
+                        type="checkbox"
                         checked={includeDraft}
                         onChange={(e) => setIncludeDraft(e.target.checked)}
-                        className="h-4 w-4 rounded border-border bg-secondary text-accent focus:ring-accent"
+                        className="h-4 w-4 rounded border-border-secondary bg-surface-secondary text-accent focus:ring-accent"
                     />
                     <label htmlFor="include-draft" className="text-sm text-text-secondary">
-                        Include current Draft Lab state for context
+                        Include current draft context (helpful for AI feedback)
                     </label>
                 </div>
-
                 <div className="flex justify-end gap-2 pt-4 border-t border-border">
-                    <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                        Cancel
+                    </Button>
                     <Button variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
                     </Button>

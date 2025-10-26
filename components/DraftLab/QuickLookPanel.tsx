@@ -3,10 +3,13 @@ import { CSSTransition } from 'react-transition-group';
 import type { ChampionLite, Champion, Ability } from '../../types';
 import { X } from 'lucide-react';
 import { useChampions } from '../../contexts/ChampionContext';
+import { Button } from '../common/Button';
 
 interface QuickLookPanelProps {
     champion: ChampionLite | null;
     onClose: () => void;
+    onDraft?: (champion: ChampionLite) => void;
+    canDraft?: boolean;
 }
 
 const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
@@ -27,7 +30,7 @@ const AbilityDisplay = ({ ability }: { ability: Ability }) => (
     </div>
 );
 
-export const QuickLookPanel = ({ champion: championLite, onClose }: QuickLookPanelProps) => {
+export const QuickLookPanel = ({ champion: championLite, onClose, onDraft, canDraft }: QuickLookPanelProps) => {
     const { champions } = useChampions();
     const panelRef = React.useRef(null);
     const backdropRef = React.useRef(null);
@@ -77,7 +80,7 @@ export const QuickLookPanel = ({ champion: championLite, onClose }: QuickLookPan
                     role="dialog"
                     aria-modal="true"
                 >
-                    {champion && <PanelContent champion={champion} onClose={onClose} />}
+                    {champion && championLite && <PanelContent champion={champion} championLite={championLite} onClose={onClose} onDraft={onDraft} canDraft={canDraft} />}
                 </aside>
             </CSSTransition>
         </>
@@ -85,7 +88,7 @@ export const QuickLookPanel = ({ champion: championLite, onClose }: QuickLookPan
 };
 
 
-const PanelContent = ({ champion, onClose }: { champion: Champion, onClose: () => void }) => (
+const PanelContent = ({ champion, championLite, onClose, onDraft, canDraft }: { champion: Champion, championLite: ChampionLite, onClose: () => void, onDraft?: (champion: ChampionLite) => void, canDraft?: boolean }) => (
     <div className="flex flex-col h-full">
         <div className="flex-shrink-0">
             <div className="flex justify-between items-start">
@@ -109,10 +112,27 @@ const PanelContent = ({ champion, onClose }: { champion: Champion, onClose: () =
              <Section title="Key Abilities">
                 <div className="space-y-3">
                     {champion.abilities.filter(a => ['Q','W','E','R'].includes(a.key)).map(ability => (
-                        <AbilityDisplay key={ability.key} ability={ability} />
+                        <React.Fragment key={ability.key}>
+                            <AbilityDisplay ability={ability} />
+                        </React.Fragment>
                     ))}
                 </div>
             </Section>
+        </div>
+        
+        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border">
+            {onDraft && canDraft && championLite && (
+                <Button
+                    variant="primary"
+                    className="w-full"
+                    onClick={() => {
+                        onDraft(championLite);
+                        onClose();
+                    }}
+                >
+                    Draft {champion.name}
+                </Button>
+            )}
         </div>
     </div>
 );

@@ -6,6 +6,7 @@ import { Button } from '../common/Button';
 import { ROLES } from '../../constants';
 import { useDraft } from '../../contexts/DraftContext';
 import { useChampions } from '../../contexts/ChampionContext';
+import * as storageService from '../../services/storageService';
 
 // --- Helper & Display Components ---
 
@@ -204,7 +205,9 @@ const useChampionAnalysis = (champion: Champion, latestVersion: string | null) =
         setIsLoading(prev => ({ ...prev, analysis: true }));
         setError(prev => ({ ...prev, analysis: null }));
         try {
-            const result = await getChampionAnalysis(champion.name, latestVersion, signal);
+            const cacheKey = `championAnalysis_${champion.name}_${latestVersion}`;
+            const fetcher = () => getChampionAnalysis(champion.name, latestVersion, signal);
+            const result = await storageService.fetchWithCache(cacheKey, fetcher, latestVersion, signal);
             if (!signal.aborted) setAnalysis(result);
         } catch (err) {
             if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -275,54 +278,60 @@ export const ChampionDetailModal = ({ isOpen, onClose, champion, onLoadInLab }: 
         const controller = new AbortController();
         abortControllerRef.current = controller;
 
-        if (activeTab === 'strategy' && !analysis && !isLoading.analysis) {
+        if (activeTab === 'strategy' && !analysis) {
             fetchAnalysis(controller.signal);
         }
-        if (activeTab === 'matchups' && analysis && !matchupAnalysis && !isLoading.matchups) {
+        if (activeTab === 'matchups' && analysis && !matchupAnalysis) {
             fetchMatchups(controller.signal);
         }
-        
-        return () => controller.abort();
-    }, [isOpen, activeTab, analysis, matchupAnalysis, isLoading, fetchAnalysis, fetchMatchups]);
+    }, [activeTab, isOpen, analysis, matchupAnalysis, fetchAnalysis, fetchMatchups]);
 
-    const handleTabChange = (tab: 'overview' | 'abilities' | 'strategy' | 'matchups') => {
-        if (tab === 'matchups' && !analysis) {
-             setActiveTab('strategy'); // Force user to load strategy first
-        } else {
-            setActiveTab(tab);
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'overview': return <OverviewDisplay champion={champion} />;
+            case 'abilities': return <AbilitiesDisplay abilities={champion.abilities} />;
+            case 'strategy':
+                if (isLoading.analysis) return <SkeletonLoader />;
+                if (error.analysis) return <ErrorDisplay message={error.analysis} onRetry={() => fetchAnalysis(new AbortController().signal)} />;
+                if (analysis) return <AIStrategyDisplay analysis={analysis} />;
+                return null;
+            case 'matchups':
+                if (isLoading.matchups) return <SkeletonLoader />;
+                if (error.matchups) return <ErrorDisplay message={error.matchups} onRetry={() => fetchMatchups(new AbortController().signal)} />;
+                if (analysis) return <MatchupsDisplay analysis={analysis} matchupAnalysis={matchupAnalysis} onRetry={() => fetchMatchups(new AbortController().signal)} />;
+                return null;
+            default: return null;
         }
     };
-    
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${champion.name}, ${champion.title}`}>
-            <div className="flex flex-col">
-                <div className="p-4 border-b border-border flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <TabButton active={activeTab === 'overview'} onClick={() => handleTabChange('overview')}>Overview</TabButton>
-                        <TabButton active={activeTab === 'abilities'} onClick={() => handleTabChange('abilities')}>Abilities</TabButton>
-                        <TabButton active={activeTab === 'strategy'} onClick={() => handleTabChange('strategy')}>AI Strategy</TabButton>
-                        <TabButton active={activeTab === 'matchups'} onClick={() => handleTabChange('matchups')} disabled={!analysis}>Matchups</TabButton>
-                    </div>
-                     <Button variant="secondary" onClick={() => { onLoadInLab(champion.id); onClose(); }}>
-                        Load in Forge
-                    </Button>
-                </div>
 
-                <div className="p-6 overflow-y-auto">
-                    {activeTab === 'overview' && <OverviewDisplay champion={champion} />}
-                    {activeTab === 'abilities' && <AbilitiesDisplay abilities={champion.abilities} />}
-                    {activeTab === 'strategy' && (
-                        isLoading.analysis ? <SkeletonLoader /> :
-                        error.analysis ? <ErrorDisplay message={error.analysis} onRetry={() => fetchAnalysis(new AbortController().signal)} /> :
-                        analysis && <AIStrategyDisplay analysis={analysis} />
-                    )}
-                    {activeTab === 'matchups' && analysis && (
-                         isLoading.matchups ? <SkeletonLoader /> :
-                         error.matchups ? <ErrorDisplay message={error.matchups} onRetry={() => fetchMatchups(new AbortController().signal)} /> :
-                         <MatchupsDisplay analysis={analysis} matchupAnalysis={matchupAnalysis} onRetry={() => fetchMatchups(new AbortController().signal)} />
-                    )}
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`${champion.name} - ${champion.title}`} size="5xl">
+            <>
+                <div
+                    className="absolute top-0 left-0 right-0 h-48 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${champion.splashUrl})` }}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
                 </div>
-            </div>
+                <div className="relative p-6 mt-32">
+                    <div className="mb-4 border-b border-border flex flex-wrap items-center gap-4">
+                        <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>Overview</TabButton>
+                        <TabButton active={activeTab === 'abilities'} onClick={() => setActiveTab('abilities')}>Abilities</TabButton>
+                        <TabButton active={activeTab === 'strategy'} onClick={() => setActiveTab('strategy')}>AI Strategy</TabButton>
+                        <TabButton active={activeTab === 'matchups'} onClick={() => setActiveTab('matchups')} disabled={!analysis}>Matchup Tips</TabButton>
+                    </div>
+                    
+                    <div className="min-h-[300px]">
+                        {renderContent()}
+                    </div>
+                    
+                    <div className="mt-6 pt-4 border-t border-border flex justify-end">
+                        <Button onClick={() => { onLoadInLab(champion.id, champion.roles[0]); onClose(); }} variant="primary">
+                            Load into Strategy Forge
+                        </Button>
+                    </div>
+                </div>
+            </>
         </Modal>
     );
 };

@@ -6,6 +6,7 @@ import { ROLES } from '../../constants';
 import { TeamAnalytics } from './TeamAnalytics';
 
 interface TeamPanelProps {
+  id?: string;
   side: TeamSide;
   state: TeamState;
   onSlotClick: (team: TeamSide, type: 'pick' | 'ban', index: number) => void;
@@ -20,19 +21,21 @@ interface TeamPanelProps {
   draggedOverSlot?: { team: TeamSide; type: 'pick' | 'ban'; index: number } | null;
   isTurnActive?: boolean;
   isAnalyzing?: boolean;
+  analysisCompleted?: boolean;
 }
 
-export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDragStart, onDragOver, onDragEnter, onDragLeave, activeSlot, draggedOverSlot, isTurnActive = false, isAnalyzing = false }: TeamPanelProps) => {
+export const TeamPanel = ({ id, side, state, onSlotClick, onClearSlot, onDrop, onDragStart, onDragOver, onDragEnter, onDragLeave, activeSlot, draggedOverSlot, isTurnActive = false, isAnalyzing = false, analysisCompleted = false }: TeamPanelProps) => {
   const isBlue = side === 'blue';
   const teamColorClass = isBlue ? 'border-team-blue' : 'border-team-red';
   const teamName = isBlue ? 'Blue Team' : 'Red Team';
   const gradientClass = isBlue ? 'from-team-blue/5 to-bg-secondary' : 'from-team-red/5 to-bg-secondary';
   const turnGlowClass = isTurnActive ? (isBlue ? 'shadow-glow-accent' : 'shadow-lg shadow-error/30') : '';
   const analyzingClass = isAnalyzing ? 'analyzing-glow' : '';
+  const analysisCompleteClass = analysisCompleted ? 'animate-pulse-once' : '';
   const isAnySlotActive = !!activeSlot;
 
   return (
-    <div className={`bg-bg-secondary p-4 shadow-sm border ${teamColorClass} border-t-4 bg-gradient-to-b ${gradientClass} transition-shadow duration-300 ${turnGlowClass} ${analyzingClass}`}>
+    <div id={id} className={`bg-bg-secondary p-4 shadow-sm border ${teamColorClass} border-t-4 bg-gradient-to-b ${gradientClass} transition-shadow duration-300 ${turnGlowClass} ${analyzingClass} ${analysisCompleteClass}`}>
         <h2 className={`text-2xl font-bold font-display mb-4 text-center text-text-primary`}>{teamName}</h2>
         
         <TeamAnalytics picks={state.picks} />
@@ -44,22 +47,23 @@ export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDra
               {state.picks.map((pick, index) => {
                 const isThisSlotActive = activeSlot?.type === 'pick' && activeSlot?.index === index;
                 return (
-                  <PickSlot 
-                    key={index}
-                    side={side}
-                    champion={pick.champion}
-                    role={ROLES[index]}
-                    onClick={() => onSlotClick(side, 'pick', index)}
-                    onClear={onClearSlot ? () => onClearSlot(side, 'pick', index) : undefined}
-                    onDrop={onDrop ? (e) => onDrop(e, side, 'pick', index) : undefined}
-                    onDragStart={onDragStart ? (e) => onDragStart(e, side, 'pick', index) : undefined}
-                    onDragOver={onDragOver}
-                    onDragEnter={onDragEnter ? (e) => onDragEnter(e, side, 'pick', index) : undefined}
-                    onDragLeave={onDragLeave}
-                    isActive={isThisSlotActive}
-                    isDimmed={isAnySlotActive && !isThisSlotActive}
-                    isDraggedOver={draggedOverSlot?.team === side && draggedOverSlot?.type === 'pick' && draggedOverSlot?.index === index}
-                  />
+                  <React.Fragment key={index}>
+                    <PickSlot
+                      side={side}
+                      champion={pick.champion}
+                      role={ROLES[index]}
+                      onClick={() => onSlotClick(side, 'pick', index)}
+                      onClear={onClearSlot ? () => onClearSlot(side, 'pick', index) : undefined}
+                      onDrop={onDrop ? (e) => onDrop(e, side, 'pick', index) : undefined}
+                      onDragStart={onDragStart ? (e) => onDragStart(e, side, 'pick', index) : undefined}
+                      onDragOver={onDragOver}
+                      onDragEnter={onDragEnter ? (e) => onDragEnter(e, side, 'pick', index) : undefined}
+                      onDragLeave={onDragLeave}
+                      isActive={isThisSlotActive}
+                      isDimmed={isAnySlotActive && !isThisSlotActive}
+                      isDraggedOver={draggedOverSlot?.team === side && draggedOverSlot?.type === 'pick' && draggedOverSlot?.index === index}
+                    />
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -72,21 +76,22 @@ export const TeamPanel = ({ side, state, onSlotClick, onClearSlot, onDrop, onDra
               {state.bans.map((ban, index) => {
                 const isThisSlotActive = activeSlot?.type === 'ban' && activeSlot?.index === index;
                 return (
-                  <BanSlot 
-                    key={index} 
-                    side={side}
-                    index={index}
-                    champion={ban.champion} 
-                    onClick={() => onSlotClick(side, 'ban', index)}
-                    onClear={onClearSlot ? () => onClearSlot(side, 'ban', index) : undefined}
-                    onDrop={onDrop ? (e) => onDrop(e, side, 'ban', index) : undefined}
-                    onDragOver={onDragOver}
-                    onDragEnter={onDragEnter ? (e) => onDragEnter(e, side, 'ban', index) : undefined}
-                    onDragLeave={onDragLeave}
-                    isActive={isThisSlotActive}
-                    isDimmed={isAnySlotActive && !isThisSlotActive}
-                    isDraggedOver={draggedOverSlot?.team === side && draggedOverSlot?.type === 'ban' && draggedOverSlot?.index === index}
-                  />
+                  <React.Fragment key={index}>
+                    <BanSlot
+                      side={side}
+                      index={index}
+                      champion={ban.champion} 
+                      onClick={() => onSlotClick(side, 'ban', index)}
+                      onClear={onClearSlot ? () => onClearSlot(side, 'ban', index) : undefined}
+                      onDrop={onDrop ? (e) => onDrop(e, side, 'ban', index) : undefined}
+                      onDragOver={onDragOver}
+                      onDragEnter={onDragEnter ? (e) => onDragEnter(e, side, 'ban', index) : undefined}
+                      onDragLeave={onDragLeave}
+                      isActive={isThisSlotActive}
+                      isDimmed={isAnySlotActive && !isThisSlotActive}
+                      isDraggedOver={draggedOverSlot?.team === side && draggedOverSlot?.type === 'ban' && draggedOverSlot?.index === index}
+                    />
+                  </React.Fragment>
                 );
               })}
             </div>
