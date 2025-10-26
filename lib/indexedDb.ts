@@ -13,7 +13,7 @@ export interface IDraftWiseDB extends Dexie {
  * @returns True if IndexedDB is available
  */
 export function isIndexedDBSupported(): boolean {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') {return false;}
 
     try {
         return 'indexedDB' in window && window.indexedDB !== null;

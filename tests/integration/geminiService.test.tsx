@@ -1,72 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { getDraftAdvice } from '../../services/geminiService';
-import { getInitialDraftState } from '../../contexts/DraftContext';
-
-/**
- * Integration tests for Gemini Service
- * Note: These tests require VITE_GEMINI_API_KEY to be set
- */
-describe('GeminiService Integration', () => {
-  // Skip these tests if no API key is available
-  const hasApiKey = !!process.env.VITE_GEMINI_API_KEY;
-
-  it.skipIf(!hasApiKey)('should handle draft analysis request', async () => {
-    const draftState = getInitialDraftState();
-    const controller = new AbortController();
-
-    try {
-      const result = await getDraftAdvice(
-        draftState,
-        'blue',
-        'Mid',
-        'Intermediate',
-        'gemini-2.5-flash',
-        controller.signal
-      );
-
-      // Should return proper structure even with empty draft
-      expect(result).toBeDefined();
-      expect(result.teamAnalysis).toBeDefined();
-      expect(result.teamAnalysis.blue).toBeDefined();
-      expect(result.teamAnalysis.red).toBeDefined();
-    } catch (error) {
-      // Expected to fail with incomplete draft
-      expect(error).toBeDefined();
-    }
-  }, 10000); // 10 second timeout for API calls
-
-  it('should abort request when signal is triggered', async () => {
-    if (!hasApiKey) return;
-
-    const draftState = getInitialDraftState();
-    const controller = new AbortController();
-
-    // Abort immediately
-    controller.abort();
-
-    await expect(
-      getDraftAdvice(
-        draftState,
-        'blue',
-        'Mid',
-        'Intermediate',
-        'gemini-2.5-flash',
-        controller.signal
-      )
-    ).rejects.toThrow('Aborted');
-  });
-
-  it('should validate empty response from AI', async () => {
-    // This test validates error handling for empty responses
-    // Actual test would require mocking the AI response
-    expect(true).toBe(true);
-  });
-});
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ChampionGrid } from '../../components/DraftLab/ChampionGrid';
-import { ChampionProvider } from '../../contexts/ChampionContext';
+import { getDraftAdvice } from '../../services/geminiService';
 import { getInitialDraftState } from '../../contexts/DraftContext';
+import { ChampionGrid } from '../../components/DraftLab/ChampionGrid';
 import type { ChampionLite } from '../../types';
 
 // Mock champion data
@@ -116,6 +52,67 @@ vi.mock('../../hooks/useSettings', () => ({
     setSettings: vi.fn(),
   }),
 }));
+
+/**
+ * Integration tests for Gemini Service
+ * Note: These tests require VITE_GEMINI_API_KEY to be set
+ */
+describe('GeminiService Integration', () => {
+  // Skip these tests if no API key is available
+  const hasApiKey = !!process.env.VITE_GEMINI_API_KEY;
+
+  it.skipIf(!hasApiKey)('should handle draft analysis request', async () => {
+    const draftState = getInitialDraftState();
+    const controller = new AbortController();
+
+    try {
+      const result = await getDraftAdvice(
+        draftState,
+        'blue',
+        'Mid',
+        'Intermediate',
+        'gemini-2.5-flash',
+        controller.signal
+      );
+
+      // Should return proper structure even with empty draft
+      expect(result).toBeDefined();
+      expect(result.teamAnalysis).toBeDefined();
+      expect(result.teamAnalysis.blue).toBeDefined();
+      expect(result.teamAnalysis.red).toBeDefined();
+    } catch (error) {
+      // Expected to fail with incomplete draft
+      expect(error).toBeDefined();
+    }
+  }, 10000); // 10 second timeout for API calls
+
+  it('should abort request when signal is triggered', async () => {
+    if (!hasApiKey) {return;}
+
+    const draftState = getInitialDraftState();
+    const controller = new AbortController();
+
+    // Abort immediately
+    controller.abort();
+
+    await expect(
+      getDraftAdvice(
+        draftState,
+        'blue',
+        'Mid',
+        'Intermediate',
+        'gemini-2.5-flash',
+        controller.signal
+      )
+    ).rejects.toThrow('Aborted');
+  });
+
+  it('should validate empty response from AI', async () => {
+    // This test validates error handling for empty responses
+    // Actual test would require mocking the AI response
+    expect(true).toBe(true);
+  });
+});
 
 describe('ChampionGrid', () => {
   const mockOnSelect = vi.fn();

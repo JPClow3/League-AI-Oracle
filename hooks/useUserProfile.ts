@@ -53,11 +53,11 @@ const defaultProfile: UserProfile = {
 
 // --- Helper Functions ---
 const getRankForLevel = (level: number): string => {
-    if (level < 5) return 'Iron Analyst';
-    if (level < 10) return 'Bronze Tactician';
-    if (level < 20) return 'Silver Strategist';
-    if (level < 30) return 'Gold Visionary';
-    if (level < 40) return 'Platinum Commander';
+    if (level < 5) {return 'Iron Analyst';}
+    if (level < 10) {return 'Bronze Tactician';}
+    if (level < 20) {return 'Silver Strategist';}
+    if (level < 30) {return 'Gold Visionary';}
+    if (level < 40) {return 'Platinum Commander';}
     return 'Diamond Mastermind';
 };
 
@@ -226,7 +226,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         let missionTitle = '';
 
         setProfileState(prev => {
-            let finalProfile = { ...prev };
+            const finalProfile = { ...prev };
 
             const updateMissions = (missions: Mission[]): Mission[] => missions.map(m => {
                 if (m.id === missionId && !m.completed) {
@@ -267,7 +267,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
 
     const addChampionMastery = useCallback((champions: Champion[], grade: string) => {
         const pointsToAdd = MASTERY_POINTS_FROM_GRADE[grade] || 0;
-        if (pointsToAdd === 0) return;
+        if (pointsToAdd === 0) {return;}
 
         setProfileState(prev => {
             const newMastery = [...prev.championMastery];
@@ -359,7 +359,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
             const startOfThisWeek = getStartOfWeek(now);
             const startOfLastActiveWeek = getStartOfWeek(lastActiveDate);
 
-            let newMissions = { ...prev.missions };
+            const newMissions = { ...prev.missions };
             let didResetWeeklies = false;
 
             // Reset weekly missions if the last active day was before the start of this week.

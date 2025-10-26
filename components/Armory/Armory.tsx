@@ -22,6 +22,7 @@ const ChampionCard = React.memo(({ champion, onSelect }: { champion: ChampionLit
         </button>
     );
 });
+ChampionCard.displayName = 'ChampionCard';
 
 
 export const Armory = ({ initialSearchTerm, onSearchHandled, onLoadChampionInLab }: ArmoryProps) => {
@@ -44,7 +45,7 @@ export const Armory = ({ initialSearchTerm, onSearchHandled, onLoadChampionInLab
     
     const filteredChampions = useMemo(() => {
         const lowercasedTerm = searchTerm.toLowerCase();
-        if (!lowercasedTerm) return championsLite;
+        if (!lowercasedTerm) {return championsLite;}
         return championsLite.filter(c => c.name.toLowerCase().includes(lowercasedTerm));
     }, [searchTerm, championsLite]);
 

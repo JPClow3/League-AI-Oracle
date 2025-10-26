@@ -17,7 +17,7 @@ interface GuidedTourProps {
 }
 
 const calculatePosition = (rect: DOMRect | null) => {
-    if (!rect) return {};
+    if (!rect) {return {};}
     const margin = 16;
     const contentWidth = 350;
     
@@ -25,7 +25,7 @@ const calculatePosition = (rect: DOMRect | null) => {
     let left = rect.left + rect.width / 2 - contentWidth / 2;
 
     // Adjust if it goes off-screen
-    if (left < margin) left = margin;
+    if (left < margin) {left = margin;}
     if (left + contentWidth > window.innerWidth - margin) {
         left = window.innerWidth - contentWidth - margin;
     }
@@ -53,7 +53,7 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
 
     const updatePosition = useCallback(() => {
         const step = steps[currentStep];
-        if (!step) return false;
+        if (!step) {return false;}
         
         const element = document.querySelector<HTMLElement>(step.selector);
         if (element) {
@@ -82,7 +82,7 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
     }, [currentStep, steps]);
 
     useLayoutEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {return;}
         
         const tryUpdate = () => {
             if (!updatePosition()) {
@@ -123,7 +123,7 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
         return () => window.removeEventListener('resize', tryUpdate);
     }, [isOpen, currentStep, steps, updatePosition]);
     
-    if (!isOpen) return null;
+    if (!isOpen) {return null;}
 
     const handleNext = () => {
         if (currentStep < steps.length - 1) {
@@ -164,7 +164,7 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
                         <AlertTriangle className="h-6 w-6 text-warning"/>
                         <h3 id={titleId} className="text-xl font-bold text-warning">Tour Guide Lost!</h3>
                     </div>
-                    <p id={contentId} className="text-sm text-text-secondary mb-4">The next highlighted item couldn't be found. You may have navigated away. Would you like to skip this step or end the tour?</p>
+                    <p id={contentId} className="text-sm text-text-secondary mb-4">The next highlighted item couldn&apos;t be found. You may have navigated away. Would you like to skip this step or end the tour?</p>
                     <div className="flex justify-end gap-2">
                         <Button onClick={onClose} variant="secondary">End Tour</Button>
                         <Button onClick={handleNext} variant="primary">Skip Step</Button>

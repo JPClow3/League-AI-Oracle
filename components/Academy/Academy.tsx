@@ -64,7 +64,7 @@ export const Academy = ({ initialLessonId, onHandled, loadChampionsAndNavigateTo
 
     const staticLessons = useMemo(() => {
         const lowerSearch = searchTerm.toLowerCase();
-        if (!lowerSearch) return LESSONS;
+        if (!lowerSearch) {return LESSONS;}
         
         return LESSONS.map(category => ({
             ...category,
@@ -78,10 +78,10 @@ export const Academy = ({ initialLessonId, onHandled, loadChampionsAndNavigateTo
     const selectedLesson = useMemo(() => {
         for (const category of LESSONS) {
             const found = category.lessons.find(l => l.id === selectedLessonId);
-            if (found) return { ...found, isGenerated: false };
+            if (found) {return { ...found, isGenerated: false };}
         }
         const foundGenerated = generatedLessons.find(l => l.id === selectedLessonId);
-        if (foundGenerated) return { ...foundGenerated, isGenerated: true };
+        if (foundGenerated) {return { ...foundGenerated, isGenerated: true };}
         return null;
     }, [selectedLessonId, generatedLessons]);
     
@@ -107,11 +107,11 @@ export const Academy = ({ initialLessonId, onHandled, loadChampionsAndNavigateTo
         try {
             const stream = generateLessonStream(topic, controller.signal);
             for await (const chunk of stream) {
-                if (controller.signal.aborted) return;
+                if (controller.signal.aborted) {return;}
                 setGeneratedLessons(prev => prev.map(l => l.id === newLessonId ? { ...l, content: l.content + chunk } : l));
             }
         } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') return;
+            if (err instanceof DOMException && err.name === 'AbortError') {return;}
             setGenerationError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             if (!controller.signal.aborted) {

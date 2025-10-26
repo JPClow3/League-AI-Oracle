@@ -70,7 +70,7 @@ export const SmartDashboard = ({ profile, latestPlaybookEntry, setCurrentPage }:
     
     const enabledCardIds = new Set(settings.dashboardCards?.filter(c => c.enabled).map(c => c.id) || []);
     
-    let cards = potentialCards
+    const cards = potentialCards
         .filter(card => enabledCardIds.has(card.id))
         .filter(card => card.condition)
         .map(c => <React.Fragment key={c.id}>{c.component}</React.Fragment>);

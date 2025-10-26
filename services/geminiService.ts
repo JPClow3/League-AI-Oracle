@@ -32,7 +32,7 @@ const callGemini = async (
     model: string = 'gemini-2.5-flash',
     isJson = true
 ) => {
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (signal.aborted) {throw new DOMException('Aborted', 'AbortError');}
     
     const response = await ai.models.generateContent({
         model,
@@ -40,7 +40,7 @@ const callGemini = async (
         config: isJson ? { responseMimeType: 'application/json' } : {},
     });
 
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (signal.aborted) {throw new DOMException('Aborted', 'AbortError');}
 
     // The .text property is the recommended way to get the string output.
     // Added optional chaining and fallback to empty string to prevent errors if text is not present.
@@ -221,7 +221,7 @@ JSON Format:
 };
 
 export const getGroundedAnswer = async (query: string, signal: AbortSignal): Promise<{ text: string, sources: MetaSource[] }> => {
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (signal.aborted) {throw new DOMException('Aborted', 'AbortError');}
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: query,
@@ -229,7 +229,7 @@ export const getGroundedAnswer = async (query: string, signal: AbortSignal): Pro
             tools: [{ googleSearch: {} }],
         },
     });
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (signal.aborted) {throw new DOMException('Aborted', 'AbortError');}
     
     // FIX: Added optional chaining and fallback to empty string to prevent errors if text is not present.
     const text = response.text ?? '';
@@ -272,7 +272,7 @@ JSON Format:
         },
     });
 
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (signal.aborted) {throw new DOMException('Aborted', 'AbortError');}
 
     // FIX: Added optional chaining and fallback to empty string to prevent errors if text is not present.
     const text = (response.text ?? '').trim().replace(/^```json/, '').replace(/```$/, '').trim();
@@ -317,7 +317,7 @@ JSON Format:
             tools: [{ googleSearch: {} }],
         },
     });
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (signal.aborted) {throw new DOMException('Aborted', 'AbortError');}
     
     // FIX: Added optional chaining and fallback to empty string to prevent errors if text is not present.
     const text = (response.text ?? '').trim().replace(/^```json/, '').replace(/```$/, '').trim();
@@ -442,7 +442,7 @@ Start the lesson immediately without any introductory phrases like "Here is the 
         contents: prompt,
     });
     for await (const chunk of response) {
-        if (signal.aborted) return;
+        if (signal.aborted) {return;}
         // FIX: Added optional chaining and fallback to empty string to prevent errors if text is not present.
         yield chunk.text ?? '';
     }

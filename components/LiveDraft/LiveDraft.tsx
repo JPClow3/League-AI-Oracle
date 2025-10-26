@@ -42,7 +42,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
     };
 
     const handleChampionSelect = (champion: Champion) => {
-        if (!activeSlot) return;
+        if (!activeSlot) {return;}
         setDraftState(prev => updateSlotInDraft(prev, activeSlot.team, activeSlot.type, activeSlot.index, champion));
         setActiveSlot(null);
         setIsModalOpen(false);
@@ -66,10 +66,10 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
         const analysisTimeout = setTimeout(async () => {
             try {
                 const result = await getDraftAdvice(draftState, 'blue', settings.primaryRole, profile.skillLevel, 'gemini-2.5-flash', controller.signal);
-                if (controller.signal.aborted) return;
+                if (controller.signal.aborted) {return;}
                 setAdvice({ ...result, draftId: JSON.stringify(draftState) });
             } catch (err) {
-                if (err instanceof DOMException && err.name === 'AbortError') return;
+                if (err instanceof DOMException && err.name === 'AbortError') {return;}
                 const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
                 setError(errorMessage);
                 toast.error(errorMessage);
@@ -107,7 +107,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
                 onClose={() => setIsModalOpen(false)}
                 onSelect={(champLite) => {
                     const champ = champions.find(c => c.id === champLite.id);
-                    if(champ) handleChampionSelect(champ);
+                    if(champ) {handleChampionSelect(champ);}
                 }}
                 onQuickLook={() => {}}
                 draftState={draftState}

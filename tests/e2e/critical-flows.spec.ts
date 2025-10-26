@@ -223,7 +223,9 @@ test.describe('Critical User Flows', () => {
           await page.waitForTimeout(1000);
 
           // Verify filtered results
-          await expect(page.getByTestId('composition-card')).toHaveCount({ max: 50 });
+          const compositionCards = page.getByTestId('composition-card');
+          const count = await compositionCards.count();
+          expect(count).toBeLessThanOrEqual(50);
         }
       }
     });

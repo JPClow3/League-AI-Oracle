@@ -13,7 +13,7 @@ interface PlaybookCardProps {
 }
 
 const ResultIcon = ({ result }: { result: HistoryEntry['result'] }) => {
-    if (!result) return null;
+    if (!result) {return null;}
     
     const iconMap = {
         win: <Check className="h-4 w-4 text-success" />,
@@ -37,7 +37,7 @@ export const PlaybookCard = ({ entry, onViewDetails, onSelectForCompare, isSelec
 
     const getChampImages = (ids: (string | null)[]) => {
         return ids.slice(0, 5).map((id, index) => {
-            if (!id) return <div key={index} style={{ zIndex: 5 - index, marginLeft: index === 0 ? '0' : '-0.75rem' }} className="w-8 h-8 bg-surface-inset border-2 border-border-primary rounded-full"></div>;
+            if (!id) {return <div key={index} style={{ zIndex: 5 - index, marginLeft: index === 0 ? '0' : '-0.75rem' }} className="w-8 h-8 bg-surface-inset border-2 border-border-primary rounded-full"></div>;}
             const champ = champions.find(c => c.id === id);
             return (
                 <img 

@@ -75,7 +75,7 @@ export const Intel = ({ onLoadChampionInLab }: IntelProps) => {
 
     // Fetch Tier List with cache
     const memoizedTierListFetcher = useCallback(async (signal: AbortSignal) => {
-        if (!latestVersion) throw new Error("DDragon version not available to validate cache.");
+        if (!latestVersion) {throw new Error("DDragon version not available to validate cache.");}
         const fetcher = () => getTierList(signal);
         return storageService.fetchWithCache('tierList', fetcher, latestVersion, signal);
     }, [latestVersion]);
@@ -83,7 +83,7 @@ export const Intel = ({ onLoadChampionInLab }: IntelProps) => {
 
     // Fetch General Patch Notes with cache
     const memoizedPatchNotesFetcher = useCallback(async (signal: AbortSignal) => {
-        if (!latestVersion) throw new Error("DDragon version not available to validate cache.");
+        if (!latestVersion) {throw new Error("DDragon version not available to validate cache.");}
         
         // Check cache manually to handle side-effect correctly.
         // fetchWithCache isn't used here because the side-effect (completeMission) should ONLY run on a fresh fetch.

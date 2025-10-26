@@ -58,8 +58,8 @@ export const ChampionGrid = ({ onSelect, onQuickLook, draftState, onDragStart }:
         return filtered.sort((a, b) => {
             const isAFavorite = settings.favoriteChampions.includes(a.id);
             const isBFavorite = settings.favoriteChampions.includes(b.id);
-            if (isAFavorite && !isBFavorite) return -1;
-            if (!isAFavorite && isBFavorite) return 1;
+            if (isAFavorite && !isBFavorite) {return -1;}
+            if (!isAFavorite && isBFavorite) {return 1;}
             return a.name.localeCompare(b.name);
         });
     }, [availableChampions, searchTerm, roleFilter, damageFilter, settings.favoriteChampions]);

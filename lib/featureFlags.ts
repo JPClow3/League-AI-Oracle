@@ -112,7 +112,7 @@ class FeatureFlagsService {
    * Refresh flags from LaunchDarkly
    */
   private async refreshFlags() {
-    if (!this.client) return;
+    if (!this.client) {return;}
 
     const newFlags: Partial<FeatureFlags> = {};
 

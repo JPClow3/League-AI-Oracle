@@ -22,11 +22,11 @@ interface AdvicePanelProps {
 }
 
 const getAnalysisTitle = (score: string | undefined): { title: string, className: string } => {
-    if (!score) return { title: 'Draft Analysis', className: 'text-text-primary' };
-    if (score.startsWith('S')) return { title: 'Masterful Composition', className: 'text-success' };
-    if (score.startsWith('A')) return { title: 'Excellent Composition', className: 'text-info' };
-    if (score.startsWith('B')) return { title: 'Solid Foundation', className: 'text-gold' };
-    if (score.startsWith('C')) return { title: 'Room for Improvement', className: 'text-warning' };
+    if (!score) {return { title: 'Draft Analysis', className: 'text-text-primary' };}
+    if (score.startsWith('S')) {return { title: 'Masterful Composition', className: 'text-success' };}
+    if (score.startsWith('A')) {return { title: 'Excellent Composition', className: 'text-info' };}
+    if (score.startsWith('B')) {return { title: 'Solid Foundation', className: 'text-gold' };}
+    if (score.startsWith('C')) {return { title: 'Room for Improvement', className: 'text-warning' };}
     return { title: 'Challenging Draft', className: 'text-error' };
 };
 
@@ -90,7 +90,7 @@ const KeyMatchupCard = ({ matchup }: { matchup: NonNullable<TeamAnalysis['keyMat
                     {redChamp && <img src={redChamp.image} alt={redChamp.name} className="w-6 h-6" />}
                 </div>
             </div>
-            <p className="text-xs text-text-secondary mt-2 text-center italic">"<KeywordHighlighter text={matchup.analysis} />"</p>
+            <p className="text-xs text-text-secondary mt-2 text-center italic">&quot;<KeywordHighlighter text={matchup.analysis} />&quot;</p>
         </div>
     );
 };
@@ -104,7 +104,7 @@ const SynergyCard = ({ synergy, type }: { synergy: NonNullable<TeamAnalysis['syn
             <Icon className={`h-5 w-5 ${color} flex-shrink-0 mt-0.5`} />
             <div>
                 <p className="font-bold text-text-primary">{synergy.championNames.join(' + ')}</p>
-                <p className="text-text-secondary text-xs italic">"<KeywordHighlighter text={synergy.reasoning} />"</p>
+                <p className="text-text-secondary text-xs italic">&quot;<KeywordHighlighter text={synergy.reasoning} />&quot;</p>
             </div>
         </div>
     );
@@ -274,8 +274,8 @@ const BuildSuggestionsContent = ({ builds }: { builds: NonNullable<AIAdvice['bui
             {builds.map(build => (
                 <div key={build.championName} className="bg-surface p-4 border border-border space-y-4">
                     <h3 className="text-xl font-bold text-text-primary">{build.championName} ({build.role})</h3>
-                    <p className="text-sm italic text-text-secondary">"<KeywordHighlighter text={build.reasoning} />"</p>
-                    
+                    <p className="text-sm italic text-text-secondary">&quot;<KeywordHighlighter text={build.reasoning} />&quot;</p>
+
                     <div>
                         <h4 className="font-semibold text-accent mb-2">Runes</h4>
                          <div className="bg-secondary p-3 text-sm rounded-md border border-border-secondary">
@@ -324,7 +324,7 @@ export const AdvicePanel = ({ advice, isLoading, error, navigateToAcademy, analy
       <div className="bg-bg-secondary text-text-secondary p-4 border border-border-primary text-center flex flex-col justify-center items-center h-full min-h-[300px]">
         <Info className="h-12 w-12 text-border-secondary mb-2" />
         <p className="font-semibold text-text-primary">Awaiting Analysis</p>
-        <p className="text-sm">Complete a 5v5 draft and press 'Analyze' to receive AI-powered feedback.</p>
+        <p className="text-sm">Complete a 5v5 draft and press &apos;Analyze&apos; to receive AI-powered feedback.</p>
       </div>
     );
   }

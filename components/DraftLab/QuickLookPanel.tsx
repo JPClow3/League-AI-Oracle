@@ -36,7 +36,7 @@ export const QuickLookPanel = ({ champion: championLite, onClose, onDraft, canDr
     const backdropRef = React.useRef(null);
     
     const champion = useMemo(() => {
-        if (!championLite) return null;
+        if (!championLite) {return null;}
         return champions.find(c => c.id === championLite.id) || null;
     }, [championLite, champions]);
 

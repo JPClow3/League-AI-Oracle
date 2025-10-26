@@ -9,7 +9,7 @@ export const PlaybookAnalysisPanel = () => {
     const { championsLite } = useChampions();
 
     const stats = useMemo(() => {
-        if (entries.length < 3) return null;
+        if (entries.length < 3) {return null;}
 
         const identityCounts: Record<string, number> = {};
         const winRatesByIdentity: Record<string, { wins: number, total: number }> = {};

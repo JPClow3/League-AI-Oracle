@@ -43,7 +43,7 @@ export const DailyTrial = ({ navigateToAcademy }: DailyTrialProps) => {
         setQuestion(null);
         try {
             const newQuestion = await getTrialQuestion(controller.signal);
-            if (controller.signal.aborted) return;
+            if (controller.signal.aborted) {return;}
             setQuestion(newQuestion);
             const cachePayload: CachedTrial = { date: today, question: newQuestion };
             safeSetLocalStorage(cacheKey, JSON.stringify(cachePayload));
@@ -87,7 +87,7 @@ export const DailyTrial = ({ navigateToAcademy }: DailyTrialProps) => {
     }, [fetchNewQuestion, today]);
 
     const handleAnswerSelect = (option: string) => {
-        if (isAnswered) return;
+        if (isAnswered) {return;}
         setSelectedAnswer(option);
         setIsAnswered(true);
         if (option === question?.correctAnswer) {
@@ -113,7 +113,7 @@ export const DailyTrial = ({ navigateToAcademy }: DailyTrialProps) => {
     };
 
     const explanationLink = useMemo(() => {
-        if (!isAnswered || !question) return null;
+        if (!isAnswered || !question) {return null;}
 
         const explanationText = question.explanation.toLowerCase();
         const foundKeyword = KEYWORDS.find(kw => explanationText.includes(kw.term.toLowerCase()));

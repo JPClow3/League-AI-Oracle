@@ -304,7 +304,6 @@ test.describe('Performance Metrics', () => {
           apiCalls.push({
             url: response.url(),
             status: response.status(),
-            timing: response.timing(),
           });
         }
       });

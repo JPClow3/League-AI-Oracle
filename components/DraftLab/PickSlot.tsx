@@ -35,7 +35,7 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (clearingRef.current || !onClear) return;
+    if (clearingRef.current || !onClear) {return;}
     clearingRef.current = true;
     onClear();
     setTimeout(() => {

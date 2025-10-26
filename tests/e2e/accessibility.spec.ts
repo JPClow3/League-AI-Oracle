@@ -32,7 +32,7 @@ test.describe('Accessibility - WCAG 2.1 AA', () => {
 
       const focusedElement = await page.evaluate(() => {
         const el = document.activeElement;
-        if (!el) return null;
+        if (!el) {return null;}
         const styles = window.getComputedStyle(el);
         return {
           outline: styles.outline,
@@ -92,7 +92,7 @@ test.describe('Accessibility - WCAG 2.1 AA', () => {
       
       for (const element of textElements.slice(0, 20)) {
         const isVisible = await element.isVisible().catch(() => false);
-        if (!isVisible) continue;
+        if (!isVisible) {continue;}
 
         const color = await element.evaluate(el => {
           const styles = window.getComputedStyle(el);
@@ -136,7 +136,7 @@ test.describe('Accessibility - WCAG 2.1 AA', () => {
       
       for (const button of buttons.slice(0, 10)) {
         const isVisible = await button.isVisible().catch(() => false);
-        if (!isVisible) continue;
+        if (!isVisible) {continue;}
 
         const box = await button.boundingBox();
         if (box) {

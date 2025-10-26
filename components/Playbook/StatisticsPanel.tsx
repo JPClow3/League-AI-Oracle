@@ -28,7 +28,7 @@ const getTopN = (map: Map<string, number>, n: number) => {
 export const StatisticsPanel = ({ entries }: StatisticsPanelProps) => {
     const { championsLite } = useChampions();
     const stats = useMemo(() => {
-        if (entries.length === 0) return null;
+        if (entries.length === 0) {return null;}
 
         const pickCounts = new Map<string, number>();
         const roleCounts = new Map<string, number>();
@@ -70,7 +70,7 @@ export const StatisticsPanel = ({ entries }: StatisticsPanelProps) => {
         };
     }, [entries]);
 
-    if (!stats) return null;
+    if (!stats) {return null;}
 
     const totalRolePicks = stats.topRoles.reduce((sum, [, count]) => sum + count, 0);
 
@@ -82,7 +82,7 @@ export const StatisticsPanel = ({ entries }: StatisticsPanelProps) => {
                      <div className="flex flex-wrap gap-4">
                         {stats.topPicks.map(([champId, count]) => {
                             const champ = championsLite.find(c => c.id === champId);
-                            if (!champ) return null;
+                            if (!champ) {return null;}
                             return (
                                 <React.Fragment key={champId}>
                                     <Tooltip content={`${count} picks`}>

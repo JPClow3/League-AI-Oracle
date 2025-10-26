@@ -47,7 +47,7 @@ const CacheManager = {
   get<T>(key: string, ttl: number = 86400000): T | null {
     try {
       const cached = localStorage.getItem(key);
-      if (!cached) return null;
+      if (!cached) {return null;}
 
       const parsed: CachedData<T> = JSON.parse(cached);
       const isExpired = Date.now() - parsed.timestamp > ttl;

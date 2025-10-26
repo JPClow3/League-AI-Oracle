@@ -21,7 +21,7 @@ interface DraftAnalysisResponse {
 }
 
 // Champion data cache
-let championData: any = null;
+const championData: any = null;
 
 /**
  * Analyze team composition
@@ -72,18 +72,18 @@ function analyzeTeamComposition(team: any[]) {
   const strengths: string[] = [];
   const weaknesses: string[] = [];
 
-  if (analysis.crowdControl > 7) strengths.push('Excellent crowd control');
-  if (analysis.crowdControl < 4) weaknesses.push('Limited crowd control');
+  if (analysis.crowdControl > 7) {strengths.push('Excellent crowd control');}
+  if (analysis.crowdControl < 4) {weaknesses.push('Limited crowd control');}
 
-  if (analysis.tankiness > 7) strengths.push('High tankiness');
-  if (analysis.tankiness < 3) weaknesses.push('Squishy composition');
+  if (analysis.tankiness > 7) {strengths.push('High tankiness');}
+  if (analysis.tankiness < 3) {weaknesses.push('Squishy composition');}
 
-  if (analysis.engage > 7) strengths.push('Strong engage');
-  if (analysis.engage < 3) weaknesses.push('Weak engage');
+  if (analysis.engage > 7) {strengths.push('Strong engage');}
+  if (analysis.engage < 3) {weaknesses.push('Weak engage');}
 
   const physicalPercent = analysis.damageTypes.physical / (analysis.damageTypes.physical + analysis.damageTypes.magical || 1);
-  if (physicalPercent > 0.7) weaknesses.push('Heavy physical damage (enemy can stack armor)');
-  if (physicalPercent < 0.3) weaknesses.push('Heavy magic damage (enemy can stack MR)');
+  if (physicalPercent > 0.7) {weaknesses.push('Heavy physical damage (enemy can stack armor)');}
+  if (physicalPercent < 0.3) {weaknesses.push('Heavy magic damage (enemy can stack MR)');}
 
   return {
     ...analysis,
@@ -219,8 +219,8 @@ function predictWinRate(blueTeam: any[], redTeam: any[]) {
     const blueStat = (blueAnalysis as any)[attr];
     const redStat = (redAnalysis as any)[attr];
 
-    if (blueStat > redStat) blueSuperior++;
-    if (redStat > blueStat) redSuperior++;
+    if (blueStat > redStat) {blueSuperior++;}
+    if (redStat > blueStat) {redSuperior++;}
   });
 
   // Balance check

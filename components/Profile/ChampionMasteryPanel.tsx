@@ -11,7 +11,7 @@ interface ChampionMasteryPanelProps {
 const MasteryCard = ({ masteryItem }: { masteryItem: ChampionMastery }) => {
     const { championsLite } = useChampions();
     const champion = championsLite.find(c => c.id === masteryItem.championId);
-    if (!champion) return null;
+    if (!champion) {return null;}
 
     const tooltipContent = (
         <div>

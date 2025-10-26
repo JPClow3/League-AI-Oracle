@@ -73,7 +73,7 @@ export const PlaybookCompareModal = ({ isOpen, onClose, drafts }: PlaybookCompar
         }
     }, [isOpen, drafts, championsLite]);
 
-    if (drafts.length !== 2) return null;
+    if (drafts.length !== 2) {return null;}
 
     const [d1, d2] = drafts;
     const d1BluePicks = new Set(d1.draft.blue.picks);
@@ -123,7 +123,7 @@ export const PlaybookCompareModal = ({ isOpen, onClose, drafts }: PlaybookCompar
                 <div className="mt-6 pt-4 border-t border-border">
                      <h3 className="font-display text-xl font-bold text-accent tracking-wide mb-2 flex items-center gap-2"><Sparkles size={20} /> AI Comparison Analysis</h3>
                      {isLoading && <div className="min-h-[50px]"><Loader messages={["Analyzing differences..."]} /></div>}
-                     {analysis && !isLoading && <p className="text-text-secondary italic">"{analysis}"</p>}
+                     {analysis && !isLoading && <p className="text-text-secondary italic">&quot;{analysis}&quot;</p>}
                 </div>
             </div>
         </Modal>

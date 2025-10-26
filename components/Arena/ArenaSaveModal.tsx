@@ -42,7 +42,7 @@ export const ArenaSaveModal = ({ isOpen, onClose, draftState, botPersona, userSi
     return (
         <Modal 
             isOpen={isOpen} 
-            onClose={() => { if(!isSaving) onClose(); }} 
+            onClose={() => { if(!isSaving) {onClose();} }} 
             title="Archive Arena Draft"
         >
             <div className="p-6 space-y-4">

@@ -22,7 +22,7 @@ const renderLine = (line: string) => {
 };
 
 export const MarkdownRenderer = ({ text }: { text: string }) => {
-    if (!text) return null;
+    if (!text) {return null;}
     // Split by one or more newlines to handle paragraphs and lists more robustly.
     const blocks = text.split(/\n\s*\n/).filter(block => block.trim() !== '');
 
@@ -37,7 +37,7 @@ export const MarkdownRenderer = ({ text }: { text: string }) => {
                         <ul key={i} className="list-disc pl-5 space-y-2">
                             {lines.map((item, j) => (
                                 <li key={j}>
-                                    {renderLine(item.replace(/^[\s]*[\*\-]\s/, ''))}
+                                    {renderLine(item.replace(/^[\s]*[*-]\s/, ''))}
                                 </li>
                             ))}
                         </ul>

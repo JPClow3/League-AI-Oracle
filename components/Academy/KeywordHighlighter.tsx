@@ -16,13 +16,12 @@ export const KeywordHighlighter = ({ text, onKeywordClick }: KeywordHighlighterP
 
   const regex = React.useMemo(() => {
     // Use word boundaries (\b) to ensure only whole words are matched.
-    // The forward slash in the replace regex must be escaped.
-    const pattern = `\\b(${KEYWORDS.map(k => k.term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})\\b`;
+    const pattern = `\\b(${KEYWORDS.map(k => k.term.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})\\b`;
     return new RegExp(pattern, 'gi');
   }, []);
 
   const parts = React.useMemo(() => {
-    if (!text) return [];
+    if (!text) {return [];}
     return text.split(regex);
   }, [text, regex]);
 

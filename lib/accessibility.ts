@@ -11,7 +11,7 @@ export function getContrastRatio(color1: string, color2: string): number {
   const rgb1 = hexToRgb(color1);
   const rgb2 = hexToRgb(color2);
 
-  if (!rgb1 || !rgb2) return 0;
+  if (!rgb1 || !rgb2) {return 0;}
 
   const l1 = getRelativeLuminance(rgb1);
   const l2 = getRelativeLuminance(rgb2);
@@ -32,7 +32,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 
   const num = parseInt(hex, 16);
 
-  if (isNaN(num)) return null;
+  if (isNaN(num)) {return null;}
 
   return {
     r: (num >> 16) & 255,
@@ -83,7 +83,7 @@ export function generateAccessibleColor(
 
   while (ratio < targetRatio && attempts < maxAttempts) {
     const rgb = hexToRgb(color);
-    if (!rgb) break;
+    if (!rgb) {break;}
 
     // Adjust brightness
     const adjustment = ratio < targetRatio ? -10 : 10;
@@ -105,7 +105,7 @@ export function generateAccessibleColor(
  * Screen reader announcement
  */
 export function announceToScreenReader(message: string, priority: 'polite' | 'assertive' = 'polite') {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined') {return;}
 
   const announcement = document.createElement('div');
   announcement.setAttribute('role', 'status');
@@ -137,23 +137,23 @@ export function isKeyboardAccessible(element: HTMLElement): boolean {
 export function getAccessibleName(element: HTMLElement): string {
   // Check aria-label
   const ariaLabel = element.getAttribute('aria-label');
-  if (ariaLabel) return ariaLabel;
+  if (ariaLabel) {return ariaLabel;}
 
   // Check aria-labelledby
   const ariaLabelledBy = element.getAttribute('aria-labelledby');
   if (ariaLabelledBy) {
     const labelElement = document.getElementById(ariaLabelledBy);
-    if (labelElement) return labelElement.textContent || '';
+    if (labelElement) {return labelElement.textContent || '';}
   }
 
   // Check associated label
   if (element.id) {
     const label = document.querySelector(`label[for="${element.id}"]`);
-    if (label) return label.textContent || '';
+    if (label) {return label.textContent || '';}
   }
 
   // Check text content
-  if (element.textContent) return element.textContent.trim();
+  if (element.textContent) {return element.textContent.trim();}
 
   // Check alt text for images
   if (element.tagName === 'IMG') {
@@ -175,7 +175,7 @@ export function createFocusTrap(container: HTMLElement) {
   const lastElement = focusableElements[focusableElements.length - 1];
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (event.key !== 'Tab') return;
+    if (event.key !== 'Tab') {return;}
 
     if (event.shiftKey) {
       // Shift + Tab
@@ -207,7 +207,7 @@ export function createFocusTrap(container: HTMLElement) {
  * Check for motion preferences
  */
 export function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') {return false;}
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
@@ -215,7 +215,7 @@ export function prefersReducedMotion(): boolean {
  * Check for high contrast mode
  */
 export function prefersHighContrast(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') {return false;}
   return window.matchMedia('(prefers-contrast: high)').matches;
 }
 
@@ -362,7 +362,7 @@ export function auditAccessibility(container: HTMLElement = document.body): {
  * Log accessibility audit results
  */
 export function logAccessibilityAudit() {
-  if (typeof window === 'undefined' || !import.meta.env.DEV) return;
+  if (typeof window === 'undefined' || !import.meta.env.DEV) {return;}
 
   const results = auditAccessibility();
 

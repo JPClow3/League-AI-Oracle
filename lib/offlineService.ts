@@ -114,7 +114,7 @@ class OfflineService {
    * Process all queued requests
    */
   private async processQueue() {
-    if (this.requestQueue.length === 0) return;
+    if (this.requestQueue.length === 0) {return;}
 
     console.log(`🔄 Processing ${this.requestQueue.length} queued requests`);
 

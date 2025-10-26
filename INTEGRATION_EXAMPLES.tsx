@@ -22,7 +22,7 @@ export const ExampleComponent: React.FC<ExampleComponentProps> = ({ championId }
   const enableAIRecommendations = useFeatureFlag('enableAIAnalysis');
 
   // 2. STATE MANAGEMENT
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<unknown>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -55,7 +55,7 @@ export const ExampleComponent: React.FC<ExampleComponentProps> = ({ championId }
         'http',
         async () => {
           const response = await fetch(`/api/champions/${championId}`);
-          if (!response.ok) throw new Error('Failed to fetch');
+          if (!response.ok) {throw new Error('Failed to fetch');}
           return response.json();
         }
       );
@@ -142,7 +142,7 @@ export const ExampleComponent: React.FC<ExampleComponentProps> = ({ championId }
         <p>{error.message}</p>
         {!offlineService.isConnected() && (
           <p className="text-warning">
-            You're offline. Request will sync when connection is restored.
+            You&apos;re offline. Request will sync when connection is restored.
             ({offlineService.getQueuedCount()} queued)
           </p>
         )}
@@ -199,7 +199,7 @@ export const ExampleComponent: React.FC<ExampleComponentProps> = ({ championId }
         {/* Offline indicator */}
         {!offlineService.isConnected() && (
           <div className="offline-notice">
-            ⚠️ You're offline. Some features may be limited.
+            ⚠️ You&apos;re offline. Some features may be limited.
           </div>
         )}
       </div>
@@ -287,7 +287,7 @@ export const TestFeatureFlags: React.FC = () => {
 export const withErrorHandling = <P extends object>(
   Component: React.ComponentType<P>
 ) => {
-  return (props: P) => {
+  const WrappedComponent = (props: P) => {
     const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
       // Log to Sentry
       logger.error(error, {
@@ -308,6 +308,9 @@ export const withErrorHandling = <P extends object>(
       </ErrorBoundary>
     );
   };
+
+  WrappedComponent.displayName = `withErrorHandling(${Component.displayName || Component.name || 'Component'})`;
+  return WrappedComponent;
 };
 
 /**
@@ -323,7 +326,7 @@ export const DraftLabExample = () => {
     logger.breadcrumb('Draft Lab opened', 'navigation');
   }, []);
 
-  const handleAnalyzeDraft = async () => {
+  const _handleAnalyzeDraft = async () => {
     analytics.track('draft_analyzed', { type: 'manual' });
 
     try {
@@ -363,13 +366,13 @@ export const ArenaExample = () => {
     return unsubscribe;
   }, []);
 
-  const saveArenaMatch = async (matchData: Record<string, unknown>) => {
+  const _saveArenaMatch = async (matchData: Record<string, unknown>) => {
     if (!offlineService.isConnected()) {
       // Queue for later
       const requestId = offlineService.queueRequest(
         '/api/arena/save',
         'POST',
-        matchData as any // Type assertion for offline service compatibility
+        matchData as Record<string, string | number | boolean>
       );
 
       logger.info('Arena match queued', { requestId });
@@ -393,7 +396,13 @@ export const ArenaExample = () => {
   return <div>{/* Arena UI */}</div>;
 };
 
-// Example 3: Settings with analytics opt-out
+// Helper Components (referenced above) - Moved outside to fix react-refresh
+const TeamBuilder = () => <div>Team Builder Component</div>;
+
+const ErrorBoundary: React.FC<{
+  children: React.ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+}> = ({ children }) => <>{children}</>;
 export const SettingsExample = () => {
   const [hasOptedOut, setHasOptedOut] = useState(
     analytics.hasOptedOut()
@@ -425,11 +434,4 @@ export const SettingsExample = () => {
     </div>
   );
 };
-
-// Helper Components (referenced above)
-const TeamBuilder = () => <div>Team Builder Component</div>;
-const ErrorBoundary: React.FC<{
-  children: React.ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-}> = ({ children }) => <>{children}</>;
 

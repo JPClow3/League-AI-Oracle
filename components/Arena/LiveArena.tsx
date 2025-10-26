@@ -64,7 +64,7 @@ const ArenaResults = ({ analysis, userSide, onReset, onNavigateToForge }: { anal
                     <p className="text-xs text-text-secondary">{userAnalysis.teamIdentity}</p>
                  </div>
                  <div className="bg-secondary p-4 border border-border">
-                    <h3 className="font-semibold text-text-primary">Opponent's Score</h3>
+                    <h3 className="font-semibold text-text-primary">Opponent&apos;s Score</h3>
                     <p className="font-display text-5xl font-black text-error">{botAnalysis.draftScore}</p>
                     <p className="text-xs text-text-secondary">{botAnalysis.teamIdentity}</p>
                  </div>
@@ -127,7 +127,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
     abortControllerRef.current = controller;
     try {
         const advice = await getDraftAdvice(draftState, userSide, settings.primaryRole, profile.skillLevel, 'gemini-2.5-flash', controller.signal);
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {return;}
         setFinalAnalysis(advice);
 
         const userScore = advice.teamAnalysis[userSide].draftScore || 'C';
@@ -155,7 +155,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   }, [draftFinished, handleDraftFinish, finalAnalysis]);
 
   const makeBotSelection = useCallback(async (signal: AbortSignal): Promise<{ champion: Champion | undefined, reasoning: string | null }> => {
-    if (!currentTurn) return { champion: undefined, reasoning: null };
+    if (!currentTurn) {return { champion: undefined, reasoning: null };}
     
     const available = getAvailableChampions(draftState, championsLite);
     if (available.length === 0) {
@@ -185,8 +185,8 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   }, [draftState, currentTurn, botPersona, champions, championsLite, sTierList, oneTrickChampion]);
   
   const handleChampionSelect = useCallback((champion: Champion | undefined) => {
-    if (!currentTurn || !champion) return;
-    if (navigator.vibrate) navigator.vibrate(50);
+    if (!currentTurn || !champion) {return;}
+    if (navigator.vibrate) {navigator.vibrate(50);}
 
     const { team, type, index } = currentTurn;
     setDraftState(prev => updateSlotInDraft(prev, team, type, index, champion));
@@ -204,7 +204,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
         return;
     }
     const champion = champions.find(c => c.id === championLite.id);
-    if (champion) handleChampionSelect(champion);
+    if (champion) {handleChampionSelect(champion);}
   }, [handleChampionSelect, champions, botPersona, isOneTrickModalOpen]);
 
   useEffect(() => {
@@ -220,7 +220,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
     setIsBotThinking(true);
     const timer = setTimeout(async () => {
       const { champion: botChampion, reasoning } = await makeBotSelection(controller.signal);
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted) {return;}
 
       if (botChampion) {
           if (reasoning && !reasoning.startsWith('Failsafe:')) {
@@ -231,7 +231,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
                         <div className="flex-shrink-0"><img className="h-10 w-10" src={botChampion.image} alt={botChampion.name} /></div>
                         <div>
                             <p className="text-sm font-semibold text-error">Opponent {actionText} {botChampion.name}</p>
-                            <p className="mt-1 text-xs text-text-secondary">"{reasoning}"</p>
+                            <p className="mt-1 text-xs text-text-secondary">&quot;{reasoning}&quot;</p>
                         </div>
                     </div>
                 </div>
@@ -248,7 +248,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   }, [currentTurnIndex, draftFinished, currentTurn, makeBotSelection, handleChampionSelect, draftState, userSide]);
 
   const handleSlotClick = (team: TeamSide, type: 'pick' | 'ban', index: number) => {
-    if (draftFinished || !currentTurn || isBotThinking || team !== userSide) return;
+    if (draftFinished || !currentTurn || isBotThinking || team !== userSide) {return;}
     
     if (currentTurn.team === team && currentTurn.type === type && currentTurn.index === index) {
       setIsModalOpen(true);

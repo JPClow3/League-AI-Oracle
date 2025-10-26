@@ -22,7 +22,7 @@ export const DraftScenarios = () => {
     const draftState = useMemo(() => fromSavedDraft(currentScenario.draft, champions), [currentScenario, champions]);
 
     const handleSelectOption = (option: DraftScenario['options'][0]) => {
-        if (isAnswered) return;
+        if (isAnswered) {return;}
         setSelectedOption(option);
         setIsAnswered(true);
         if (option.isCorrect) {
@@ -63,11 +63,11 @@ export const DraftScenarios = () => {
                 <AnimatePresence mode="wait">
                     {!isAnswered ? (
                         <motion.div key="options" {...{initial:{opacity: 0}, animate:{opacity: 1}, exit:{opacity: 0}}}>
-                            <h3 className="text-lg font-bold text-text-primary text-center mb-4">What's the pick?</h3>
+                            <h3 className="text-lg font-bold text-text-primary text-center mb-4">What&apos;s the pick?</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {currentScenario.options.map((option) => {
                                     const champ = championsLite.find(c => c.id === option.championId);
-                                    if (!champ) return null;
+                                    if (!champ) {return null;}
                                     return (
                                         <button key={option.championId} onClick={() => handleSelectOption(option)} className="group relative bg-secondary border border-border text-left hover:border-accent transition-all duration-300 transform hover:-translate-y-1 overflow-hidden shadow-md hover:shadow-lg hover:shadow-accent/10 p-3 flex flex-col items-center">
                                             <img src={champ.image} alt={champ.name} className="w-24 h-24 mb-2 border-2 border-border-secondary"/>
@@ -87,7 +87,7 @@ export const DraftScenarios = () => {
                                             {selectedOption.isCorrect ? "Correct!" : "Suboptimal"}
                                         </h3>
                                     </div>
-                                    <p className="text-text-secondary mb-2 italic">"{selectedOption.explanation}"</p>
+                                    <p className="text-text-secondary mb-2 italic">&quot;{selectedOption.explanation}&quot;</p>
                                     {!selectedOption.isCorrect && <p className="text-text-primary font-semibold mt-4 mb-2">The Optimal Choice:</p>}
                                     <p className="text-text-secondary max-w-2xl mx-auto">{currentScenario.correctChoiceExplanation}</p>
                                     <Button onClick={handleNext} variant="primary" className="mt-6">Next Scenario</Button>

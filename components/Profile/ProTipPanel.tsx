@@ -23,7 +23,7 @@ interface ProTip {
 }
 
 const isTipRecent = (generatedAt?: string): boolean => {
-    if (!generatedAt) return false;
+    if (!generatedAt) {return false;}
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     return new Date(generatedAt) > sevenDaysAgo;
@@ -46,7 +46,7 @@ export const ProTipPanel = ({ profile, setCurrentPage, navigateToAcademy }: ProT
                 try {
                     const recentEntries = entries.slice(0, 3);
                     const tipText = await generateDynamicProTip(recentEntries, championsLite, controller.signal);
-                    if (controller.signal.aborted) return;
+                    if (controller.signal.aborted) {return;}
                     setProfile({ 
                         dynamicProTip: {
                             tip: tipText,
@@ -54,7 +54,7 @@ export const ProTipPanel = ({ profile, setCurrentPage, navigateToAcademy }: ProT
                         }
                     });
                 } catch (err) {
-                     if (err instanceof DOMException && err.name === 'AbortError') return;
+                     if (err instanceof DOMException && err.name === 'AbortError') {return;}
                      console.error("Failed to generate dynamic pro tip:", err);
                 } finally {
                     if (!controller.signal.aborted) {

@@ -83,7 +83,13 @@ export const Router = (props: RouterProps) => {
         }
     };
 
-    const nodeRef = pageRefs.current[currentPage] ?? (pageRefs.current[currentPage] = React.createRef());
+    // Get or create ref for the current page
+    const nodeRef = React.useMemo(() => {
+        if (!pageRefs.current[currentPage]) {
+            pageRefs.current[currentPage] = React.createRef();
+        }
+        return pageRefs.current[currentPage];
+    }, [currentPage]);
 
     return (
         <Suspense fallback={

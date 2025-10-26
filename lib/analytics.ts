@@ -81,7 +81,7 @@ class AnalyticsService {
    * Track a page view
    */
   pageView(pageName: string, properties?: Record<string, any>) {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.capture('$pageview', {
       page: pageName,
@@ -93,7 +93,7 @@ class AnalyticsService {
    * Track a custom event
    */
   track(event: string, properties?: Record<string, any>) {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.capture(event, properties);
 
@@ -157,7 +157,7 @@ class AnalyticsService {
    * Identify user
    */
   identifyUser(userId: string, properties?: UserProperties) {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     this.userId = userId;
 
@@ -168,7 +168,7 @@ class AnalyticsService {
    * Set user properties
    */
   setUserProperties(properties: UserProperties) {
-    if (!this.isInitialized || !this.userId) return;
+    if (!this.isInitialized || !this.userId) {return;}
 
     posthog.people.set(properties);
   }
@@ -177,7 +177,7 @@ class AnalyticsService {
    * Reset user (logout)
    */
   resetUser() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.reset();
     this.userId = null;
@@ -187,7 +187,7 @@ class AnalyticsService {
    * Opt out of tracking
    */
   optOut() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.opt_out_capturing();
     console.log('Analytics opt-out enabled');
@@ -197,7 +197,7 @@ class AnalyticsService {
    * Opt in to tracking
    */
   optIn() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.opt_in_capturing();
     console.log('Analytics opt-in enabled');
@@ -207,7 +207,7 @@ class AnalyticsService {
    * Check if user has opted out
    */
   hasOptedOut(): boolean {
-    if (!this.isInitialized) return true;
+    if (!this.isInitialized) {return true;}
 
     return posthog.has_opted_out_capturing();
   }
@@ -216,7 +216,7 @@ class AnalyticsService {
    * Enable session recording (with user consent)
    */
   enableSessionRecording() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.startSessionRecording();
   }
@@ -225,7 +225,7 @@ class AnalyticsService {
    * Disable session recording
    */
   disableSessionRecording() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.stopSessionRecording();
   }
@@ -234,7 +234,7 @@ class AnalyticsService {
    * Get feature flags (PostHog can also manage feature flags)
    */
   getFeatureFlag(flagName: string): boolean | string | undefined {
-    if (!this.isInitialized) return undefined;
+    if (!this.isInitialized) {return undefined;}
 
     return posthog.getFeatureFlag(flagName);
   }
@@ -243,7 +243,7 @@ class AnalyticsService {
    * Check if feature flag is enabled
    */
   isFeatureEnabled(flagName: string): boolean {
-    if (!this.isInitialized) return false;
+    if (!this.isInitialized) {return false;}
 
     return posthog.isFeatureEnabled(flagName) || false;
   }
@@ -252,7 +252,7 @@ class AnalyticsService {
    * Flush events immediately
    */
   flush() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     posthog.capture('$flush');
   }
@@ -261,7 +261,7 @@ class AnalyticsService {
    * Clean up
    */
   cleanup() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {return;}
 
     this.flush();
   }

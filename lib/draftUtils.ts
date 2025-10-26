@@ -171,11 +171,11 @@ export const swapChampionsInDraft = (
 
 const deriveDamageType = (info: { attack: number; magic: number }): 'AD' | 'AP' | 'Mixed' => {
     const total = info.attack + info.magic;
-    if (total === 0) return 'Mixed';
+    if (total === 0) {return 'Mixed';}
     const adRatio = info.attack / total;
 
-    if (adRatio > 0.7) return 'AD';
-    if (adRatio < 0.3) return 'AP';
+    if (adRatio > 0.7) {return 'AD';}
+    if (adRatio < 0.3) {return 'AP';}
     return 'Mixed';
 };
 
@@ -184,14 +184,14 @@ const deriveStatLevel = (text: string, heavyKeywords: string[], mediumKeywords: 
     const lowerText = text.toLowerCase();
 
     heavyKeywords.forEach(kw => {
-        if (lowerText.includes(kw)) score += 2;
+        if (lowerText.includes(kw)) {score += 2;}
     });
     mediumKeywords.forEach(kw => {
-        if (lowerText.includes(kw)) score += 1;
+        if (lowerText.includes(kw)) {score += 1;}
     });
 
-    if (score >= 3) return 'High';
-    if (score >= 1) return 'Medium';
+    if (score >= 3) {return 'High';}
+    if (score >= 1) {return 'Medium';}
     return 'Low';
 };
 

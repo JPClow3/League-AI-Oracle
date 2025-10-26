@@ -72,7 +72,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
     };
 
     const handleChampionSelect = (champion: Champion) => {
-        if (!activeSlot) return;
+        if (!activeSlot) {return;}
         setDraftState(prev => updateSlotInDraft(prev, activeSlot.team, activeSlot.type, activeSlot.index, champion));
         setActiveSlot(null);
     };
@@ -82,7 +82,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
     };
 
     const handleAnalyze = async () => {
-        if (!isDraftComplete || isLoading) return;
+        if (!isDraftComplete || isLoading) {return;}
         setIsLoading(true);
         setError(null);
         setAnalysisCompleted(false);
@@ -93,7 +93,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
 
         try {
             const result = await getDraftAdvice(draftState, 'blue', settings.primaryRole, profile.skillLevel, 'gemini-2.5-pro', controller.signal);
-            if(controller.signal.aborted) return;
+            if(controller.signal.aborted) {return;}
             
             setAdvice({ ...result, draftId: JSON.stringify(draftState) });
             setAnalysisCompleted(true);
@@ -113,7 +113,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
             completeMission(MISSION_IDS.DAILY.FIRST_DRAFT_OF_DAY);
 
         } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') return;
+            if (err instanceof DOMException && err.name === 'AbortError') {return;}
             const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
             setError(errorMessage);
             toast.error(errorMessage);
@@ -178,7 +178,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
                 availableChampions: available,
                 signal
             });
-            if (signal.aborted) return;
+            if (signal.aborted) {return;}
             
             const suggestionsWithData = suggestions.map(s => ({
                 ...s,
@@ -188,11 +188,11 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
             setBuilderSuggestions(suggestionsWithData);
 
         } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') return;
+            if (err instanceof DOMException && err.name === 'AbortError') {return;}
             toast.error(err instanceof Error ? err.message : "Failed to get suggestions.");
             setIsBuilding(false); // Abort builder on error
         } finally {
-            if (!signal.aborted) setIsBuilderLoading(false);
+            if (!signal.aborted) {setIsBuilderLoading(false);}
         }
     }, [championsLite]);
 
@@ -213,7 +213,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
 
     const handleBuilderSelect = (champion: ChampionLite) => {
         const fullChampion = champions.find(c => c.id === champion.id);
-        if (!fullChampion) return;
+        if (!fullChampion) {return;}
 
         const nextState = updateSlotInDraft(draftState, 'blue', 'pick', builderStep, fullChampion);
         setDraftState(nextState);
@@ -246,7 +246,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
                     availableChampions: available,
                     signal: controller.signal
                 });
-                if (controller.signal.aborted) break;
+                if (controller.signal.aborted) {break;}
 
                 const champ = champions.find(c => c.name === suggestion.championName);
                 if (champ) {
@@ -254,7 +254,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
                     setDraftState(currentRedDraft);
                 }
             } catch (e) {
-                if (e instanceof DOMException && e.name === 'AbortError') break;
+                if (e instanceof DOMException && e.name === 'AbortError') {break;}
                 toast.error("Failed to generate part of the opponent team.");
                 break;
             }
@@ -315,7 +315,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
                         isOpponentLoading={isOpponentLoading}
                     />
                    : 
-                     <ChampionGrid onSelect={(champLite) => { const champ = champions.find(c => c.id === champLite.id); if (champ) handleChampionSelect(champ); }} onQuickLook={() => {}} onWhyThisPick={() => {}} recommendations={[]} isRecsLoading={false} activeRole={null} draftState={draftState} onDragStart={(e, champ) => handleDragStart(e, 'blue', 'pick', -1, champ)} />
+                     <ChampionGrid onSelect={(champLite) => { const champ = champions.find(c => c.id === champLite.id); if (champ) {handleChampionSelect(champ);} }} onQuickLook={() => {}} onWhyThisPick={() => {}} recommendations={[]} isRecsLoading={false} activeRole={null} draftState={draftState} onDragStart={(e, champ) => handleDragStart(e, 'blue', 'pick', -1, champ)} />
                    }
                 </div>
             </div>

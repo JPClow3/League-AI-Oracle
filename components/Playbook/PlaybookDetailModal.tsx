@@ -43,42 +43,99 @@ const DossierDisplay = ({ dossier }: { dossier: PlaybookPlusDossier }) => (
     </div>
 );
 
-
-const DraftDisplay = ({ draft, analysis }: { draft: DraftState, analysis: HistoryEntry['analysis'] }) => {
-    const TeamDisplay = ({ side }: { side: 'blue' | 'red' }) => {
-        const team = draft[side];
-        const isBlue = side === 'blue';
-        const score = analysis?.teamAnalysis?.[side]?.draftScore;
-
-        return (
-            <div>
-                 <div className="flex justify-between items-center mb-2">
-                    <h4 className={`font-bold text-lg ${isBlue ? 'text-blue-500' : 'text-red-500'}`}>{isBlue ? 'Blue Team' : 'Red Team'}</h4>
-                    {score && <span className={`font-display text-2xl font-black ${isBlue ? 'text-blue-400' : 'text-red-400'}`}>{score}</span>}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {team.picks.map((p, i) => (
-                        <div key={`pick-${side}-${i}`} className="w-12 h-12 bg-background rounded-md border border-border" title={p.champion?.name}>
-                            {p.champion && <img src={p.champion.image} alt={p.champion.name} className="w-full h-full object-cover rounded-md" />}
-                        </div>
-                    ))}
-                </div>
-                 <div className="flex flex-wrap gap-1 mt-2">
-                    {team.bans.map((b, i) => (
-                         <div key={`ban-${side}-${i}`} className="w-8 h-8 bg-background rounded-md border border-border" title={b.champion?.name}>
-                            {b.champion && <img src={b.champion.image} alt={b.champion.name} className="w-full h-full object-cover rounded-md grayscale" />}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
+// Helper component for displaying team picks and bans (moved outside to avoid creating during render)
+const TeamDisplay = ({
+    draft,
+    side,
+    analysis
+}: {
+    draft: DraftState;
+    side: 'blue' | 'red';
+    analysis: HistoryEntry['analysis']
+}) => {
+    const team = draft[side];
+    const isBlue = side === 'blue';
+    const score = analysis?.teamAnalysis?.[side]?.draftScore;
 
     return (
-        <div className="bg-secondary p-4 rounded-lg space-y-4 border border-border">
-            <TeamDisplay side="blue" />
-            <TeamDisplay side="red" />
+        <div>
+             <div className="flex justify-between items-center mb-2">
+                <h4 className={`font-bold text-lg ${isBlue ? 'text-blue-500' : 'text-red-500'}`}>{isBlue ? 'Blue Team' : 'Red Team'}</h4>
+                {score && <span className={`font-display text-2xl font-black ${isBlue ? 'text-blue-400' : 'text-red-400'}`}>{score}</span>}
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {team.picks.map((p, i) => (
+                    <div key={`pick-${side}-${i}`} className="w-12 h-12 bg-background rounded-md border border-border" title={p.champion?.name}>
+                        {p.champion && <img src={p.champion.image} alt={p.champion.name} className="w-full h-full object-cover rounded-md" />}
+                    </div>
+                ))}
+            </div>
+             <div className="flex flex-wrap gap-1 mt-2">
+                {team.bans.map((b, i) => (
+                     <div key={`ban-${side}-${i}`} className="w-8 h-8 bg-background rounded-md border border-border" title={b.champion?.name}>
+                        {b.champion && <img src={b.champion.image} alt={b.champion.name} className="w-full h-full object-cover rounded-md grayscale" />}
+                    </div>
+                ))}
+            </div>
         </div>
+    );
+};
+
+const DraftDisplay = ({ draft, analysis }: { draft: DraftState, analysis: HistoryEntry['analysis'] }) => {
+    return (
+        <div className="bg-secondary p-4 rounded-lg space-y-4 border border-border">
+            <TeamDisplay draft={draft} side="blue" analysis={analysis} />
+            <TeamDisplay draft={draft} side="red" analysis={analysis} />
+        </div>
+    );
+};
+
+const TabButton = ({
+    tab,
+    children,
+    disabled,
+    activeTab,
+    setActiveTab
+}: {
+    tab: 'analysis' | 'dossier';
+    children: React.ReactNode;
+    disabled?: boolean;
+    activeTab: 'analysis' | 'dossier';
+    setActiveTab: (tab: 'analysis' | 'dossier') => void;
+}) => (
+    <button
+        onClick={() => !disabled && setActiveTab(tab)}
+        disabled={disabled}
+        className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+            activeTab === tab ? 'bg-accent text-on-accent' : 'bg-secondary text-text-secondary hover:bg-border'
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
+    >
+        {children}
+    </button>
+);
+
+const ResultButton = ({
+    value,
+    children,
+    result,
+    setResult
+}: {
+    value: NonNullable<HistoryEntry['result']>;
+    children: React.ReactNode;
+    result: HistoryEntry['result'];
+    setResult: (result: HistoryEntry['result']) => void;
+}) => {
+    const isActive = result === value;
+    const color = value === 'win' ? 'border-success hover:bg-success/10' : value === 'loss' ? 'border-error hover:bg-error/10' : 'border-border hover:bg-border/10';
+    const activeColor = value === 'win' ? 'bg-success/20 border-success' : value === 'loss' ? 'bg-error/20 border-error' : 'bg-border/20 border-border';
+    return (
+        <Button
+            variant="secondary"
+            onClick={() => setResult(result === value ? undefined : value)}
+            className={`!border-2 ${isActive ? activeColor : color}`}
+        >
+            {children}
+        </Button>
     );
 };
 
@@ -121,7 +178,7 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
     };
     
     const getFormattedDraftText = () => {
-        if (!fullDraft || !entry) return '';
+        if (!fullDraft || !entry) {return '';}
 
         const formatTeam = (side: 'blue' | 'red') => {
             const team = fullDraft[side];
@@ -154,7 +211,7 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
     };
 
     const handleExportAsText = () => {
-        if (!entry) return;
+        if (!entry) {return;}
         const text = getFormattedDraftText();
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
@@ -165,22 +222,6 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
         URL.revokeObjectURL(url);
     };
 
-    const TabButton = ({ tab, children, disabled }: { tab: 'analysis' | 'dossier', children: React.ReactNode, disabled?: boolean }) => (
-        <button onClick={() => !disabled && setActiveTab(tab)} disabled={disabled} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeTab === tab ? 'bg-accent text-on-accent' : 'bg-secondary text-text-secondary hover:bg-border'} disabled:opacity-50 disabled:cursor-not-allowed`}>
-            {children}
-        </button>
-    );
-
-    const ResultButton = ({ value, children }: { value: NonNullable<HistoryEntry['result']>, children: React.ReactNode }) => {
-        const isActive = result === value;
-        const color = value === 'win' ? 'border-success hover:bg-success/10' : value === 'loss' ? 'border-error hover:bg-error/10' : 'border-border hover:bg-border/10';
-        const activeColor = value === 'win' ? 'bg-success/20 border-success' : value === 'loss' ? 'bg-error/20 border-error' : 'bg-border/20 border-border';
-        return (
-             <Button variant="secondary" onClick={() => setResult(result === value ? undefined : value)} className={`!border-2 ${isActive ? activeColor : color}`}>
-                {children}
-            </Button>
-        );
-    }
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={entry ? `Archives: ${entry.name}` : 'Archived Entry'} size="6xl">
@@ -191,9 +232,9 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
                         <div className="space-y-2">
                              <h3 className="font-display text-xl font-bold text-accent tracking-wide">Record Outcome</h3>
                              <div className="flex gap-2">
-                                <ResultButton value="win"><Check className="h-4 w-4 mr-1"/> Win</ResultButton>
-                                <ResultButton value="loss"><X className="h-4 w-4 mr-1"/> Loss</ResultButton>
-                                <ResultButton value="remake"><Minus className="h-4 w-4 mr-1"/> Remake</ResultButton>
+                                <ResultButton value="win" result={result} setResult={setResult}><Check className="h-4 w-4 mr-1"/> Win</ResultButton>
+                                <ResultButton value="loss" result={result} setResult={setResult}><X className="h-4 w-4 mr-1"/> Loss</ResultButton>
+                                <ResultButton value="remake" result={result} setResult={setResult}><Minus className="h-4 w-4 mr-1"/> Remake</ResultButton>
                              </div>
                         </div>
                         <div className="space-y-2">
@@ -223,8 +264,8 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
     
                     <div className="max-h-[70vh] overflow-y-auto">
                         <div className="flex gap-2 mb-4 p-1 bg-secondary rounded-lg">
-                            <TabButton tab="dossier" disabled={!entry.dossier}>Strategic Dossier</TabButton>
-                            <TabButton tab="analysis" disabled={!entry.analysis}>Original Analysis</TabButton>
+                            <TabButton tab="dossier" disabled={!entry.dossier} activeTab={activeTab} setActiveTab={setActiveTab}>Strategic Dossier</TabButton>
+                            <TabButton tab="analysis" disabled={!entry.analysis} activeTab={activeTab} setActiveTab={setActiveTab}>Original Analysis</TabButton>
                         </div>
                         
                         {activeTab === 'dossier' && entry.dossier && <DossierDisplay dossier={entry.dossier} />}

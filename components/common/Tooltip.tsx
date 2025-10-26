@@ -18,7 +18,7 @@ export const Tooltip = ({ content, children, delay = 300 }: TooltipProps) => {
   useLayoutEffect(() => {
     if (isVisible && targetRef.current && tooltipRef.current) {
         const calculatePosition = () => {
-            if (!targetRef.current || !tooltipRef.current) return;
+            if (!targetRef.current || !tooltipRef.current) {return;}
 
             const targetRect = targetRef.current.getBoundingClientRect();
             const tooltipRect = tooltipRef.current.getBoundingClientRect();

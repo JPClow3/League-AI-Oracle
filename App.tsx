@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import type { Page, DraftState, Settings } from './types';
+import type { Page, DraftState } from './types';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { BottomNav } from './components/Layout/BottomNav';
@@ -140,7 +140,7 @@ const App = () => {
     
     const loadChampionToLab = (championId: string, role?: string) => {
         const champ = champions.find(c => c.id === championId);
-        if (!champ) return;
+        if (!champ) {return;}
         
         setDraftState(prev => {
             const roleIndex = role ? ROLES.indexOf(role) : -1;

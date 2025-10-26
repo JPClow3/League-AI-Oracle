@@ -8,7 +8,7 @@ import { useModals } from '../../hooks/useModals';
 import { useDraft } from '../../contexts/DraftContext';
 import { TextArea } from '../common/TextArea';
 
-interface FeedbackModalProps {}
+type FeedbackModalProps = Record<string, never>;
 
 const CATEGORIES: FeedbackCategory[] = [
     'AI Suggestion Quality',
@@ -18,7 +18,7 @@ const CATEGORIES: FeedbackCategory[] = [
     'Other'
 ];
 
-export const FeedbackModal = (props: FeedbackModalProps) => {
+export const FeedbackModal = () => {
     const { modals, dispatch } = useModals();
     const { draftState } = useDraft();
     const [category, setCategory] = useState<FeedbackCategory>('AI Suggestion Quality');

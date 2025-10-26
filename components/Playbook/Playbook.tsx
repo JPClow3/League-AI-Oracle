@@ -44,7 +44,7 @@ export const Playbook = ({ onLoadDraft, setCurrentPage, navigateToAcademy }: Pla
 
     const handleDelete = (id: string) => {
         const entryToDelete = entries.find(entry => entry.id === id);
-        if (!entryToDelete) return;
+        if (!entryToDelete) {return;}
 
         setConfirmationState({
             title: "Delete Strategy?",

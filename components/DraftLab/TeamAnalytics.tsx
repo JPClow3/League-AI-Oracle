@@ -9,10 +9,10 @@ interface TeamAnalyticsProps {
 
 const scoreMap: Record<string, number> = { Low: 1, Medium: 2, High: 3 };
 const scoreToRating = (score: number, max: number): 'Low' | 'Medium' | 'High' => {
-    if (max === 0) return 'Low';
+    if (max === 0) {return 'Low';}
     const percentage = score / max;
-    if (percentage < 0.34) return 'Low';
-    if (percentage < 0.67) return 'Medium';
+    if (percentage < 0.34) {return 'Low';}
+    if (percentage < 0.67) {return 'Medium';}
     return 'High';
 }
 
@@ -38,9 +38,9 @@ export const TeamAnalytics = ({ picks }: TeamAnalyticsProps) => {
     }
 
     const damage = pickedChampions.reduce((acc, champ) => {
-        if (champ.damageType === 'AD') acc.ad++;
-        else if (champ.damageType === 'AP') acc.ap++;
-        else acc.mixed++;
+        if (champ.damageType === 'AD') {acc.ad++;}
+        else if (champ.damageType === 'AP') {acc.ap++;}
+        else {acc.mixed++;}
         return acc;
     }, { ad: 0, ap: 0, mixed: 0 });
 

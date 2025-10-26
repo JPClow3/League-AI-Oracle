@@ -6,7 +6,6 @@ import { Button } from '../common/Button';
 import { useModals } from '../../hooks/useModals';
 import { X } from 'lucide-react';
 
-interface SettingsPanelProps {}
 
 const ToggleButton = ({ options, currentValue, onToggle }: {
     options: { value: string, label: string }[];

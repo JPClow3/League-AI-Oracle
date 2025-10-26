@@ -108,7 +108,7 @@ class PerformanceMonitor {
    * Measure page load performance
    */
   measurePageLoad() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     window.addEventListener('load', () => {
       setTimeout(() => {
@@ -190,7 +190,7 @@ class PerformanceMonitor {
    */
   getAverage(name: string): number {
     const metrics = this.getMetricsByName(name);
-    if (metrics.length === 0) return 0;
+    if (metrics.length === 0) {return 0;}
 
     const sum = metrics.reduce((acc, m) => acc + m.value, 0);
     return sum / metrics.length;
@@ -216,7 +216,7 @@ class PerformanceMonitor {
           });
         });
       });
-      inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 40 });
+      inpObserver.observe({ type: 'event', buffered: true } as PerformanceObserverInit);
     } catch (e) {
       console.warn('INP observation failed:', e);
     }
@@ -226,7 +226,7 @@ class PerformanceMonitor {
    * Monitor resource loading performance
    */
   measureResourcePerformance() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     const observer = new PerformanceObserver((list) => {
       list.getEntries().forEach((entry: any) => {
@@ -275,7 +275,7 @@ class PerformanceMonitor {
    * Monitor memory usage (Chrome only)
    */
   measureMemory() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     // Check if memory API is available (Chrome/Edge)
     if ('memory' in performance) {
@@ -293,7 +293,7 @@ class PerformanceMonitor {
    * Measure First Contentful Paint (FCP)
    */
   measureFCP() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     try {
       const fcpObserver = new PerformanceObserver((list) => {
@@ -316,7 +316,7 @@ class PerformanceMonitor {
    * Measure Time to Interactive (TTI) approximation
    */
   measureTTI() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     window.addEventListener('load', () => {
       // Wait for network to be idle
@@ -369,7 +369,7 @@ class PerformanceMonitor {
     // Group metrics by type
     const metricsByType = this.metrics.reduce((acc, metric) => {
       const type = metric.metadata?.type || 'other';
-      if (!acc[type]) acc[type] = [];
+      if (!acc[type]) {acc[type] = [];}
       acc[type].push(metric);
       return acc;
     }, {} as Record<string, PerformanceMetric[]>);
@@ -433,7 +433,7 @@ class PerformanceMonitor {
    * Initialize all monitoring
    */
   initializeMonitoring() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     this.measureWebVitals();
     this.measurePageLoad();
@@ -481,46 +481,6 @@ class PerformanceMonitor {
 // Export singleton instance
 export const performanceMonitor = new PerformanceMonitor();
 
-  clear() {
-    this.metrics = [];
-  }
-
-  /**
-   * Send metrics to analytics service
-   */
-  private sendToAnalytics(metric: PerformanceMetric) {
-    // Send to your analytics service (PostHog, Google Analytics, etc.)
-    if (typeof window !== 'undefined' && (window as any).posthog) {
-      (window as any).posthog.capture('performance_metric', {
-        metric_name: metric.name,
-        metric_value: metric.value,
-        ...metric.metadata
-      });
-    }
-  }
-
-  /**
-   * Generate performance report
-   */
-  generateReport(): string {
-    const report: Record<string, any> = {
-      timestamp: new Date().toISOString(),
-      totalMetrics: this.metrics.length,
-      averages: {}
-    };
-
-    // Calculate averages for each metric type
-    const metricNames = [...new Set(this.metrics.map(m => m.name))];
-    metricNames.forEach(name => {
-      report.averages[name] = this.getAverage(name);
-    });
-
-    return JSON.stringify(report, null, 2);
-  }
-}
-
-export const performanceMonitor = new PerformanceMonitor();
-
 // Initialize monitoring
 if (typeof window !== 'undefined') {
   performanceMonitor.measureWebVitals();
@@ -529,17 +489,23 @@ if (typeof window !== 'undefined') {
 
 // Export hook for React components
 export function usePerformanceMonitor(componentName: string) {
-  const [renderTime, setRenderTime] = React.useState<number | null>(null);
+  if (typeof window === 'undefined') {
+    return { renderTime: null };
+  }
 
-  React.useEffect(() => {
-    const stopMeasure = performanceMonitor.startMeasure(componentName);
+  // Note: This should only be used in React components
+  // Import React in the component that uses this hook
+  const startTime = performance.now();
 
-    return () => {
-      stopMeasure();
-    };
-  }, [componentName]);
+  // Clean up function
+  const cleanup = () => {
+    const duration = performance.now() - startTime;
+    performanceMonitor.record(`Component: ${componentName}`, duration, {
+      type: 'component-render'
+    });
+  };
 
-  return { renderTime };
+  return { renderTime: null, cleanup };
 }
 
 export default performanceMonitor;

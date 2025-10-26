@@ -36,11 +36,11 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   useEffect(() => {
     // Skip lazy loading for priority images
-    if (priority) return;
+    if (priority) {return;}
 
     // Use Intersection Observer for lazy loading
     const img = imgRef.current;
-    if (!img) return;
+    if (!img) {return;}
 
     const observer = new IntersectionObserver(
       (entries) => {

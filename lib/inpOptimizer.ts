@@ -49,7 +49,7 @@ export class DOMBatcher {
   }
 
   private schedule() {
-    if (this.scheduled) return;
+    if (this.scheduled) {return;}
     this.scheduled = true;
 
     requestAnimationFrame(() => {
@@ -70,7 +70,7 @@ export class DOMBatcher {
   }
 
   flush() {
-    if (!this.scheduled) return;
+    if (!this.scheduled) {return;}
 
     // Force immediate execution
     while (this.readQueue.length > 0) {
@@ -104,23 +104,23 @@ export function runWhenIdle(callback: () => void, options?: IdleRequestOptions) 
  */
 export function debounceWithImmediate<TArgs extends unknown[], TReturn>(
   func: (...args: TArgs) => TReturn,
-  wait: number
+  wait: number,
+  immediate: boolean = false
 ): (...args: TArgs) => void {
-): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 
-  return function executedFunction(...args: Parameters<T>) {
+  return function executedFunction(...args: TArgs) {
     const later = () => {
       timeout = null;
-      if (!immediate) func(...args);
+      if (!immediate) {func(...args);}
     };
 
     const callNow = immediate && !timeout;
 
-    if (timeout) clearTimeout(timeout);
+    if (timeout) {clearTimeout(timeout);}
     timeout = setTimeout(later, wait);
 
-    if (callNow) func(...args);
+    if (callNow) {func(...args);}
   };
 }
 

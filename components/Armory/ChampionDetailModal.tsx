@@ -163,11 +163,11 @@ const AIStrategyDisplay = ({ analysis }: { analysis: ChampionAnalysis }) => (
 );
 
 const MatchupsDisplay = ({ analysis, matchupAnalysis, onRetry }: { analysis: ChampionAnalysis, matchupAnalysis: MatchupAnalysis | null, onRetry: () => void }) => {
-    if (!matchupAnalysis) return (
+    if (!matchupAnalysis) {return (
         <div className="flex flex-col items-center justify-center min-h-[200px]">
             <Button onClick={onRetry}>Generate Matchup Tips</Button>
         </div>
-    );
+    );}
     
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -201,34 +201,34 @@ const useChampionAnalysis = (champion: Champion, latestVersion: string | null) =
     const [error, setError] = useState<Record<string, string | null>>({ analysis: null, matchups: null });
 
     const fetchAnalysis = useCallback(async (signal: AbortSignal) => {
-        if (!latestVersion) return;
+        if (!latestVersion) {return;}
         setIsLoading(prev => ({ ...prev, analysis: true }));
         setError(prev => ({ ...prev, analysis: null }));
         try {
             const cacheKey = `championAnalysis_${champion.name}_${latestVersion}`;
             const fetcher = () => getChampionAnalysis(champion.name, latestVersion, signal);
             const result = await storageService.fetchWithCache(cacheKey, fetcher, latestVersion, signal);
-            if (!signal.aborted) setAnalysis(result);
+            if (!signal.aborted) {setAnalysis(result);}
         } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') return;
+            if (err instanceof DOMException && err.name === 'AbortError') {return;}
             setError(prev => ({ ...prev, analysis: err instanceof Error ? err.message : 'Failed to load AI analysis.' }));
         } finally {
-            if (!signal.aborted) setIsLoading(prev => ({ ...prev, analysis: false }));
+            if (!signal.aborted) {setIsLoading(prev => ({ ...prev, analysis: false }));}
         }
     }, [champion.name, latestVersion]);
 
     const fetchMatchups = useCallback(async (signal: AbortSignal) => {
-        if (!analysis) return;
+        if (!analysis) {return;}
         setIsLoading(prev => ({ ...prev, matchups: true }));
         setError(prev => ({ ...prev, matchups: null }));
         try {
             const result = await getMatchupAnalysis(champion.name, analysis.counters.weakAgainst, analysis.counters.strongAgainst, signal);
-            if (!signal.aborted) setMatchupAnalysis(result);
+            if (!signal.aborted) {setMatchupAnalysis(result);}
         } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') return;
+            if (err instanceof DOMException && err.name === 'AbortError') {return;}
             setError(prev => ({ ...prev, matchups: err instanceof Error ? err.message : 'Failed to load matchup tips.' }));
         } finally {
-            if (!signal.aborted) setIsLoading(prev => ({ ...prev, matchups: false }));
+            if (!signal.aborted) {setIsLoading(prev => ({ ...prev, matchups: false }));}
         }
     }, [champion.name, analysis]);
 
@@ -266,13 +266,13 @@ export const ChampionDetailModal = ({ isOpen, onClose, champion, onLoadInLab }: 
         }
         return () => {
             abortControllerRef.current?.abort();
-            if (!isOpen) reset();
+            if (!isOpen) {reset();}
         };
     }, [isOpen, champion, reset]);
 
     // Fetch data when switching to a tab
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {return;}
 
         abortControllerRef.current?.abort();
         const controller = new AbortController();
@@ -291,14 +291,14 @@ export const ChampionDetailModal = ({ isOpen, onClose, champion, onLoadInLab }: 
             case 'overview': return <OverviewDisplay champion={champion} />;
             case 'abilities': return <AbilitiesDisplay abilities={champion.abilities} />;
             case 'strategy':
-                if (isLoading.analysis) return <SkeletonLoader />;
-                if (error.analysis) return <ErrorDisplay message={error.analysis} onRetry={() => fetchAnalysis(new AbortController().signal)} />;
-                if (analysis) return <AIStrategyDisplay analysis={analysis} />;
+                if (isLoading.analysis) {return <SkeletonLoader />;}
+                if (error.analysis) {return <ErrorDisplay message={error.analysis} onRetry={() => fetchAnalysis(new AbortController().signal)} />;}
+                if (analysis) {return <AIStrategyDisplay analysis={analysis} />;}
                 return null;
             case 'matchups':
-                if (isLoading.matchups) return <SkeletonLoader />;
-                if (error.matchups) return <ErrorDisplay message={error.matchups} onRetry={() => fetchMatchups(new AbortController().signal)} />;
-                if (analysis) return <MatchupsDisplay analysis={analysis} matchupAnalysis={matchupAnalysis} onRetry={() => fetchMatchups(new AbortController().signal)} />;
+                if (isLoading.matchups) {return <SkeletonLoader />;}
+                if (error.matchups) {return <ErrorDisplay message={error.matchups} onRetry={() => fetchMatchups(new AbortController().signal)} />;}
+                if (analysis) {return <MatchupsDisplay analysis={analysis} matchupAnalysis={matchupAnalysis} onRetry={() => fetchMatchups(new AbortController().signal)} />;}
                 return null;
             default: return null;
         }

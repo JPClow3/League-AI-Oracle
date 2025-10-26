@@ -77,7 +77,7 @@ export const usePlaybook = () => {
 
         try {
             const dossier = analysis ? await generatePlaybookPlusDossier(draftState, userSide, controller.signal) : null;
-            if (controller.signal.aborted) return false;
+            if (controller.signal.aborted) {return false;}
             
             const finalId = new Date().toISOString(); // Use final timestamp as permanent ID
             const finalEntry: HistoryEntry = {
@@ -131,7 +131,7 @@ export const usePlaybook = () => {
      */
     const deleteEntry = async (id: string): Promise<void> => {
         const entryToDelete = entries.find(e => e.id === id);
-        if (!entryToDelete) return;
+        if (!entryToDelete) {return;}
         
         await db.history.delete(id);
         setEntries(prev => prev.filter(entry => entry.id !== id));

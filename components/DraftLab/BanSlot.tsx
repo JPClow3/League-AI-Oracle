@@ -34,7 +34,7 @@ export const BanSlot = ({ champion, onClick, onClear, onDrop, onDragOver, onDrag
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (clearingRef.current || !onClear) return;
+    if (clearingRef.current || !onClear) {return;}
     clearingRef.current = true;
     onClear();
     setTimeout(() => {
