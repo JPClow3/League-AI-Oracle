@@ -40,6 +40,10 @@
     "lighthouse": "lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html",
     "analyze": "vite-bundle-visualizer"
   },
+  "engines": {
+  "node": ">=20",
+  "npm": ">=10"
+},
   "dependencies": {
     "@google/genai": "^1.15.0",
     "@sentry/react": "^10.22.0",
