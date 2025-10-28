@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
 import type { Page, DraftState } from './types';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
@@ -367,6 +368,8 @@ const App = () => {
         <Footer />
         <BottomNav currentPage={currentPage} setCurrentPage={setCurrentPage} />
         <OfflineIndicator />
+        {/* Vercel Web Analytics */}
+        <Analytics />
         <div className="pb-16 md:pb-0" /> {/* Spacer for BottomNav */}
       </div>
     </ErrorBoundary>
