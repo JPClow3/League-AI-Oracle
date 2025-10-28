@@ -6,6 +6,28 @@ Todas as correções críticas foram aplicadas com sucesso. O projeto está pron
 
 ---
 
+## 🚨 CORREÇÃO CRÍTICA DE SEGURANÇA
+
+### ⚠️ API Key Removida do Cliente (CRÍTICO!)
+
+**Problema Resolvido**: A API key do Google Gemini estava sendo injetada no código do cliente via `vite.config.ts` (seção `define`). Isso expunha a chave publicamente.
+
+**Correção Aplicada**:
+- ❌ Removida seção `define` do vite.config.ts
+- ❌ Removido `loadEnv` não utilizado
+- ✅ API key agora APENAS no backend via `process.env.GEMINI_API_KEY`
+- ✅ Adicionada detecção de desconexão do cliente em `api/gemini.js`
+
+**Documentação**: Ver `SECURITY_CRITICAL_API_KEY_FIX.md` para detalhes completos.
+
+**⚠️ SE VOCÊ JÁ FEZ DEPLOY ANTES**:
+1. 🚨 **REVOGUE a chave antiga** no Google Cloud Console
+2. 🔑 **Gere uma nova chave**
+3. ✅ Configure a nova no Vercel
+4. 🚀 Faça novo deploy
+
+---
+
 ## 🎯 Correções Críticas Completadas
 
 ### ✅ 1. vercel.json - CORRIGIDO

@@ -60,9 +60,15 @@ export default async function handler(req, res) {
       tools: useSearch ? [{ googleSearch: {} }] : undefined,
     };
 
-    // ✅ IMPROVEMENT: Add AbortSignal support with timeout
+    // ✅ IMPROVEMENT: Add AbortSignal support with timeout and client disconnect detection
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    // Detect client disconnect (Vercel environment)
+    req.on('close', () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    });
 
     try {
       const response = await fetch(url, {

@@ -82,7 +82,7 @@ export const isValidURL = (url: string, allowedProtocols: string[] = ['http:', '
 };
 
 /**
- * Check if URL is safe (no javascript:, data:, or other dangerous protocols)
+ * Check if URL is safe (no javascript:, data:, vbscript:, or other dangerous protocols)
  * @param url - URL string to check
  */
 export const isSafeURL = (url: string): boolean => {
@@ -160,7 +160,7 @@ export const sanitizeHTMLBasic = (html: string): string => {
       }
     });
 
-    // Remove javascript: protocol from href and src
+    // Remove dangerous protocols from href and src
     ['href', 'src', 'action', 'formaction'].forEach(attr => {
       const value = el.getAttribute(attr);
       if (value) {
@@ -172,8 +172,11 @@ export const sanitizeHTMLBasic = (html: string): string => {
             el.removeAttribute(attr);
           }
         } catch {
-          // If it's not a valid URL, check if it starts with javascript:
-          if (value.toLowerCase().trim().startsWith('javascript:')) {
+          // If it's not a valid URL, check for dangerous protocols
+          const lowerValue = value.toLowerCase().trim();
+          if (lowerValue.startsWith('javascript:') ||
+              lowerValue.startsWith('data:') ||
+              lowerValue.startsWith('vbscript:')) {
             el.removeAttribute(attr);
           }
         }

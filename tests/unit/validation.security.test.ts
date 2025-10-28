@@ -63,6 +63,43 @@ describe('Security - HTML Sanitization', () => {
       expect(result).not.toContain('alert');
     });
   });
+
+  it('should remove data: protocol from href', () => {
+    const malicious = '<a href="data:text/html,<script>alert(\'XSS\')</script>">Click</a>';
+    const result = sanitizeHTMLBasic(malicious);
+    expect(result).not.toContain('data:');
+    expect(result).not.toContain('href');
+  });
+
+  it('should remove vbscript: protocol from href', () => {
+    const malicious = '<a href="vbscript:msgbox(\'XSS\')">Click</a>';
+    const result = sanitizeHTMLBasic(malicious);
+    expect(result).not.toContain('vbscript:');
+    expect(result).not.toContain('href');
+  });
+
+  it('should handle data: protocol in img src', () => {
+    const malicious = '<img src="data:text/html,<script>alert(\'XSS\')</script>">';
+    const result = sanitizeHTMLBasic(malicious);
+    expect(result).not.toContain('data:');
+    expect(result).not.toContain('src=');
+  });
+
+  it('should handle mixed dangerous protocols', () => {
+    const malicious = `
+      <div>
+        <a href="javascript:alert(1)">Link1</a>
+        <a href="data:text/html,<script>alert(2)</script>">Link2</a>
+        <a href="vbscript:msgbox(3)">Link3</a>
+      </div>
+    `;
+    const result = sanitizeHTMLBasic(malicious);
+    expect(result).not.toContain('javascript:');
+    expect(result).not.toContain('data:');
+    expect(result).not.toContain('vbscript:');
+    expect(result).not.toContain('alert');
+    expect(result).not.toContain('msgbox');
+  });
 });
 
 describe('Security - URL Validation', () => {
