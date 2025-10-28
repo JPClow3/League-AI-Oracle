@@ -1,8 +1,0 @@
-{
-  "framework": "vite",
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
-  // Headers de segurança podem ser adicionados se necessário, mas vamos testar sem eles primeiro
-  // A reescrita da API ("/api/:path*") geralmente também é detectada automaticamente
-}
