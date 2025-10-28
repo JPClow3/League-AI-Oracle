@@ -51,7 +51,7 @@ export const TeamPanel = ({ id, side, state, onSlotClick, onClearSlot, onDrop, o
                     <PickSlot
                       side={side}
                       champion={pick.champion}
-                      role={ROLES[index]}
+                      role={ROLES[index] || 'Unknown'}
                       onClick={() => onSlotClick(side, 'pick', index)}
                       onClear={onClearSlot ? () => onClearSlot(side, 'pick', index) : undefined}
                       onDrop={onDrop ? (e) => onDrop(e, side, 'pick', index) : undefined}

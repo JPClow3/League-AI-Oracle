@@ -46,6 +46,7 @@ export const Tooltip = ({ content, children, delay = 300 }: TooltipProps) => {
         const rafId = requestAnimationFrame(calculatePosition);
         return () => cancelAnimationFrame(rafId);
     }
+    return undefined;
   }, [isVisible]);
   
   const handleMouseEnter = () => {

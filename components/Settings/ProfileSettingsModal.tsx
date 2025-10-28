@@ -1,4 +1,3 @@
-import React from 'react';
 import { Modal } from '../common/Modal';
 import { useSettings } from '../../hooks/useSettings';
 import { ROLES } from '../../constants';

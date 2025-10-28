@@ -3,9 +3,9 @@ import type { Page } from '../../types';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { SmartDashboard } from './SmartDashboard';
-import { useTranslation, TranslationKey } from '../../hooks/useTranslation';
+import { useTranslation } from '../../hooks/useTranslation';
 import { Button } from '../common/Button';
-import { FlaskConical, Signal, Swords, Shield, GraduationCap, FileText, Library, Eye, Sparkles, BrainCircuit } from 'lucide-react';
+import { FlaskConical, Signal, Swords, Shield, GraduationCap, FileText, Library, Sparkles, BrainCircuit } from 'lucide-react';
 
 interface HomeProps {
   setCurrentPage: (page: Page) => void;

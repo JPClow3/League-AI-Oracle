@@ -1,6 +1,5 @@
 
 
-import React from 'react';
 import type { DraftTurn } from './arenaConstants';
 import { Ban, Plus, CheckCircle2 } from 'lucide-react';
 import type { TeamSide } from '../../types';

@@ -127,12 +127,28 @@ export const Router = (props: RouterProps) => {
     };
 
     // Get or create ref for the current page
+    // Keep only the current and previous page refs to prevent memory leaks
     const nodeRef = React.useMemo(() => {
         if (!pageRefs.current[currentPage]) {
-            pageRefs.current[currentPage] = React.createRef();
+            // Clean up old refs, keeping only last 2 pages (current + previous for exit animation)
+            const pageKeys = Object.keys(pageRefs.current);
+            if (pageKeys.length > 1) {
+                // Keep only the most recent refs
+                const recentPages = pageKeys.slice(-1);
+                const newRefs: { [key: string]: React.RefObject<HTMLDivElement> } = {};
+                recentPages.forEach(key => {
+                    const ref = pageRefs.current[key];
+                    if (ref) {
+                        newRefs[key] = ref;
+                    }
+                });
+                pageRefs.current = newRefs;
+            }
+
+            pageRefs.current[currentPage] = React.createRef<HTMLDivElement>() as React.RefObject<HTMLDivElement>;
         }
         return pageRefs.current[currentPage];
-    }, [currentPage]);
+    }, [currentPage, pageRefs]);
 
     return (
         <TransitionGroup>

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { RecentFeedback } from '../../types';
 import { CheckCircle2, GraduationCap } from 'lucide-react';
 

@@ -25,7 +25,7 @@ describe('Settings Integration', () => {
 
   it('should sync theme with user profile', async () => {
     const { result: settingsResult } = renderHook(() => useSettings(), { wrapper: AllProviders });
-    const { result: profileResult } = renderHook(() => useUserProfile(), { wrapper: AllProviders });
+    const { result: _profileResult } = renderHook(() => useUserProfile(), { wrapper: AllProviders });
 
     act(() => {
       settingsResult.current.setSettings({ theme: 'dark' });

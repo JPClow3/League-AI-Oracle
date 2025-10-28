@@ -63,9 +63,9 @@ export const StrategistJourneyPanel = ({ profile, spForNextLevel }: StrategistJo
                 )}
                 <div className="flex justify-center items-center gap-2">
                     <h2 className="text-2xl font-bold text-text-primary">{profile.username}</h2>
-                    {profile.badges.includes('Rookie Strategist') && (
+                    {profile.badges.includes('Rookie Strategist') && profile.badges[0] && (
                         <Tooltip content="Rookie Strategist: Completed initial profile setup.">
-                            <span className="bg-surface-secondary text-gold px-2 py-0.5 text-xs font-bold">{profile.badges[0].split(' ')[0].toUpperCase()}</span>
+                            <span className="bg-surface-secondary text-gold px-2 py-0.5 text-xs font-bold">{profile.badges[0].split(' ')[0]?.toUpperCase()}</span>
                         </Tooltip>
                     )}
                 </div>

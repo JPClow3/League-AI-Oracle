@@ -31,12 +31,13 @@ const NavItem = ({
     return (
         <button
             onClick={() => onClick(pageName)}
-            className={`flex flex-col items-center justify-center gap-1 w-full pt-2 pb-1 transition-all duration-200 relative ${
+            className={`flex flex-col items-center justify-center gap-1 w-full pt-2 pb-1 min-h-[44px] transition-all duration-200 relative focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
                 isActive 
                     ? 'text-[hsl(var(--accent))] bg-[hsl(var(--accent)_/_0.1)]' 
                     : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--surface)_/_0.5)]'
             }`}
             aria-current={isActive ? 'page' : undefined}
+            aria-label={`Navigate to ${label}`}
         >
             {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-[hsl(var(--accent))] rounded-b-full shadow-glow-accent" />}
             {ICONS[pageName]}
@@ -46,7 +47,7 @@ const NavItem = ({
 };
 
 export const BottomNav = ({ currentPage, setCurrentPage }: BottomNavProps) => {
-    const { t } = useTranslation();
+    const { t: _t } = useTranslation();
     const navItems: { page: Page; key: 'nav_home' | 'nav_live_co_pilot' | 'nav_strategy_forge' | 'nav_the_armory' | 'nav_profile', shortLabel: string }[] = [
         { page: 'Home', key: 'nav_home', shortLabel: 'Home' },
         { page: 'Live Co-Pilot', key: 'nav_live_co_pilot', shortLabel: 'Live' },

@@ -1,61 +1,69 @@
 import { describe, it, expect } from 'vitest';
-import { validateDraft } from '../../lib/validation';
+import { isValidEmail, isValidLength, isRequired, isValidChampionName, isValidTag } from '../../lib/validation';
 
 describe('validation', () => {
-  describe('validateDraft', () => {
-    it('should validate a complete draft', () => {
-      const mockChampion = { id: 'ahri', name: 'Ahri', roles: ['Mid'] };
-      const mockDraft = {
-        blue: {
-          picks: Array(5).fill(null).map((_, i) => ({
-            champion: { id: `champ${i}`, name: `Champ${i}`, roles: ['Top'] },
-            isActive: false
-          })),
-          bans: Array(5).fill(null).map((_, i) => ({
-            champion: { id: `ban${i}`, name: `Ban${i}`, roles: ['Mid'] }
-          }))
-        },
-        red: {
-          picks: Array(5).fill(null).map((_, i) => ({
-            champion: { id: `champ${i + 5}`, name: `Champ${i + 5}`, roles: ['Top'] },
-            isActive: false
-          })),
-          bans: Array(5).fill(null).map((_, i) => ({
-            champion: { id: `ban${i + 5}`, name: `Ban${i + 5}`, roles: ['Mid'] }
-          }))
-        }
-      };
-
-      const result = validateDraft(mockDraft as any);
-      expect(result.isValid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+  describe('isValidEmail', () => {
+    it('should validate correct email', () => {
+      expect(isValidEmail('test@example.com')).toBe(true);
     });
 
-    it('should invalidate incomplete draft', () => {
-      const mockDraft = {
-        blue: {
-          picks: Array(3).fill(null).map((_, i) => ({
-            champion: { id: `champ${i}`, name: `Champ${i}`, roles: ['Top'] },
-            isActive: false
-          })).concat(Array(2).fill({ champion: null, isActive: false })),
-          bans: Array(5).fill(null).map((_, i) => ({
-            champion: { id: `ban${i}`, name: `Ban${i}`, roles: ['Mid'] }
-          }))
-        },
-        red: {
-          picks: Array(5).fill(null).map((_, i) => ({
-            champion: { id: `champ${i + 5}`, name: `Champ${i + 5}`, roles: ['Top'] },
-            isActive: false
-          })),
-          bans: Array(5).fill(null).map((_, i) => ({
-            champion: { id: `ban${i + 5}`, name: `Ban${i + 5}`, roles: ['Mid'] }
-          }))
-        }
-      };
+    it('should invalidate incorrect email', () => {
+      expect(isValidEmail('notanemail')).toBe(false);
+      expect(isValidEmail('test@')).toBe(false);
+      expect(isValidEmail('@example.com')).toBe(false);
+    });
+  });
 
-      const result = validateDraft(mockDraft as any);
-      expect(result.isValid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
+  describe('isValidLength', () => {
+    it('should validate string within length bounds', () => {
+      expect(isValidLength('hello', 1, 10)).toBe(true);
+      expect(isValidLength('test', 4, 4)).toBe(true);
+    });
+
+    it('should invalidate string outside length bounds', () => {
+      expect(isValidLength('hi', 3, 10)).toBe(false);
+      expect(isValidLength('verylongstring', 1, 5)).toBe(false);
+    });
+  });
+
+  describe('isRequired', () => {
+    it('should validate non-empty strings', () => {
+      expect(isRequired('test')).toBe(true);
+      expect(isRequired('  value  ')).toBe(true);
+    });
+
+    it('should invalidate empty or null values', () => {
+      expect(isRequired('')).toBe(false);
+      expect(isRequired('   ')).toBe(false);
+      expect(isRequired(null)).toBe(false);
+      expect(isRequired(undefined)).toBe(false);
+    });
+  });
+
+  describe('isValidChampionName', () => {
+    it('should validate valid champion names', () => {
+      expect(isValidChampionName('Ahri')).toBe(true);
+      expect(isValidChampionName("Kai'Sa")).toBe(true);
+      expect(isValidChampionName('Lee Sin')).toBe(true);
+    });
+
+    it('should invalidate invalid champion names', () => {
+      expect(isValidChampionName('A')).toBe(false);
+      expect(isValidChampionName('Champion123')).toBe(false);
+      expect(isValidChampionName('Test<>')).toBe(false);
+    });
+  });
+
+  describe('isValidTag', () => {
+    it('should validate valid tags', () => {
+      expect(isValidTag('teamfight')).toBe(true);
+      expect(isValidTag('poke-comp')).toBe(true);
+    });
+
+    it('should invalidate invalid tags', () => {
+      expect(isValidTag('')).toBe(false);
+      expect(isValidTag('a'.repeat(25))).toBe(false);
+      expect(isValidTag('tag<script>')).toBe(false);
     });
   });
 });

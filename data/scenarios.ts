@@ -5,8 +5,8 @@ import { toSavedDraft } from '../lib/draftUtils';
 // Helper to create a base draft state
 const createDraftWithPicks = (bluePicks: (string | null)[], redPicks: (string | null)[]) => {
     const draft = getInitialDraftState();
-    bluePicks.forEach((id, i) => { if (id) {draft.blue.picks[i].champion = { id } as any;} });
-    redPicks.forEach((id, i) => { if (id) {draft.red.picks[i].champion = { id } as any;} });
+    bluePicks.forEach((id, i) => { if (id && draft.blue.picks[i]) {draft.blue.picks[i]!.champion = { id } as any;} });
+    redPicks.forEach((id, i) => { if (id && draft.red.picks[i]) {draft.red.picks[i]!.champion = { id } as any;} });
     return toSavedDraft(draft);
 };
 

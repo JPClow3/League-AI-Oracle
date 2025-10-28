@@ -19,6 +19,7 @@ const MissionItem = ({ mission, isNewlyCompleted, onAnimationEnd }: { mission: M
             }, 1500); // Duration of the animation
             return () => clearTimeout(timer);
         }
+        return undefined;
     }, [isNewlyCompleted, onAnimationEnd]);
     
     return (

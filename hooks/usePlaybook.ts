@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { HistoryEntry, DraftState, AIAdvice, TeamSide } from '../types';
 import { toSavedDraft } from '../lib/draftUtils';
 import { generatePlaybookPlusDossier } from '../services/geminiService';
@@ -21,16 +21,30 @@ export const usePlaybook = () => {
     const { completeMission, addSP } = useUserProfile();
 
     useEffect(() => {
+        let isMounted = true; // ✅ BUG FIX: Track if component is mounted
+
         const loadEntries = async () => {
+            if (!db) {
+                console.warn("IndexedDB not available");
+                return;
+            }
+            if (!isMounted) return; // Check before state update
+
             setIsLoading(true);
             try {
                 const allEntries = await db.history.orderBy('createdAt').reverse().toArray();
-                setEntries(allEntries);
+                if (isMounted) { // ✅ Only update state if still mounted
+                    setEntries(allEntries);
+                }
             } catch (error) {
                 console.error("Failed to load playbook from IndexedDB:", error);
-                toast.error("Could not load The Archives data.");
+                if (isMounted) {
+                    toast.error("Could not load The Archives data.");
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
         };
 
@@ -38,7 +52,15 @@ export const usePlaybook = () => {
         
         // Cleanup ongoing dossier generation on component unmount
         return () => {
-            abortControllerRef.current?.abort();
+            isMounted = false; // ✅ Mark as unmounted
+            try {
+                abortControllerRef.current?.abort();
+            } catch (error) {
+                // Ignore abort errors during cleanup
+                if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                    console.error('Abort error during cleanup:', error);
+                }
+            }
         };
     }, []);
 
@@ -53,6 +75,11 @@ export const usePlaybook = () => {
      * @returns A promise that resolves to true if the entry was successfully saved.
      */
     const addEntry = async (name: string, draftState: DraftState, analysis: AIAdvice | null, userNotes: string | undefined, userSide: TeamSide, tags: string[] = []): Promise<boolean> => {
+        if (!db) {
+            toast.error("Storage not available");
+            return false;
+        }
+
         const tempId = `temp-${Date.now()}`;
         const newEntry: HistoryEntry = {
             id: tempId,
@@ -68,11 +95,27 @@ export const usePlaybook = () => {
 
         // Optimistically update UI
         setEntries(prevEntries => [newEntry, ...prevEntries]);
-        await db.history.add(newEntry);
-        toast.success(`Archiving "${name}"...`);
-        
-        // Generate dossier in the background
-        const controller = new AbortController();
+
+            // ✅ BUG FIX: Improved atomic transaction with better error handling
+            try {
+                await (db as Dexie).transaction('rw', db!.history, async () => {
+                    // Verify temp entry exists before proceeding
+                    const tempEntry = await db!.history.get(tempId);
+                    if (!tempEntry) {
+                        throw new Error('Temporary entry not found - may have been deleted');
+                    }
+
+                    // Add final entry first (if this fails, temp entry remains)
+                    await db!.history.add(finalEntry);
+
+                    // Only delete temp if add succeeded
+                    await db!.history.delete(tempId);
+                });
+            } catch (txError) {
+                console.error('Transaction error:', txError);
+                // If transaction failed, clean up and re-throw
+                throw new Error(`Failed to save: ${txError instanceof Error ? txError.message : 'Unknown error'}`);
+            }
         abortControllerRef.current = controller;
 
         try {
@@ -86,10 +129,10 @@ export const usePlaybook = () => {
                 dossier: dossier || undefined,
                 status: 'saved',
             };
-            
-            await (db as Dexie).transaction('rw', db.history, async () => {
-                await db.history.delete(tempId);
-                await db.history.add(finalEntry);
+            // Replace temp with final entry atomically
+            await (db as Dexie).transaction('rw', db!.history, async () => {
+                await db!.history.delete(tempId);
+                await db!.history.add(finalEntry);
             });
 
             setEntries(prev => [finalEntry, ...prev.filter(e => e.id !== tempId)]);
@@ -111,7 +154,7 @@ export const usePlaybook = () => {
                 console.log("Dossier generation aborted.");
                 // Clean up the optimistic entry from UI and DB
                 setEntries(prev => prev.filter(e => e.id !== tempId));
-                await db.history.delete(tempId);
+                if (db) await db.history.delete(tempId);
                 return false;
             }
             console.error("Failed to generate dossier:", err);
@@ -119,7 +162,7 @@ export const usePlaybook = () => {
             
             // Mark the entry as failed but keep it for user to retry/delete
             const errorEntry: HistoryEntry = { ...newEntry, status: 'error' };
-            await db.history.put(errorEntry);
+            if (db) await db.history.put(errorEntry);
             setEntries(prev => prev.map(e => e.id === tempId ? errorEntry : e));
             return false;
         }
@@ -130,6 +173,11 @@ export const usePlaybook = () => {
      * @param id The ID of the entry to delete.
      */
     const deleteEntry = async (id: string): Promise<void> => {
+        if (!db) {
+            toast.error("Storage not available");
+            return;
+        }
+
         const entryToDelete = entries.find(e => e.id === id);
         if (!entryToDelete) {return;}
         
@@ -144,6 +192,11 @@ export const usePlaybook = () => {
      * @param updates A partial HistoryEntry object with the fields to update.
      */
     const updateEntry = async (id: string, updates: Partial<Omit<HistoryEntry, 'id'>>): Promise<void> => {
+        if (!db) {
+            toast.error("Storage not available");
+            return;
+        }
+
         await db.history.update(id, updates);
         setEntries(prev => prev.map(entry => 
             entry.id === id ? { ...entry, ...updates } : entry

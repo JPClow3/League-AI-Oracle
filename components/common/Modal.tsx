@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { CSSTransition } from 'react-transition-group';
 import { Button } from './Button';
@@ -15,13 +15,30 @@ interface ModalProps {
   enableBackdropBlur?: boolean; // Toggle backdrop blur for performance
 }
 
-export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBackdropBlur = true }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBackdropBlur }: ModalProps) => {
   const backdropRef = useRef(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const originalOverflowRef = useRef<string>('');
+  const triggerElementRef = useRef<HTMLElement | null>(null);
+
+  // Auto-detect if backdrop blur should be enabled based on user preferences and device capability
+  const [shouldBlur] = useState(() => {
+    if (enableBackdropBlur !== undefined) return enableBackdropBlur;
+
+    // Respect reduced motion preference
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return false;
+
+    // Disable on low-end devices
+    const cores = navigator.hardwareConcurrency || 2;
+    return cores >= 4;
+  });
 
   useEffect(() => {
     if (isOpen) {
+      // Store the element that had focus before the modal opened
+      triggerElementRef.current = document.activeElement as HTMLElement;
+
       // Store original overflow value only on first open
       if (!originalOverflowRef.current) {
         originalOverflowRef.current = document.body.style.overflow || '';
@@ -30,6 +47,11 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBa
     } else {
       // Restore original overflow value
       document.body.style.overflow = originalOverflowRef.current || '';
+
+      // Return focus to the trigger element
+      if (triggerElementRef.current && typeof triggerElementRef.current.focus === 'function') {
+        triggerElementRef.current.focus();
+      }
     }
     // Cleanup function to reset on unmount
     return () => {
@@ -61,7 +83,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBa
     >
       <div
         ref={backdropRef}
-        className={`fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] flex justify-center items-center z-50 p-4 ${enableBackdropBlur ? 'backdrop-blur-sm' : ''}`}
+        className={`fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] flex justify-center items-center z-50 p-4 ${shouldBlur ? 'backdrop-blur-sm' : ''}`}
         onClick={onClose}
         aria-modal="true"
         role="dialog"

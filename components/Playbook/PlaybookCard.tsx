@@ -1,4 +1,3 @@
-import React from 'react';
 import type { HistoryEntry } from '../../types';
 import { Button } from '../common/Button';
 import { Tooltip } from '../common/Tooltip';

@@ -1,9 +1,46 @@
-import type { DraftState, SavedDraft, Champion, DraftSlot, SavedTeamState, ChampionLite, TeamSide, Ability } from '../types';
+import type { DraftState, SavedDraft, Champion, DraftSlot, ChampionLite, TeamSide } from '../types';
 import toast from 'react-hot-toast';
 import { CHAMPION_ROLES } from '../data/championRoles';
 
 // --- Hardened LocalStorage Utilities ---
 const QUOTA_EXCEEDED_MESSAGE = "Could not save data. Your browser's storage may be full or disabled. Please clear some space and try again.";
+
+/**
+ * Attempts to clear expired cache entries to free up space
+ * @returns true if cache was cleared, false otherwise
+ */
+const tryEvictCache = (): boolean => {
+    try {
+        let evictedCount = 0;
+        const CACHE_PREFIX = 'cache_';
+        const ONE_HOUR_MS = 60 * 60 * 1000;
+
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith(CACHE_PREFIX) || key.startsWith('championAnalysis_'))) {
+                try {
+                    const item = localStorage.getItem(key);
+                    if (item) {
+                        const entry = JSON.parse(item);
+                        if (!entry.timestamp || (Date.now() - entry.timestamp >= ONE_HOUR_MS)) {
+                            localStorage.removeItem(key);
+                            evictedCount++;
+                        }
+                    }
+                } catch {
+                    localStorage.removeItem(key);
+                    evictedCount++;
+                }
+            }
+        }
+
+        console.log(`[Storage] Evicted ${evictedCount} expired cache entries`);
+        return evictedCount > 0;
+    } catch (e) {
+        console.error('Failed to evict cache:', e);
+        return false;
+    }
+};
 
 export const safeSetLocalStorage = (key: string, value: string): boolean => {
     try {
@@ -11,7 +48,20 @@ export const safeSetLocalStorage = (key: string, value: string): boolean => {
         return true;
     } catch (e) {
         if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-            console.error(`LocalStorage quota exceeded for key: ${key}`, e);
+            console.warn(`LocalStorage quota exceeded for key: ${key}`);
+
+            // Try to free space by removing old cache entries
+            if (tryEvictCache()) {
+                // Retry once after cleanup
+                try {
+                    localStorage.setItem(key, value);
+                    toast.success('Freed storage space and saved successfully');
+                    return true;
+                } catch (retryError) {
+                    console.error('Retry failed after cache eviction:', retryError);
+                }
+            }
+
             toast.error(QUOTA_EXCEEDED_MESSAGE);
         } else {
             console.error(`Failed to set localStorage for key: ${key}`, e);
@@ -154,8 +204,10 @@ export const swapChampionsInDraft = (
     const teamState = draftState[team];
     const newPicks = [...teamState.picks];
     
-    // Simple array swap
-    [newPicks[sourceIndex], newPicks[destinationIndex]] = [newPicks[destinationIndex], newPicks[sourceIndex]];
+    // Simple array swap with null checks
+    const temp = newPicks[sourceIndex];
+    newPicks[sourceIndex] = newPicks[destinationIndex]!;
+    newPicks[destinationIndex] = temp!;
 
     return {
         ...draftState,

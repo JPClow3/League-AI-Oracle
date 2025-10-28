@@ -1,5 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import type { MetaSource } from '../../types';
+import { useState, useCallback } from 'react';
 import { getGroundedAnswer } from '../../services/geminiService';
 import { Button } from '../common/Button';
 import { Loader } from '../common/Loader';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Button } from '../common/Button';
 import { useModals } from '../../hooks/useModals';

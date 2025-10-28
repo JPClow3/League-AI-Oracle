@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ChampionLite, DraftState } from '../../types';
 import { Modal } from '../common/Modal';
 import { ChampionGrid } from '../DraftLab/ChampionGrid';

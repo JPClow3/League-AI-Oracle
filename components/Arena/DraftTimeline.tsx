@@ -66,7 +66,7 @@ export const DraftTimeline = ({ sequence, draftState, currentTurnIndex, lastUpda
               isLastUpdated={index === lastUpdatedIndex}
             />
             {/* Add dividers for phase clarity */}
-            {(index < sequence.length - 1 && turn.type !== sequence[index + 1].type) && <div className="w-px h-8 bg-border mx-1"></div>}
+            {(index < sequence.length - 1 && turn.type !== sequence[index + 1]?.type) && <div className="w-px h-8 bg-border mx-1"></div>}
           </React.Fragment>
         ))}
       </div>

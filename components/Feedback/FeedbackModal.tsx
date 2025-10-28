@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import type { FeedbackCategory } from '../../types';
@@ -8,7 +8,6 @@ import { useModals } from '../../hooks/useModals';
 import { useDraft } from '../../contexts/DraftContext';
 import { TextArea } from '../common/TextArea';
 
-type FeedbackModalProps = Record<string, never>;
 
 const CATEGORIES: FeedbackCategory[] = [
     'AI Suggestion Quality',

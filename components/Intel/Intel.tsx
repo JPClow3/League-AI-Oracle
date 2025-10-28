@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { getTierList, getPatchNotesSummary, getPersonalizedPatchSummary } from '../../services/geminiService';
-import type { StructuredTierList, StructuredPatchNotes, PersonalizedPatchSummary } from '../../types';
+import type { StructuredTierList, StructuredPatchNotes } from '../../types';
 import { Loader } from '../common/Loader';
 import { Button } from '../common/Button';
 import { SourceList } from '../common/SourceList';

@@ -1,8 +1,8 @@
-import React from 'react';
+
 import type { ChampionLite, ChampionSuggestion } from '../../types';
 import { Loader } from '../common/Loader';
 import { ROLES } from '../../constants';
-import { Check, Sparkles, Swords } from 'lucide-react';
+import { Check, Swords } from 'lucide-react';
 import { Button } from '../common/Button';
 
 interface TeamBuilderAssistantProps {

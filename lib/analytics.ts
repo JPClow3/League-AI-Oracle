@@ -5,10 +5,6 @@ import posthog from 'posthog-js';
  * Uses PostHog for product analytics with user privacy in mind
  */
 
-interface AnalyticsEvent {
-  name: string;
-  properties?: Record<string, any>;
-}
 
 interface UserProperties {
   rank?: string;

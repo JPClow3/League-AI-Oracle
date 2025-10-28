@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { DraftState, Champion, TeamSide, ChampionLite, ArenaBotPersona, ChampionSuggestion, StructuredTierList, AIAdvice } from '../../types';
-import { MISSION_IDS, ROLES } from '../../constants';
+import type { DraftState, Champion, TeamSide, ChampionLite, ArenaBotPersona, AIAdvice } from '../../types';
+import { MISSION_IDS } from '../../constants';
 import { getBotDraftAction, getDraftAdvice, getTierList } from '../../services/geminiService';
 import { TeamPanel } from '../DraftLab/TeamPanel';
 import { ArenaChampionSelectModal } from './ArenaChampionSelectModal';
@@ -11,10 +11,9 @@ import { DraftTimeline } from './DraftTimeline';
 import { COMPETITIVE_SEQUENCE } from './arenaConstants';
 import toast from 'react-hot-toast';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { usePlaybook } from '../../hooks/usePlaybook';
 import { getAvailableChampions, updateSlotInDraft, swapChampionsInDraft } from '../../lib/draftUtils';
 import { QuickLookPanel } from '../DraftLab/QuickLookPanel';
-import { Swords, Bot, CheckCircle, Trophy, BrainCircuit } from 'lucide-react';
+import { Swords, Bot, Trophy, BrainCircuit } from 'lucide-react';
 import { useChampions } from '../../contexts/ChampionContext';
 import { Loader } from '../common/Loader';
 import { useSettings } from '../../hooks/useSettings';
@@ -92,8 +91,10 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   const [userSide, setUserSide] = useState<TeamSide>('blue');
   const { champions, championsLite } = useChampions();
   const [finalAnalysis, setFinalAnalysis] = useState<AIAdvice | null>(null);
-  
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   const { profile, addSP, completeMission, updateArenaStats } = useUserProfile();
   const { settings } = useSettings();
@@ -103,7 +104,9 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   const currentTurn = !draftFinished ? COMPETITIVE_SEQUENCE[currentTurnIndex] : null;
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+        isMountedRef.current = false;
         abortControllerRef.current?.abort();
         setIsBotThinking(false);
     }
@@ -112,22 +115,35 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   useEffect(() => {
     if (botPersona === 'The Meta Slave' && sTierList.length === 0) {
         const controller = new AbortController();
-        getTierList(controller.signal).then(list => {
-            const sTierNames = list.tierList.flatMap(r => r.champions.map(c => c.championName));
-            setSTierList(sTierNames);
-            toast.success("S-Tier list loaded for Meta Slave persona.");
-        }).catch(() => toast.error("Could not load S-Tier list for bot."));
+        getTierList(controller.signal)
+            .then(list => {
+                if (!controller.signal.aborted) {
+                    const sTierNames = list.tierList.flatMap(r => r.champions.map(c => c.championName));
+                    setSTierList(sTierNames);
+                    toast.success("S-Tier list loaded for Meta Slave persona.");
+                }
+            })
+            .catch((err) => {
+                if (!(err instanceof DOMException && err.name === 'AbortError')) {
+                    console.error('Failed to load S-Tier list:', err);
+                    toast.error("Could not load S-Tier list. Bot will use default logic.");
+                }
+            });
         return () => controller.abort();
     }
+    return undefined;
   }, [botPersona, sTierList.length]);
 
   const handleDraftFinish = useCallback(async () => {
+    if (isAnalyzing) return; // Prevent duplicate calls
+
+    setIsAnalyzing(true);
     setFinalAnalysis(null);
     const controller = new AbortController();
     abortControllerRef.current = controller;
     try {
         const advice = await getDraftAdvice(draftState, userSide, settings.primaryRole, profile.skillLevel, 'gemini-2.5-flash', controller.signal);
-        if (controller.signal.aborted) {return;}
+        if (controller.signal.aborted || !isMountedRef.current) {return;}
         setFinalAnalysis(advice);
 
         const userScore = advice.teamAnalysis[userSide].draftScore || 'C';
@@ -145,14 +161,18 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
         if (!(e instanceof DOMException && e.name === 'AbortError')) {
            toast.error("Could not get final draft score.");
         }
+    } finally {
+        if (isMountedRef.current) {
+            setIsAnalyzing(false);
+        }
     }
-  }, [draftState, userSide, settings.primaryRole, profile.skillLevel, addSP, completeMission, updateArenaStats, botPersona]);
+  }, [draftState, userSide, settings.primaryRole, profile.skillLevel, addSP, completeMission, updateArenaStats, botPersona, isAnalyzing]);
 
   useEffect(() => {
-    if (draftFinished && finalAnalysis === null) {
+    if (draftFinished && !finalAnalysis && !isAnalyzing) {
        handleDraftFinish();
     }
-  }, [draftFinished, handleDraftFinish, finalAnalysis]);
+  }, [draftFinished, finalAnalysis, isAnalyzing, handleDraftFinish]);
 
   const makeBotSelection = useCallback(async (signal: AbortSignal): Promise<{ champion: Champion | undefined, reasoning: string | null }> => {
     if (!currentTurn) {return { champion: undefined, reasoning: null };}
@@ -179,7 +199,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
         console.error("Critical error in bot action selection, using fallback:", error);
         toast("The opponent AI had an issue and is selecting a random champion to continue.", { icon: '🤖' });
         const randomPick = available[Math.floor(Math.random() * available.length)];
-        const champion = champions.find(c => c.id === randomPick.id);
+        const champion = randomPick ? champions.find(c => c.id === randomPick.id) : undefined;
         return { champion, reasoning: "Failsafe: A random champion was selected due to an AI error." };
     }
   }, [draftState, currentTurn, botPersona, champions, championsLite, sTierList, oneTrickChampion]);
@@ -220,7 +240,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
     setIsBotThinking(true);
     const timer = setTimeout(async () => {
       const { champion: botChampion, reasoning } = await makeBotSelection(controller.signal);
-      if (controller.signal.aborted) {return;}
+      if (controller.signal.aborted || !isMountedRef.current) {return;}
 
       if (botChampion) {
           if (reasoning && !reasoning.startsWith('Failsafe:')) {
@@ -351,7 +371,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
                 </div>
 
                 <DraftTimeline sequence={COMPETITIVE_SEQUENCE} draftState={draftState} currentTurnIndex={currentTurnIndex} lastUpdatedIndex={lastUpdatedIndex} />
-                <TurnIndicator turn={currentTurn} isBotThinking={isBotThinking} userSide={userSide} context="arena" />
+                <TurnIndicator turn={currentTurn || null} isBotThinking={isBotThinking} userSide={userSide} context="arena" />
             </>
         )}
 

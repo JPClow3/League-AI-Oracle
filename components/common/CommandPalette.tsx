@@ -63,7 +63,9 @@ export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProp
         } else if (e.key === 'Enter' && flatCommands.length > 0) {
             e.preventDefault();
             const command = flatCommands[activeIndex];
-            command.action();
+            if (command) {
+                command.action();
+            }
             onClose();
         } else if (e.key === 'Escape') {
             onClose();

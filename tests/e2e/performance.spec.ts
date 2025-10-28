@@ -72,7 +72,6 @@ test.describe('Performance Metrics', () => {
     });
 
     test('should meet FCP (First Contentful Paint) targets', async ({ page }) => {
-      const startTime = Date.now();
       await page.goto('/');
 
       const fcp = await page.evaluate(() => {
@@ -88,7 +87,7 @@ test.describe('Performance Metrics', () => {
     });
 
     test('should meet TTFB (Time to First Byte) targets', async ({ page }) => {
-      const response = await page.goto('/');
+      await page.goto('/');
       const ttfb = await page.evaluate(() => {
         const navTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
         return navTiming.responseStart - navTiming.requestStart;
@@ -164,7 +163,8 @@ test.describe('Performance Metrics', () => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      const firstVisitResources = await page.evaluate(() => {
+      // Check first visit resources
+      await page.evaluate(() => {
         return performance.getEntriesByType('resource').map((r: any) => ({
           name: r.name,
           cached: r.transferSize === 0 && r.decodedBodySize > 0,
@@ -424,4 +424,3 @@ test.describe('Performance Metrics', () => {
     });
   });
 });
-

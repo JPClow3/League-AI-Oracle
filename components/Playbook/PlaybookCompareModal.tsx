@@ -47,13 +47,13 @@ export const PlaybookCompareModal = ({ isOpen, onClose, drafts }: PlaybookCompar
     const { championsLite } = useChampions();
 
     useEffect(() => {
-        if (isOpen && drafts.length === 2) {
+        if (isOpen && drafts.length === 2 && drafts[0] && drafts[1]) {
             const controller = new AbortController();
             const fetchAnalysis = async () => {
                 setIsLoading(true);
                 setAnalysis(null);
                 try {
-                    const result = await getDraftComparisonAnalysis(drafts[0], drafts[1], championsLite, controller.signal);
+                    const result = await getDraftComparisonAnalysis(drafts[0]!, drafts[1]!, championsLite, controller.signal);
                     if (!controller.signal.aborted) {
                         setAnalysis(result);
                     }
@@ -71,20 +71,21 @@ export const PlaybookCompareModal = ({ isOpen, onClose, drafts }: PlaybookCompar
             fetchAnalysis();
             return () => controller.abort();
         }
+        return undefined;
     }, [isOpen, drafts, championsLite]);
 
-    if (drafts.length !== 2) {return null;}
+    if (drafts.length !== 2 || !drafts[0] || !drafts[1]) {return null;}
 
     const [d1, d2] = drafts;
-    const d1BluePicks = new Set(d1.draft.blue.picks);
-    const d1BlueBans = new Set(d1.draft.blue.bans);
-    const d1RedPicks = new Set(d1.draft.red.picks);
-    const d1RedBans = new Set(d1.draft.red.bans);
+    const d1BluePicks = new Set(d1!.draft.blue.picks);
+    const d1BlueBans = new Set(d1!.draft.blue.bans);
+    const d1RedPicks = new Set(d1!.draft.red.picks);
+    const d1RedBans = new Set(d1!.draft.red.bans);
 
-    const d2BluePicks = new Set(d2.draft.blue.picks);
-    const d2BlueBans = new Set(d2.draft.blue.bans);
-    const d2RedPicks = new Set(d2.draft.red.picks);
-    const d2RedBans = new Set(d2.draft.red.bans);
+    const d2BluePicks = new Set(d2!.draft.blue.picks);
+    const d2BlueBans = new Set(d2!.draft.blue.bans);
+    const d2RedPicks = new Set(d2!.draft.red.picks);
+    const d2RedBans = new Set(d2!.draft.red.bans);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Compare Drafts" size="4xl">

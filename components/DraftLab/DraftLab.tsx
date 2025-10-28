@@ -52,14 +52,17 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
     const [isOpponentLoading, setIsOpponentLoading] = useState(false);
 
     const abortControllerRef = useRef<AbortController | null>(null);
+    const isMountedRef = useRef(true);
 
     useEffect(() => {
         setIsTourOpen(startTour);
     }, [startTour]);
     
-    // Cleanup abort controller on unmount
+    // Cleanup abort controller on unmount and mark as unmounted
     useEffect(() => {
+        isMountedRef.current = true;
         return () => {
+            isMountedRef.current = false;
             abortControllerRef.current?.abort();
         };
     }, []);
@@ -84,6 +87,7 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
     const handleAnalyze = async () => {
         if (!isDraftComplete || isLoading) {return;}
         setIsLoading(true);
+        // Abort any previous request to prevent race conditions
         setError(null);
         setAnalysisCompleted(false);
 
@@ -91,6 +95,8 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
         const controller = new AbortController();
         abortControllerRef.current = controller;
 
+            // Check if request was aborted or component unmounted
+            if (controller.signal.aborted || !isMountedRef.current) {return;}
         try {
             const result = await getDraftAdvice(draftState, 'blue', settings.primaryRole, profile.skillLevel, 'gemini-2.5-pro', controller.signal);
             if(controller.signal.aborted) {return;}
@@ -114,11 +120,13 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
 
         } catch (err) {
             if (err instanceof DOMException && err.name === 'AbortError') {return;}
+            if (!isMountedRef.current) {return;}
+
             const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {
-            if (!controller.signal.aborted) {
+            if (!controller.signal.aborted && isMountedRef.current) {
                 setIsLoading(false);
             }
         }
@@ -164,17 +172,16 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
     };
 
     // --- Team Builder Assistant Logic ---
-    const fetchBuilderSuggestions = useCallback(async (currentDraft: DraftState, step: number, core: string, signal: AbortSignal) => {
+    const fetchBuilderSuggestions = useCallback(async (currentDraft: DraftState, step: number, _core: string, signal: AbortSignal) => {
         setIsBuilderLoading(true);
         try {
-            const currentPicks = currentDraft.blue.picks.map(p => p.champion?.name).filter(Boolean) as string[];
             const roleToPick = ROLES[step];
             const available = getAvailableChampions(currentDraft, championsLite);
             
             const suggestions = await getTeambuilderSuggestion({
-                coreConcept: core,
-                currentPicks,
-                roleToPick,
+                coreConcept: builderCore,
+                currentPicks: draftState.blue.picks.filter(p => p.champion).map(p => p.champion!.name),
+                roleToPick: roleToPick || 'Any',
                 availableChampions: available,
                 signal
             });
@@ -295,11 +302,11 @@ export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { sta
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <TeamPanel id="draftlab-blue-team" side="blue" state={draftState.blue} onSlotClick={handleSlotClick} onClearSlot={handleClearSlot} activeSlot={activeSlot?.team === 'blue' ? activeSlot : null} onDrop={handleDrop} onDragStart={(e, t, y, i) => handleDragStart(e, t, y, i, draftState.blue.picks[i].champion!)} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
-                        <TeamPanel id="draftlab-red-team" side="red" state={draftState.red} onSlotClick={handleSlotClick} onClearSlot={handleClearSlot} activeSlot={activeSlot?.team === 'red' ? activeSlot : null} onDrop={handleDrop} onDragStart={(e, t, y, i) => handleDragStart(e, t, y, i, draftState.red.picks[i].champion!)} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
+                        <TeamPanel id="draftlab-blue-team" side="blue" state={draftState.blue} onSlotClick={handleSlotClick} onClearSlot={handleClearSlot} activeSlot={activeSlot?.team === 'blue' ? activeSlot : null} onDrop={handleDrop} onDragStart={(e, t, y, i) => draftState.blue.picks[i]?.champion && handleDragStart(e, t, y, i, draftState.blue.picks[i].champion as any)} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
+                        <TeamPanel id="draftlab-red-team" side="red" state={draftState.red} onSlotClick={handleSlotClick} onClearSlot={handleClearSlot} activeSlot={activeSlot?.team === 'red' ? activeSlot : null} onDrop={handleDrop} onDragStart={(e, t, y, i) => draftState.red.picks[i]?.champion && handleDragStart(e, t, y, i, draftState.red.picks[i].champion as any)} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
                     </div>
                     <div id="draftlab-advice-panel">
-                        <AdvicePanel advice={advice} isLoading={isLoading} error={error} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => setAnalysisCompleted(false)} isStale={isStale} />
+                        <AdvicePanel advice={advice} isLoading={isLoading} error={error} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => setAnalysisCompleted(false)} isStale={isStale || false} />
                     </div>
                 </div>
 

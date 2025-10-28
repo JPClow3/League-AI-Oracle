@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { Loader } from '../common/Loader';
 import { useChampions } from '../../contexts/ChampionContext';
@@ -6,7 +6,7 @@ import { BookOpen } from 'lucide-react';
 
 export const PlaybookAnalysisPanel = () => {
     const { entries, isLoading } = usePlaybook();
-    const { championsLite } = useChampions();
+    const { championsLite: _championsLite } = useChampions();
 
     const stats = useMemo(() => {
         if (entries.length < 3) {return null;}

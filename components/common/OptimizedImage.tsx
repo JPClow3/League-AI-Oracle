@@ -31,7 +31,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 }) => {
   const [imageSrc, setImageSrc] = useState<string | null>(priority ? src : null);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [_hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -77,17 +77,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     onError?.();
   };
 
-  // Try to use modern formats (WebP/AVIF) if supported
-  const getOptimizedSrc = (originalSrc: string) => {
-    // If already a data URI or external URL, return as-is
-    if (originalSrc.startsWith('data:') || originalSrc.startsWith('http')) {
-      return originalSrc;
-    }
-
-    // For local images, try to use WebP
-    // You can enhance this based on your image hosting setup
-    return originalSrc;
-  };
+  // Note: Modern format optimization could be added here in the future
+  // Currently serving images as-is for simplicity
 
   return (
     <img

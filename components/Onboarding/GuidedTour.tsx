@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useId, useRef, useCallback } from 'react';
+import { useState, useLayoutEffect, useId, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../common/Button';
 import FocusTrap from 'focus-trap-react';
@@ -92,11 +92,11 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
 
         // Attempt to find the element immediately.
         if (updatePosition()) {
-            setElementNotFound(false);
+            setTimeout(() => setElementNotFound(false), 0);
         } else {
             // If not found, set up an observer to watch for it.
             observerRef.current?.disconnect();
-            observerRef.current = new MutationObserver((mutations) => {
+            observerRef.current = new MutationObserver((_mutations) => {
                 if (updatePosition()) {
                     setElementNotFound(false);
                     observerRef.current?.disconnect();
@@ -108,7 +108,8 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
             // Failsafe timeout in case the element never appears.
             const failsafe = setTimeout(() => {
                 observerRef.current?.disconnect();
-                if (!document.querySelector(steps[currentStep].selector)) {
+                const currentStepSelector = steps[currentStep]?.selector;
+                if (currentStepSelector && !document.querySelector(currentStepSelector)) {
                     setElementNotFound(true);
                 }
             }, 3000);
@@ -179,8 +180,8 @@ export const GuidedTour = ({ isOpen, onClose, steps }: GuidedTourProps) => {
                 style={contentStyle} 
                 className="fixed bg-surface text-text-primary p-6 rounded-lg border border-border shadow-2xl w-[350px] max-w-[90vw] z-[1002] transition-all duration-300"
             >
-                <h3 id={titleId} className="text-xl font-bold text-text-primary mb-2">{step.title}</h3>
-                <p id={contentId} className="text-sm text-text-secondary mb-4">{step.content}</p>
+                <h3 id={titleId} className="text-xl font-bold text-text-primary mb-2">{step?.title || 'Step'}</h3>
+                <p id={contentId} className="text-sm text-text-secondary mb-4">{step?.content || ''}</p>
                 <div className="flex justify-between items-center">
                     <span className="text-sm text-text-muted">{currentStep + 1} / {steps.length}</span>
                     <div className="flex gap-2">

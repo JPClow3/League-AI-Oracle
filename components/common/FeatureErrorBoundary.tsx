@@ -33,7 +33,7 @@ export class FeatureErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     const { componentName } = this.props;
     console.error(`Error in ${componentName || 'component'}:`, error, errorInfo);
 
@@ -66,7 +66,7 @@ export class FeatureErrorBoundary extends Component<Props, State> {
     this.props.onReset?.();
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;

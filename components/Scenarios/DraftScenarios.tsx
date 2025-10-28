@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { SCENARIOS } from '../../data/scenarios';
 import type { DraftScenario } from '../../types';
 import { useUserProfile } from '../../hooks/useUserProfile';
@@ -19,10 +19,14 @@ export const DraftScenarios = () => {
     const { champions, championsLite } = useChampions();
 
     const currentScenario = SCENARIOS[currentScenarioIndex];
-    const draftState = useMemo(() => fromSavedDraft(currentScenario.draft, champions), [currentScenario, champions]);
+
+    const draftState = useMemo(() => {
+        if (!currentScenario) return null;
+        return fromSavedDraft(currentScenario.draft, champions);
+    }, [currentScenario, champions]);
 
     const handleSelectOption = (option: DraftScenario['options'][0]) => {
-        if (isAnswered) {return;}
+        if (isAnswered || !currentScenario) {return;}
         setSelectedOption(option);
         setIsAnswered(true);
         if (option.isCorrect) {
@@ -36,6 +40,20 @@ export const DraftScenarios = () => {
         setSelectedOption(null);
         setCurrentScenarioIndex((prev) => (prev + 1) % SCENARIOS.length);
     };
+
+    if (!currentScenario || !draftState) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center gap-4 bg-surface p-4 shadow-lg">
+                    <div className="bg-secondary text-accent w-12 h-12 flex items-center justify-center flex-shrink-0"><BrainCircuit size={32} /></div>
+                    <div>
+                        <h1 className="font-display text-3xl font-bold text-text-primary">Draft Scenarios</h1>
+                        <p className="text-sm text-text-secondary">No scenarios available.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

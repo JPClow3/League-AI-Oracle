@@ -1,4 +1,3 @@
-import type { Champion, ChampionLite } from './types';
 
 export interface Blueprint {
   name: string;

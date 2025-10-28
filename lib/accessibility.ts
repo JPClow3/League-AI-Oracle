@@ -42,11 +42,12 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 }
 
 function getRelativeLuminance(rgb: { r: number; g: number; b: number }): number {
-  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(val => {
+  const values = [rgb.r, rgb.g, rgb.b].map(val => {
     const sRGB = val / 255;
     return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
   });
 
+  const [r = 0, g = 0, b = 0] = values;
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 

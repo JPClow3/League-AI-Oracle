@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import type { HistoryEntry, DraftState, Page, SavedTeamState } from '../../types';
+import type { HistoryEntry, DraftState, Page } from '../../types';
 import { Button } from '../common/Button';
 import { PlaybookDetailModal } from './PlaybookDetailModal';
-import { ConfirmationModal, ConfirmationState } from '../common/ConfirmationModal';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { Loader } from '../common/Loader';
 import { Library, FolderOpen } from 'lucide-react';
@@ -15,6 +15,12 @@ interface PlaybookProps {
     onLoadDraft: (draft: DraftState) => void;
     setCurrentPage: (page: Page) => void;
     navigateToAcademy: (lessonId: string) => void;
+}
+
+interface ConfirmationState {
+    title: string;
+    message: string;
+    onConfirm: () => void;
 }
 
 export const Playbook = ({ onLoadDraft, setCurrentPage, navigateToAcademy }: PlaybookProps) => {
@@ -81,7 +87,13 @@ export const Playbook = ({ onLoadDraft, setCurrentPage, navigateToAcademy }: Pla
             <ConfirmationModal 
                 isOpen={!!confirmationState}
                 onClose={() => setConfirmationState(null)}
-                state={confirmationState}
+                onConfirm={() => {
+                    confirmationState?.onConfirm();
+                    setConfirmationState(null);
+                }}
+                title={confirmationState?.title || ''}
+                message={confirmationState?.message || ''}
+                variant="danger"
             />
              <PlaybookCompareModal
                 isOpen={isCompareModalOpen}

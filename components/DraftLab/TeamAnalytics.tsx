@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import type { DraftSlot } from '../../types';
 import { Tooltip } from '../common/Tooltip';
 import { AlertTriangle } from 'lucide-react';

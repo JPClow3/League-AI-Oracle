@@ -377,6 +377,8 @@ class PerformanceMonitor {
     // Calculate averages for each type
     Object.keys(metricsByType).forEach(type => {
       const metrics = metricsByType[type];
+      if (!metrics || metrics.length === 0) return;
+
       const values = metrics.map(m => m.value);
       summary[type] = {
         count: metrics.length,

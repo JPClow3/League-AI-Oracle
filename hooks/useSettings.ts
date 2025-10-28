@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import * as React from 'react';
 import type { Settings } from '../types';
-import { ROLES } from '../constants';
 import toast from 'react-hot-toast';
 import * as storageService from '../services/storageService';
 

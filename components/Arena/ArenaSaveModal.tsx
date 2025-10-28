@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import type { ArenaBotPersona, DraftState, TeamSide } from '../../types';
@@ -23,8 +23,11 @@ export const ArenaSaveModal = ({ isOpen, onClose, draftState, botPersona, userSi
         if (isOpen) {
             const defaultName = `Arena Practice vs ${botPersona}`;
             const existingEntry = latestEntry?.name.startsWith(defaultName);
-            setDraftName(existingEntry ? `${defaultName} #${(Math.random() * 100).toFixed(0)}` : defaultName);
-            setDraftTags([`vs ${botPersona}`]);
+            // Defer state updates to avoid cascading renders
+            setTimeout(() => {
+                setDraftName(existingEntry ? `${defaultName} #${(Math.random() * 100).toFixed(0)}` : defaultName);
+                setDraftTags([`vs ${botPersona}`]);
+            }, 0);
         }
     }, [isOpen, botPersona, latestEntry]);
     
@@ -59,7 +62,7 @@ export const ArenaSaveModal = ({ isOpen, onClose, draftState, botPersona, userSi
                 </div>
                  <div>
                     <label htmlFor="draftTags" className="block text-sm font-medium text-text-secondary">Tags</label>
-                    <TagInput tags={draftTags} setTags={setDraftTags} placeholder="e.g. Practice, Counter-Engage" />
+                    <TagInput tags={draftTags} onTagsChange={setDraftTags} placeholder="e.g. Practice, Counter-Engage" />
                 </div>
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>

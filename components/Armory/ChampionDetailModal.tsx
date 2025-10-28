@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import type { Champion, Ability, ChampionAnalysis, MatchupAnalysis, DraftState } from '../../types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import type { Champion, Ability, ChampionAnalysis, MatchupAnalysis } from '../../types';
 import { getChampionAnalysis, getMatchupAnalysis } from '../../services/geminiService';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { ROLES } from '../../constants';
-import { useDraft } from '../../contexts/DraftContext';
 import { useChampions } from '../../contexts/ChampionContext';
 import * as storageService from '../../services/storageService';
 
@@ -162,7 +160,7 @@ const AIStrategyDisplay = ({ analysis }: { analysis: ChampionAnalysis }) => (
     </div>
 );
 
-const MatchupsDisplay = ({ analysis, matchupAnalysis, onRetry }: { analysis: ChampionAnalysis, matchupAnalysis: MatchupAnalysis | null, onRetry: () => void }) => {
+const MatchupsDisplay = ({ analysis: _analysis, matchupAnalysis, onRetry }: { analysis: ChampionAnalysis, matchupAnalysis: MatchupAnalysis | null, onRetry: () => void }) => {
     if (!matchupAnalysis) {return (
         <div className="flex flex-col items-center justify-center min-h-[200px]">
             <Button onClick={onRetry}>Generate Matchup Tips</Button>

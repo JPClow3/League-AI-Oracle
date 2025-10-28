@@ -148,10 +148,12 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
 
     useEffect(() => {
         if (entry) {
-            setUserNotes(entry.userNotes || '');
-            setTags(entry.tags || []);
-            setResult(entry.result);
-            setActiveTab(entry.dossier ? 'dossier' : 'analysis');
+            setTimeout(() => {
+                setUserNotes(entry.userNotes || '');
+                setTags(entry.tags || []);
+                setResult(entry.result);
+                setActiveTab(entry.dossier ? 'dossier' : 'analysis');
+            }, 0);
         }
     }, [entry]);
 
@@ -239,7 +241,7 @@ export const PlaybookDetailModal = ({ isOpen, onClose, entry, onLoad, onDelete, 
                         </div>
                         <div className="space-y-2">
                              <h3 className="font-display text-xl font-bold text-accent tracking-wide">Tags</h3>
-                             <TagInput tags={tags} setTags={setTags} />
+                             <TagInput tags={tags} onTagsChange={setTags} />
                         </div>
                         <div className="flex-grow flex flex-col">
                             <h3 className="font-display text-xl font-bold text-accent tracking-wide mb-2">My Notes</h3>

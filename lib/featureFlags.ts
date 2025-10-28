@@ -42,8 +42,6 @@ class FeatureFlagsService {
   private client: LDClient | null = null;
   private flags: FeatureFlags = { ...DEFAULT_FLAGS };
   private listeners: Set<(flags: FeatureFlags) => void> = new Set();
-  private isInitialized = false;
-
   /**
    * Initialize LaunchDarkly
    */
@@ -54,7 +52,6 @@ class FeatureFlagsService {
     if (!clientId) {
       console.warn('LaunchDarkly not configured. Using local feature flags.');
       this.loadLocalFlags();
-      this.isInitialized = true;
       return;
     }
 
@@ -74,12 +71,10 @@ class FeatureFlagsService {
         this.refreshFlags();
       });
 
-      this.isInitialized = true;
       console.log('✅ Feature flags initialized');
     } catch (error) {
       console.error('Failed to initialize feature flags:', error);
       this.loadLocalFlags();
-      this.isInitialized = true;
     }
   }
 

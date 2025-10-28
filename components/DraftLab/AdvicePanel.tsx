@@ -3,7 +3,7 @@ import type { AIAdvice, TeamAnalysis } from '../../types';
 import { Loader } from '../common/Loader';
 import { KeywordHighlighter } from '../Academy/KeywordHighlighter';
 import { PowerSpikeTimeline } from './PowerSpikeTimeline';
-import { ThumbsUp, ThumbsDown, Info, AlertTriangle, ChevronsRight, Swords, Link, Sparkles, Copy, GraduationCap } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Info, AlertTriangle, Swords, Link, Sparkles, Copy, GraduationCap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { KEYWORDS } from '../Academy/lessons';

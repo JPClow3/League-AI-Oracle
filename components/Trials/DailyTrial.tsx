@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getTrialQuestion } from '../../services/geminiService';
 import type { TrialQuestion } from '../../types';
 import { Loader } from '../common/Loader';
 import { Button } from '../common/Button';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import toast from 'react-hot-toast';
 import { KEYWORDS } from '../Academy/lessons';
 import { safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from '../../lib/draftUtils';
 import { MISSION_IDS } from '../../constants';
@@ -28,7 +27,7 @@ export const DailyTrial = ({ navigateToAcademy }: DailyTrialProps) => {
     const { addSP, completeMission } = useUserProfile();
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today: string = new Date().toISOString().split('T')[0]!;
     const cacheKey = 'dailyTrialCache';
 
     const fetchNewQuestion = useCallback(async () => {

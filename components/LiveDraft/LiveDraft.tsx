@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { DraftState, Champion, TeamSide, AIAdvice, Page } from '../../types';
+import React, { useState, useEffect, useRef } from 'react';
+import type { DraftState, Champion, TeamSide, AIAdvice } from '../../types';
 import { getDraftAdvice } from '../../services/geminiService';
 import { TeamPanel } from '../DraftLab/TeamPanel';
 import { AdvicePanel } from '../DraftLab/AdvicePanel';
@@ -21,7 +21,7 @@ interface LiveDraftProps {
 }
 
 export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps) => {
-    const { champions, championsLite } = useChampions();
+    const { champions } = useChampions();
     const { settings } = useSettings();
     const { profile } = useUserProfile();
 
@@ -33,8 +33,18 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
     const [error, setError] = useState<string | null>(null);
 
     const abortControllerRef = useRef<AbortController | null>(null);
-    
-    const isStale = advice && JSON.stringify(draftState) !== advice.draftId;
+    const isMountedRef = useRef(true);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            abortControllerRef.current?.abort();
+        };
+    }, []);
+
+    const isStale = advice ? (JSON.stringify(draftState) !== advice.draftId) : false;
 
     const handleSlotClick = (team: TeamSide, type: 'pick' | 'ban', index: number) => {
         setActiveSlot({ team, type, index });
@@ -66,15 +76,17 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
         const analysisTimeout = setTimeout(async () => {
             try {
                 const result = await getDraftAdvice(draftState, 'blue', settings.primaryRole, profile.skillLevel, 'gemini-2.5-flash', controller.signal);
-                if (controller.signal.aborted) {return;}
+                if (controller.signal.aborted || !isMountedRef.current) {return;}
                 setAdvice({ ...result, draftId: JSON.stringify(draftState) });
             } catch (err) {
                 if (err instanceof DOMException && err.name === 'AbortError') {return;}
+                if (!isMountedRef.current) {return;}
+
                 const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
                 setError(errorMessage);
                 toast.error(errorMessage);
             } finally {
-                if (!controller.signal.aborted) {
+                if (!controller.signal.aborted && isMountedRef.current) {
                     setIsLoading(false);
                 }
             }
@@ -91,7 +103,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
         for (const turn of COMPETITIVE_SEQUENCE) {
             const { team, type, index } = turn;
             const slot = draftState[team][type === 'pick' ? 'picks' : 'bans'][index];
-            if (!slot.champion) {
+            if (slot && !slot.champion) {
                 return turn;
             }
         }

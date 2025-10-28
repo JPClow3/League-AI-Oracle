@@ -1,265 +1,119 @@
-import { Workbox } from 'workbox-window';
-
 /**
- * Offline Mode Service
- * Handles service worker registration and request queuing
+ * Offline Service
+ * Manages offline functionality, service worker registration, and request queuing
  */
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-
-interface QueuedRequest {
-  id: string;
-  url: string;
-  method: string;
-  body?: JsonValue;
-  headers?: Record<string, string>;
-  timestamp: number;
-}
+type OnlineStatusCallback = (isOnline: boolean) => void;
 
 class OfflineService {
-  private wb: Workbox | null = null;
-  private isOnline = navigator.onLine;
-  private requestQueue: QueuedRequest[] = [];
-  private listeners: Set<(isOnline: boolean) => void> = new Set();
+    private isOnline: boolean = navigator.onLine;
+    private subscribers: Set<OnlineStatusCallback> = new Set();
+    private queuedRequests: any[] = [];
 
-  /**
-   * Initialize offline mode
-   */
-  async initialize() {
-    // Load queued requests from storage
-    this.loadQueue();
-
-    // Register service worker
-    if ('serviceWorker' in navigator && import.meta.env.PROD) {
-      try {
-        this.wb = new Workbox('/sw.js');
-
-        // Listen for service worker updates
-        this.wb.addEventListener('waiting', () => {
-          console.log('New service worker available. Refresh to update.');
-        });
-
-        this.wb.addEventListener('activated', () => {
-          console.log('Service worker activated');
-        });
-
-        await this.wb.register();
-        console.log('✅ Service worker registered');
-      } catch (error) {
-        console.warn('Service worker registration failed:', error);
-      }
+    constructor() {
+        // Listen for online/offline events
+        window.addEventListener('online', this.handleOnline);
+        window.addEventListener('offline', this.handleOffline);
     }
 
-    // Listen for online/offline events
-    window.addEventListener('online', this.handleOnline);
-    window.addEventListener('offline', this.handleOffline);
-
-    console.log('✅ Offline mode initialized');
-  }
-
-  /**
-   * Handle going online
-   */
-  private handleOnline = async () => {
-    console.log('📡 Connection restored');
-    this.isOnline = true;
-    this.notifyListeners(true);
-
-    // Process queued requests
-    await this.processQueue();
-  };
-
-  /**
-   * Handle going offline
-   */
-  private handleOffline = () => {
-    console.log('📵 Connection lost');
-    this.isOnline = false;
-    this.notifyListeners(false);
-  };
-
-  /**
-   * Check if online
-   */
-  isConnected(): boolean {
-    return this.isOnline;
-  }
-
-  /**
-   * Queue a request for later processing
-   */
-  queueRequest(
-    url: string,
-    method: string = 'GET',
-    body?: JsonValue,
-    headers?: Record<string, string>
-  ): string {
-    const request: QueuedRequest = {
-      id: crypto.randomUUID(),
-      url,
-      method,
-      body,
-      headers,
-      timestamp: Date.now(),
+    private handleOnline = () => {
+        this.isOnline = true;
+        this.notifySubscribers();
+        this.processQueue();
     };
 
-    this.requestQueue.push(request);
-    this.saveQueue();
-
-    console.log(`📦 Request queued: ${method} ${url}`);
-    return request.id;
-  }
-
-  /**
-   * Process all queued requests
-   */
-  private async processQueue() {
-    if (this.requestQueue.length === 0) {return;}
-
-    console.log(`🔄 Processing ${this.requestQueue.length} queued requests`);
-
-    const results = await Promise.allSettled(
-      this.requestQueue.map(req => this.executeRequest(req))
-    );
-
-    // Remove successful requests
-    const successfulIds = results
-      .map((result, index) =>
-        result.status === 'fulfilled' ? this.requestQueue[index].id : null
-      )
-      .filter(Boolean) as string[];
-
-    this.requestQueue = this.requestQueue.filter(
-      req => !successfulIds.includes(req.id)
-    );
-
-    this.saveQueue();
-
-    const successCount = successfulIds.length;
-    const failCount = results.length - successCount;
-
-    console.log(`✅ Processed: ${successCount} succeeded, ${failCount} failed`);
-  }
-
-  /**
-   * Execute a queued request
-   */
-  private async executeRequest(request: QueuedRequest): Promise<Response> {
-    const { url, method, body, headers } = request;
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Request failed: ${response.status}`);
-    }
-
-    return response;
-  }
-
-  /**
-   * Get queued request count
-   */
-  getQueuedCount(): number {
-    return this.requestQueue.length;
-  }
-
-  /**
-   * Clear the queue
-   */
-  clearQueue() {
-    this.requestQueue = [];
-    this.saveQueue();
-  }
-
-  /**
-   * Save queue to localStorage
-   */
-  private saveQueue() {
-    try {
-      localStorage.setItem('offlineQueue', JSON.stringify(this.requestQueue));
-    } catch (error) {
-      console.warn('Failed to save request queue:', error);
-    }
-  }
-
-  /**
-   * Load queue from localStorage
-   */
-  private loadQueue() {
-    try {
-      const stored = localStorage.getItem('offlineQueue');
-      if (stored) {
-        this.requestQueue = JSON.parse(stored);
-
-        // Remove requests older than 24 hours
-        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-        this.requestQueue = this.requestQueue.filter(
-          req => req.timestamp > cutoff
-        );
-      }
-    } catch (error) {
-      console.warn('Failed to load request queue:', error);
-      this.requestQueue = [];
-    }
-  }
-
-  /**
-   * Subscribe to online status changes
-   */
-  subscribe(listener: (isOnline: boolean) => void) {
-    this.listeners.add(listener);
-
-    // Immediately notify of current status
-    listener(this.isOnline);
-
-    return () => {
-      this.listeners.delete(listener);
+    private handleOffline = () => {
+        this.isOnline = false;
+        this.notifySubscribers();
     };
-  }
 
-  /**
-   * Notify all listeners
-   */
-  private notifyListeners(isOnline: boolean) {
-    this.listeners.forEach(listener => {
-      try {
-        listener(isOnline);
-      } catch (error) {
-        console.error('Error in offline listener:', error);
-      }
-    });
-  }
-
-  /**
-   * Check if service worker is supported
-   */
-  isSupported(): boolean {
-    return 'serviceWorker' in navigator;
-  }
-
-  /**
-   * Update service worker
-   */
-  async update() {
-    if (this.wb) {
-      await this.wb.update();
+    private notifySubscribers() {
+        this.subscribers.forEach(callback => callback(this.isOnline));
     }
-  }
 
-  /**
-   * Clean up
-   */
-  cleanup() {
-    window.removeEventListener('online', this.handleOnline);
-    window.removeEventListener('offline', this.handleOffline);
-  }
+    private async processQueue() {
+        if (!this.isOnline || this.queuedRequests.length === 0) return;
+
+        const requests = [...this.queuedRequests];
+        this.queuedRequests = [];
+
+        for (const request of requests) {
+            try {
+                await fetch(request.url, request.options);
+            } catch (error) {
+                // Re-queue if still failing
+                console.error('Failed to process queued request:', error);
+                this.queuedRequests.push(request);
+            }
+        }
+    }
+
+    /**
+     * Initialize the service and register service worker
+     */
+    async initialize() {
+        // Register service worker if available
+        if ('serviceWorker' in navigator && import.meta.env.PROD) {
+            try {
+                const registration = await navigator.serviceWorker.register('/sw.js', {
+                    scope: '/',
+                });
+                console.log('Service Worker registered:', registration.scope);
+
+                // Check for updates periodically
+                setInterval(() => {
+                    registration.update();
+                }, 60000); // Check every minute
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+            }
+        }
+    }
+
+    /**
+     * Subscribe to online status changes
+     */
+    subscribe(callback: OnlineStatusCallback): () => void {
+        this.subscribers.add(callback);
+        // Immediately notify of current status
+        callback(this.isOnline);
+
+        // Return unsubscribe function
+        return () => {
+            this.subscribers.delete(callback);
+        };
+    }
+
+    /**
+     * Get current online status
+     */
+    getOnlineStatus(): boolean {
+        return this.isOnline;
+    }
+
+    /**
+     * Queue a request for when online
+     */
+    queueRequest(url: string, options: RequestInit = {}) {
+        this.queuedRequests.push({ url, options });
+    }
+
+    /**
+     * Get count of queued requests
+     */
+    getQueuedCount(): number {
+        return this.queuedRequests.length;
+    }
+
+    /**
+     * Clean up event listeners
+     */
+    destroy() {
+        window.removeEventListener('online', this.handleOnline);
+        window.removeEventListener('offline', this.handleOffline);
+        this.subscribers.clear();
+        this.queuedRequests = [];
+    }
 }
 
 // Export singleton instance

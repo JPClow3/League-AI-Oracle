@@ -250,7 +250,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
             finalProfile.missions = newMissions;
 
             if (missionId === MISSION_IDS.DAILY.FIRST_DRAFT_OF_DAY) {
-                finalProfile.lastLabAnalysisDate = new Date().toISOString().split('T')[0];
+                finalProfile.lastLabAnalysisDate = new Date().toISOString().split('T')[0]!;
             }
             
             return finalProfile;
@@ -274,9 +274,9 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
             champions.forEach(champ => {
                 const existingIndex = newMastery.findIndex(m => m.championId === champ.id);
                 if (existingIndex > -1) {
-                    const existing = newMastery[existingIndex];
+                    const existing = newMastery[existingIndex]!;
                     newMastery[existingIndex] = {
-                        ...existing,
+                        championId: existing.championId,
                         points: existing.points + pointsToAdd,
                         highestGrade: grade > existing.highestGrade ? grade : existing.highestGrade,
                     };
@@ -348,9 +348,9 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     const checkStreak = useCallback(() => {
         setProfileState(prev => {
             const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
+            const todayStr = now.toISOString().split('T')[0]!;
             const lastActiveDate = new Date(prev.lastActiveDate);
-            const lastActiveStr = lastActiveDate.toISOString().split('T')[0];
+            const lastActiveStr = lastActiveDate.toISOString().split('T')[0]!;
 
             if (lastActiveStr === todayStr) {
                 return prev; // Already active today, no change needed.

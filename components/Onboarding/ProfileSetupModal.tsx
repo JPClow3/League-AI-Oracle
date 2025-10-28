@@ -3,7 +3,6 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useSettings } from '../../hooks/useSettings';
 import { ROLES } from '../../constants';
-import type { ChampionLite, Settings } from '../../types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useChampions } from '../../contexts/ChampionContext';
 import { Users, Shield, Sprout, Zap, Crosshair, Heart } from 'lucide-react';
@@ -76,7 +75,7 @@ export const ProfileSetupModal = ({ isOpen, onComplete }: ProfileSetupModalProps
 
     useEffect(() => {
         if (isOpen) {
-            resetState();
+            setTimeout(() => resetState(), 0);
         }
     }, [isOpen, resetState]);
 

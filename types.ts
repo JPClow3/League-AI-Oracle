@@ -1,4 +1,3 @@
-import type { Icon } from 'lucide-react';
 
 export type Page = 'Home' | 'Strategy Forge' | 'The Archives' | 'Academy' | 'Draft Arena' | 'The Armory' | 'Daily Challenge' | 'Profile' | 'The Oracle' | 'Live Co-Pilot' | 'Draft Scenarios';
 export type DraftMode = 'competitive' | 'soloq';

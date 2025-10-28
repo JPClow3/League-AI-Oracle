@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import type { Page, UserProfile } from '../../types';
 import { usePlaybook } from '../../hooks/usePlaybook';
 import { Button } from '../common/Button';
@@ -65,6 +65,7 @@ export const ProTipPanel = ({ profile, setCurrentPage, navigateToAcademy }: ProT
             fetchTip();
             return () => controller.abort();
         }
+        return undefined;
     }, [entries, profile.dynamicProTip, championsLite, setProfile, isLoadingTip]);
 
     const staticTips: ProTip[] = useMemo(() => {
@@ -87,7 +88,7 @@ export const ProTipPanel = ({ profile, setCurrentPage, navigateToAcademy }: ProT
             },
             {
                 id: 'identified-weakness',
-                condition: () => lastFeedback && lastFeedback.type === 'lesson' && lastFeedback.message.includes('weakness'),
+                condition: () => Boolean(lastFeedback && lastFeedback.type === 'lesson' && lastFeedback.message.includes('weakness')),
                 title: "Address a Weakness",
                 description: `The AI noted a potential weakness in a recent draft: "${lastFeedback?.message.split('"')[1]}". Reviewing related lessons can help.`,
                 actionText: 'Go to Academy',

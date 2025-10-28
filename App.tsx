@@ -59,6 +59,22 @@ const App = () => {
         analytics.pageView(currentPage);
     }, [currentPage]);
 
+    // Clear stale navigation state when navigating away from pages
+    useEffect(() => {
+        // Clear Academy lesson ID when leaving Academy
+        if (currentPage !== 'Academy' && academyInitialLessonId !== undefined) {
+            setAcademyInitialLessonId(undefined);
+        }
+
+        // Clear Armory search/tab when leaving Armory
+        if (currentPage !== 'The Armory') {
+            if (strategyHubInitialSearch !== null || strategyHubInitialTab !== 'champions') {
+                setStrategyHubInitialTab('champions');
+                setStrategyHubInitialSearch(null);
+            }
+        }
+    }, [currentPage, academyInitialLessonId, strategyHubInitialSearch, strategyHubInitialTab]);
+
     // Check if onboarding is complete
     useEffect(() => {
         const onboardingComplete = localStorage.getItem('onboardingComplete');
@@ -103,11 +119,25 @@ const App = () => {
     const resetLiveDraft = useCallback(() => setLiveDraftState(getInitialDraftState()), []);
     const resetArena = useCallback(() => setArenaDraftState(getInitialDraftState()), []);
 
-    // Daily streak check
+    // Daily streak check - runs on mount and periodically for PWA users
     useEffect(() => {
-        if (isHydrated) { // Only check streak after profile is loaded
+        let streakInterval: NodeJS.Timeout | undefined;
+
+        if (isHydrated) {
             checkStreak();
+
+            // Check streak every hour for users who keep the PWA open
+            // This ensures daily challenges refresh at midnight even without reload
+            streakInterval = setInterval(() => {
+                checkStreak();
+            }, 60 * 60 * 1000); // Every 1 hour
         }
+
+        return () => {
+            if (streakInterval) {
+                clearInterval(streakInterval);
+            }
+        };
     }, [checkStreak, isHydrated]);
 
     // Command Palette Hotkey
@@ -140,32 +170,73 @@ const App = () => {
     
     const loadChampionToLab = (championId: string, role?: string) => {
         const champ = champions.find(c => c.id === championId);
-        if (!champ) {return;}
-        
+        if (!champ) {
+            console.error(`Champion with id "${championId}" not found`);
+            toast.error('Champion not found');
+            return;
+        }
+
         setDraftState(prev => {
-            const roleIndex = role ? ROLES.indexOf(role) : -1;
+            let roleIndex = -1;
+
+            if (role) {
+                // Handle common role name variations
+                const normalizedRole = role.toLowerCase();
+                const roleMap: { [key: string]: string } = {
+                    'bot': 'ADC',
+                    'adc': 'ADC',
+                    'bottom': 'ADC',
+                    'top': 'Top',
+                    'jungle': 'Jungle',
+                    'jg': 'Jungle',
+                    'mid': 'Mid',
+                    'middle': 'Mid',
+                    'support': 'Support',
+                    'sup': 'Support',
+                    'supp': 'Support'
+                };
+
+                const mappedRole = roleMap[normalizedRole] || role;
+                roleIndex = ROLES.indexOf(mappedRole);
+
+                if (roleIndex === -1) {
+                    console.warn(`Role "${role}" not found in ROLES array. Available roles:`, ROLES);
+                    toast.error(`Invalid role: ${role}. Placing in first available slot.`);
+                }
+            }
+
             const newPicks = [...prev.blue.picks];
-            if (roleIndex !== -1) {
+
+            if (roleIndex !== -1 && newPicks[roleIndex]) {
                 newPicks[roleIndex] = { champion: champ, isActive: false };
             } else {
-                 const emptyIndex = newPicks.findIndex(p => p.champion === null);
-                 if (emptyIndex !== -1) {
-                     newPicks[emptyIndex] = { champion: champ, isActive: false };
-                 }
+                const emptyIndex = newPicks.findIndex(p => p.champion === null);
+                if (emptyIndex !== -1) {
+                    newPicks[emptyIndex] = { champion: champ, isActive: false };
+                } else {
+                    toast.error('All pick slots are full. Champion not added.');
+                    return prev;
+                }
             }
+
             return { ...prev, blue: { ...prev.blue, picks: newPicks }};
         });
         
         setCurrentPage('Strategy Forge');
+        toast.success(`${champ.name} added to Strategy Forge`);
     };
 
     const loadChampionsAndNavigateToForge = (championIds: string[]) => {
-        const blueprintChamps = championIds.map(id => champions.find(c => c.id === id) || null);
-        
         const newDraft = getInitialDraftState();
-        newDraft.blue.picks = newDraft.blue.picks.map((slot, i) =>
-            i < blueprintChamps.length ? { ...slot, champion: blueprintChamps[i] } : slot
-        );
+
+        championIds.forEach((id, i) => {
+            if (i < newDraft.blue.picks.length) {
+                const champ = champions.find(c => c.id === id);
+                if (champ) {
+                    newDraft.blue.picks[i] = { ...newDraft.blue.picks[i], champion: champ, isActive: newDraft.blue.picks[i]?.isActive || false };
+                }
+            }
+        });
 
         setDraftState(newDraft);
         setCurrentPage('Strategy Forge');
@@ -191,43 +262,55 @@ const App = () => {
         }
 
         if (championsError) {
-             return (
+            // CRITICAL: Return error UI and prevent any component rendering
+            // This prevents crashes from components trying to use empty champions array
+            return (
                 <div className="flex-grow flex items-center justify-center p-4">
-                    <div className="text-center bg-error/10 p-8 border border-error/20 text-error">
-                        <h2 className="text-2xl font-bold">Failed to Load Champion Data</h2>
-                        <p>{championsError}</p>
-                        <p className="mt-2 text-sm">Please check your internet connection and refresh the page.</p>
+                    <div className="text-center bg-error/10 p-8 border border-error/20 text-error max-w-md">
+                        <h2 className="text-2xl font-bold mb-4">Failed to Load Champion Data</h2>
+                        <p className="mb-2">{championsError}</p>
+                        <p className="text-sm mb-4">Please check your internet connection and refresh the page.</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="px-4 py-2 bg-error text-white rounded hover:bg-error/80 transition-colors"
+                        >
+                            Reload Page
+                        </button>
                     </div>
                 </div>
-             );
+            );
         }
 
+        // Only render Router if champions are loaded successfully
         return (
              <main className="flex-grow w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-                <Router
-                    currentPage={currentPage}
-                    pageRefs={pageRefs}
-                    setCurrentPage={setCurrentPage}
-                    navigateToArmory={navigateToArmory}
-                    startLabTour={startLabTour}
-                    handleTourComplete={handleTourComplete}
-                    navigateToAcademy={navigateToAcademy}
-                    liveDraftState={liveDraftState}
-                    setLiveDraftState={setLiveDraftState}
-                    resetLiveDraft={resetLiveDraft}
-                    arenaDraftState={arenaDraftState}
-                    setArenaDraftState={setArenaDraftState}
-                    resetArena={resetArena}
-                    loadDraftAndNavigate={loadDraftAndNavigate}
-                    academyInitialLessonId={academyInitialLessonId}
-                    setAcademyInitialLessonId={setAcademyInitialLessonId}
-                    strategyHubInitialTab={strategyHubInitialTab}
-                    strategyHubInitialSearch={strategyHubInitialSearch}
-                    loadChampionToLab={loadChampionToLab}
-                    loadChampionsAndNavigateToForge={loadChampionsAndNavigateToForge}
-                    setStrategyHubInitialTab={setStrategyHubInitialTab}
-                    setStrategyHubInitialSearch={setStrategyHubInitialSearch}
-                />
+                {/* ✅ BUG FIX: Wrap Router in ErrorBoundary to prevent full app crashes */}
+                <ErrorBoundary>
+                    <Router
+                        currentPage={currentPage}
+                        pageRefs={pageRefs}
+                        setCurrentPage={setCurrentPage}
+                        navigateToArmory={navigateToArmory}
+                        startLabTour={startLabTour}
+                        handleTourComplete={handleTourComplete}
+                        navigateToAcademy={navigateToAcademy}
+                        liveDraftState={liveDraftState}
+                        setLiveDraftState={setLiveDraftState}
+                        resetLiveDraft={resetLiveDraft}
+                        arenaDraftState={arenaDraftState}
+                        setArenaDraftState={setArenaDraftState}
+                        resetArena={resetArena}
+                        loadDraftAndNavigate={loadDraftAndNavigate}
+                        academyInitialLessonId={academyInitialLessonId}
+                        setAcademyInitialLessonId={setAcademyInitialLessonId}
+                        strategyHubInitialTab={strategyHubInitialTab}
+                        strategyHubInitialSearch={strategyHubInitialSearch}
+                        loadChampionToLab={loadChampionToLab}
+                        loadChampionsAndNavigateToForge={loadChampionsAndNavigateToForge}
+                        setStrategyHubInitialTab={setStrategyHubInitialTab}
+                        setStrategyHubInitialSearch={setStrategyHubInitialSearch}
+                    />
+                </ErrorBoundary>
             </main>
         );
     };

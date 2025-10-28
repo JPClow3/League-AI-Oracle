@@ -1,14 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { LESSONS } from './lessons';
-import { KeywordHighlighter } from './KeywordHighlighter';
 import type { Lesson } from '../../types';
 import { Button } from '../common/Button';
-import { Loader } from '../common/Loader';
 import { generateLessonStream } from '../../services/geminiService';
 import toast from 'react-hot-toast';
 import { MarkdownRenderer } from '../common/MarkdownRenderer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GraduationCap, ThumbsUp, ThumbsDown, FlaskConical } from 'lucide-react';
+import { safeAbort } from '../../lib/abortUtils';
 
 interface AcademyProps {
     initialLessonId?: string;
@@ -51,7 +50,7 @@ export const Academy = ({ initialLessonId, onHandled, loadChampionsAndNavigateTo
     // Abort any ongoing stream on unmount
     useEffect(() => {
         return () => {
-            abortControllerRef.current?.abort();
+            safeAbort(abortControllerRef.current, 'Component unmounting');
         };
     }, []);
 
@@ -90,7 +89,7 @@ export const Academy = ({ initialLessonId, onHandled, loadChampionsAndNavigateTo
             toast.error("Please wait for the current lesson to finish generating.");
             return;
         }
-
+        safeAbort(abortControllerRef.current, 'New lesson generation started');
         abortControllerRef.current?.abort();
         const controller = new AbortController();
         abortControllerRef.current = controller;

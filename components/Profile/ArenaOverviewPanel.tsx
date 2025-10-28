@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ArenaStats } from '../../types';
 
 interface ArenaOverviewPanelProps {
@@ -20,10 +19,10 @@ export const ArenaOverviewPanel = ({ stats }: ArenaOverviewPanelProps) => {
                     <span className="font-semibold text-text-secondary">Average Draft Score</span>
                     <span className="font-bold text-2xl text-accent">{stats.averageScore.toFixed(1)}%</span>
                 </div>
-                 <div className="bg-surface-secondary p-3 rounded-lg border border-border-primary">
+                <div className="bg-surface-secondary p-3 rounded-lg border border-border-primary">
                     <div className="font-semibold text-text-secondary">Current Bot Difficulty</div>
                     <div className="font-bold text-lg text-text-primary">{stats.difficulty}</div>
-                    <p className="text-xs text-text-secondary mt-1">{difficultyInfo[stats.difficulty]}</p>
+                    <p className="text-xs text-text-secondary mt-1">{difficultyInfo[stats.difficulty as keyof typeof difficultyInfo]}</p>
                 </div>
             </div>
         </div>

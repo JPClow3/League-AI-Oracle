@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fromSavedDraft, toSavedDraft } from '../../lib/draftUtils';
+import { fromSavedDraft } from '../../lib/draftUtils';
 import type { Champion, SavedDraft } from '../../types';
 
 describe.skip('fromSavedDraft - ID normalization fallback', () => {
@@ -39,7 +39,7 @@ describe.skip('fromSavedDraft - ID normalization fallback', () => {
     };
 
     const hydrated = fromSavedDraft(saved, champions);
-    expect(hydrated.red.picks[0].champion?.id).toBe('Kaisa');
+    expect(hydrated.red.picks[0]?.champion?.id).toBe('Kaisa');
   });
 });
 
