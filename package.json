@@ -52,7 +52,7 @@
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "dexie": "^4.0.7",
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "focus-trap-react": "^11.0.4",
     "framer-motion": "^12.23.12",
