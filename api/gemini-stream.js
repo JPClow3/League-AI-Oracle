@@ -4,6 +4,7 @@
  */
 
 import { rateLimitMiddleware } from './rateLimit.js';
+import { validateRequest, geminiRequestSchema, sanitizeString } from './validation.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -27,35 +28,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, model = 'gemini-2.5-flash', useSearch = false } = req.body;
+    // ✅ SECURITY: Validate request with Zod
+    const validation = validateRequest(req.body, geminiRequestSchema);
 
-    // ✅ SECURITY FIX: Comprehensive input validation
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'Invalid prompt' });
-    }
-
-    // Check length limits
-    const MAX_PROMPT_LENGTH = 10000; // 10k characters
-    if (prompt.length > MAX_PROMPT_LENGTH) {
+    if (!validation.success) {
       return res.status(400).json({
-        error: `Prompt too long. Maximum ${MAX_PROMPT_LENGTH} characters allowed.`
+        error: validation.error,
+        details: validation.details,
       });
     }
 
-    if (prompt.trim().length < 10) {
-      return res.status(400).json({ error: 'Prompt too short. Minimum 10 characters required.' });
-    }
+    const { prompt, model, useSearch } = validation.data;
 
     // Sanitize prompt (remove control characters)
-    const sanitizedPrompt = prompt.replace(/[\x00-\x1F\x7F]/g, '');
+    const sanitizedPrompt = sanitizeString(prompt);
 
-    // Validate model
-    const validModels = ['gemini-2.5-flash', 'gemini-2.5-pro'];
-    if (!validModels.includes(model)) {
-      return res.status(400).json({ error: 'Invalid model' });
-    }
-
-      contents: [{ parts: [{ text: sanitizedPrompt }] }],
+    // Get API key from environment
     const API_KEY = process.env.GEMINI_API_KEY;
     if (!API_KEY) {
       console.error('GEMINI_API_KEY not configured');
@@ -72,36 +60,66 @@ export default async function handler(req, res) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
 
     const requestBody = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts: [{ text: sanitizedPrompt }] }],
       generationConfig: {},
-      tools: useSearch ? [{ googleSearch: {} }] : undefined
+      tools: useSearch ? [{ googleSearch: {} }] : undefined,
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': API_KEY  // ✅ Use header instead of URL param
-      },
-      body: JSON.stringify(requestBody)
+    // ✅ IMPROVEMENT: Add AbortSignal support with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout for streaming
+
+    // Handle client disconnect
+    req.on('close', () => {
+      clearTimeout(timeoutId);
+      controller.abort();
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Gemini API error:', response.status, errorData);
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': API_KEY, // ✅ Use header instead of URL param
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
 
-      if (response.status === 429) {
-        res.write(`data: ${JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.', type: 'rate_limit' })}\n\n`);
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Gemini API error:', response.status, errorData);
+
+        if (response.status === 429) {
+          res.write(
+            `data: ${JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.', type: 'rate_limit' })}\n\n`
+          );
+          return res.end();
+        }
+
+        if (response.status === 403 || response.status === 429) {
+          res.write(
+            `data: ${JSON.stringify({ error: 'AI service temporarily unavailable. Please try again in a few minutes.', type: 'quota_exceeded' })}\n\n`
+          );
+          return res.end();
+        }
+
+        res.write(`data: ${JSON.stringify({ error: 'AI service error' })}\n\n`);
+        return res.end();
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      if (fetchError.name === 'AbortError') {
+        console.error('Streaming request aborted or timed out');
+        res.write(`data: ${JSON.stringify({ error: 'Request timeout or cancelled', type: 'timeout' })}\n\n`);
         return res.end();
       }
 
-      if (response.status === 403 || response.status === 429) {
-        res.write(`data: ${JSON.stringify({ error: 'AI service temporarily unavailable. Please try again in a few minutes.', type: 'quota_exceeded' })}\n\n`);
-        return res.end();
-      }
-
-      res.write(`data: ${JSON.stringify({ error: 'AI service error' })}\n\n`);
-      return res.end();
+      throw fetchError;
     }
 
     // Stream the response
@@ -166,4 +184,3 @@ export default async function handler(req, res) {
     res.end();
   }
 }
-

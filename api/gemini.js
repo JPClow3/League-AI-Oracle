@@ -4,6 +4,7 @@
  */
 
 import { rateLimitMiddleware } from './rateLimit.js';
+import { validateRequest, geminiRequestSchema } from './validation.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -27,17 +28,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, model = 'gemini-2.5-flash', isJson = true, useSearch = false } = req.body;
+    // ✅ SECURITY: Validate request with Zod
+    const validation = validateRequest(req.body, geminiRequestSchema);
 
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'Invalid prompt' });
+    if (!validation.success) {
+      return res.status(400).json({
+        error: validation.error,
+        details: validation.details,
+      });
     }
 
-    // Validate model
-    const validModels = ['gemini-2.5-flash', 'gemini-2.5-pro'];
-    if (!validModels.includes(model)) {
-      return res.status(400).json({ error: 'Invalid model' });
-    }
+    const { prompt, model, isJson, useSearch } = validation.data;
 
     // Get API key from environment
     const API_KEY = process.env.GEMINI_API_KEY;
@@ -51,59 +52,82 @@ export default async function handler(req, res) {
 
     const requestBody = {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: isJson ? {
-        responseMimeType: 'application/json'
-      } : {},
-      tools: useSearch ? [{ googleSearch: {} }] : undefined
+      generationConfig: isJson
+        ? {
+            responseMimeType: 'application/json',
+          }
+        : {},
+      tools: useSearch ? [{ googleSearch: {} }] : undefined,
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
+    // ✅ IMPROVEMENT: Add AbortSignal support with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Gemini API error:', response.status, errorData);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
 
-      if (response.status === 429) {
-        return res.status(429).json({
-          error: 'Rate limit exceeded. Please try again in a moment.',
-          type: 'rate_limit'
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Gemini API error:', response.status, errorData);
+
+        if (response.status === 429) {
+          return res.status(429).json({
+            error: 'Rate limit exceeded. Please try again in a moment.',
+            type: 'rate_limit',
+          });
+        }
+
+        if (response.status === 403 || response.status === 429) {
+          return res.status(503).json({
+            error: 'AI service temporarily unavailable. Please try again in a few minutes.',
+            type: 'quota_exceeded',
+          });
+        }
+
+        return res.status(500).json({ error: 'AI service error' });
+      }
+
+      const data = await response.json();
+
+      // Extract text from Gemini response
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      if (!text) {
+        return res.status(500).json({ error: 'AI returned empty response' });
+      }
+
+      // Extract grounding metadata if available (for search grounding)
+      const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
+
+      res.status(200).json({
+        text,
+        success: true,
+        groundingMetadata: groundingMetadata || undefined,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      // Handle timeout/abort errors
+      if (fetchError.name === 'AbortError') {
+        console.error('Request aborted or timed out');
+        return res.status(408).json({
+          error: 'Request timeout. The AI service took too long to respond.',
+          type: 'timeout',
         });
       }
 
-      if (response.status === 403 || response.status === 429) {
-        return res.status(503).json({
-          error: 'AI service temporarily unavailable. Please try again in a few minutes.',
-          type: 'quota_exceeded'
-        });
-      }
-
-      return res.status(500).json({ error: 'AI service error' });
+      throw fetchError; // Re-throw to be caught by outer try-catch
     }
-
-    const data = await response.json();
-
-    // Extract text from Gemini response
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    if (!text) {
-      return res.status(500).json({ error: 'AI returned empty response' });
-    }
-
-    // Extract grounding metadata if available (for search grounding)
-    const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
-
-    res.status(200).json({
-      text,
-      success: true,
-      groundingMetadata: groundingMetadata || undefined
-    });
   } catch (error) {
     console.error('Gemini API Error:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
-

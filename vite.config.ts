@@ -79,10 +79,20 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           icons: [
             {
-              src: '/icon.svg',
-              sizes: '192x192 512x512',
-              type: 'image/svg+xml',
-              purpose: 'any maskable',
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
             },
           ],
         },
@@ -134,8 +144,8 @@ export default defineConfig(({ mode }) => {
             playbook: ['./components/Playbook/Playbook'],
             academy: ['./components/Academy/Academy'],
 
-            // AI/Services
-            'ai-services': ['./services/geminiService', '@google/genai'],
+            // AI/Services (client-side only, no SDK)
+            'ai-services': ['./services/geminiService'],
 
             // Data
             'champion-data': ['./contexts/ChampionContext', './data/championRoles'],
