@@ -23,11 +23,15 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBa
 
   // Auto-detect if backdrop blur should be enabled based on user preferences and device capability
   const [shouldBlur] = useState(() => {
-    if (enableBackdropBlur !== undefined) return enableBackdropBlur;
+    if (enableBackdropBlur !== undefined) {
+      return enableBackdropBlur;
+    }
 
     // Respect reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return false;
+    if (prefersReducedMotion) {
+      return false;
+    }
 
     // Disable on low-end devices
     const cores = navigator.hardwareConcurrency || 2;
@@ -74,13 +78,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBa
   };
 
   return (
-    <CSSTransition
-      in={isOpen}
-      timeout={200}
-      classNames="modal"
-      unmountOnExit
-      nodeRef={backdropRef}
-    >
+    <CSSTransition in={isOpen} timeout={200} classNames="modal" unmountOnExit nodeRef={backdropRef}>
       <div
         ref={backdropRef}
         className={`fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] flex justify-center items-center z-50 p-4 ${shouldBlur ? 'backdrop-blur-sm' : ''}`}
@@ -88,35 +86,29 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBa
         aria-modal="true"
         role="dialog"
       >
-        <CSSTransition
-          in={isOpen}
-          timeout={200}
-          classNames="modal-content"
-          unmountOnExit
-          nodeRef={contentRef}
-        >
+        <CSSTransition in={isOpen} timeout={200} classNames="modal-content" unmountOnExit nodeRef={contentRef}>
           <FocusTrap
             active={isOpen}
             focusTrapOptions={{
               fallbackFocus: () => contentRef.current || document.body,
             }}
           >
-            <div 
+            <div
               ref={contentRef}
               tabIndex={-1}
               className={`bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full max-h-[90vh] flex flex-col m-4 focus:outline-none border border-[hsl(var(--border))] ${sizeClasses[size]}`}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
             >
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center p-6 border-b border-[hsl(var(--border))] flex-shrink-0">
-                  <h2 className="font-display text-2xl font-semibold text-[hsl(var(--text-primary))] tracking-wider">{title}</h2>
+                  <h2 className="font-display text-2xl font-semibold text-[hsl(var(--text-primary))] tracking-wider">
+                    {title}
+                  </h2>
                   <Button onClick={onClose} variant="ghost" aria-label="Close modal">
                     <X className="h-6 w-6" />
                   </Button>
                 </div>
-                <div className="flex-grow overflow-y-auto">
-                    {children}
-                </div>
+                <div className="flex-grow overflow-y-auto">{children}</div>
               </div>
             </div>
           </FocusTrap>

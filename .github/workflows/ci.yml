@@ -11,7 +11,11 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,7 +49,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+      actions: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -78,7 +85,11 @@ jobs:
     needs: [test, build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+    permissions:
+      contents: read
+      actions: read
+      deployments: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

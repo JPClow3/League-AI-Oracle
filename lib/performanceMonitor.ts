@@ -28,7 +28,7 @@ class PerformanceMonitor {
       name,
       value,
       timestamp: Date.now(),
-      metadata
+      metadata,
     };
 
     this.metrics.push(metric);
@@ -59,11 +59,11 @@ class PerformanceMonitor {
 
     // Largest Contentful Paint (LCP)
     try {
-      const lcpObserver = new PerformanceObserver((list) => {
+      const lcpObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1] as any;
         this.record('LCP', lastEntry.renderTime || lastEntry.loadTime, {
-          type: 'web-vital'
+          type: 'web-vital',
         });
       });
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
@@ -73,11 +73,11 @@ class PerformanceMonitor {
 
     // First Input Delay (FID)
     try {
-      const fidObserver = new PerformanceObserver((list) => {
+      const fidObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
           this.record('FID', entry.processingStart - entry.startTime, {
-            type: 'web-vital'
+            type: 'web-vital',
           });
         });
       });
@@ -89,7 +89,7 @@ class PerformanceMonitor {
     // Cumulative Layout Shift (CLS)
     try {
       let clsScore = 0;
-      const clsObserver = new PerformanceObserver((list) => {
+      const clsObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
           if (!entry.hadRecentInput) {
@@ -108,7 +108,9 @@ class PerformanceMonitor {
    * Measure page load performance
    */
   measurePageLoad() {
-    if (typeof window === 'undefined') {return;}
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     window.addEventListener('load', () => {
       setTimeout(() => {
@@ -134,7 +136,7 @@ class PerformanceMonitor {
       const endTime = performance.now();
       const duration = endTime - startTime;
       this.record(`Component Render: ${componentName}`, duration, {
-        type: 'component-render'
+        type: 'component-render',
       });
     };
   }
@@ -142,10 +144,7 @@ class PerformanceMonitor {
   /**
    * Measure API call duration
    */
-  async measureAPI<T>(
-    endpoint: string,
-    apiCall: () => Promise<T>
-  ): Promise<T> {
+  async measureAPI<T>(endpoint: string, apiCall: () => Promise<T>): Promise<T> {
     const startTime = performance.now();
 
     try {
@@ -154,7 +153,7 @@ class PerformanceMonitor {
 
       this.record(`API Call: ${endpoint}`, duration, {
         type: 'api-call',
-        status: 'success'
+        status: 'success',
       });
 
       return result;
@@ -164,7 +163,7 @@ class PerformanceMonitor {
       this.record(`API Call: ${endpoint}`, duration, {
         type: 'api-call',
         status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
 
       throw error;
@@ -190,7 +189,9 @@ class PerformanceMonitor {
    */
   getAverage(name: string): number {
     const metrics = this.getMetricsByName(name);
-    if (metrics.length === 0) {return 0;}
+    if (metrics.length === 0) {
+      return 0;
+    }
 
     const sum = metrics.reduce((acc, m) => acc + m.value, 0);
     return sum / metrics.length;
@@ -205,14 +206,14 @@ class PerformanceMonitor {
     }
 
     try {
-      const inpObserver = new PerformanceObserver((list) => {
+      const inpObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
           // INP measures responsiveness to user interactions
           const duration = entry.processingStart - entry.startTime;
           this.record('INP', duration, {
             type: 'web-vital',
-            interaction: entry.name
+            interaction: entry.name,
           });
         });
       });
@@ -226,16 +227,18 @@ class PerformanceMonitor {
    * Monitor resource loading performance
    */
   measureResourcePerformance() {
-    if (typeof window === 'undefined') {return;}
+    if (typeof window === 'undefined') {
+      return;
+    }
 
-    const observer = new PerformanceObserver((list) => {
+    const observer = new PerformanceObserver(list => {
       list.getEntries().forEach((entry: any) => {
         if (entry.initiatorType) {
           this.record(`Resource: ${entry.initiatorType}`, entry.duration, {
             type: 'resource',
             name: entry.name.split('/').pop(),
             size: entry.transferSize,
-            cached: entry.transferSize === 0 && entry.decodedBodySize > 0
+            cached: entry.transferSize === 0 && entry.decodedBodySize > 0,
           });
         }
       });
@@ -257,11 +260,11 @@ class PerformanceMonitor {
     }
 
     try {
-      const longTaskObserver = new PerformanceObserver((list) => {
-        list.getEntries().forEach((entry) => {
+      const longTaskObserver = new PerformanceObserver(list => {
+        list.getEntries().forEach(entry => {
           this.record('Long Task', entry.duration, {
             type: 'long-task',
-            startTime: entry.startTime
+            startTime: entry.startTime,
           });
         });
       });
@@ -275,7 +278,9 @@ class PerformanceMonitor {
    * Monitor memory usage (Chrome only)
    */
   measureMemory() {
-    if (typeof window === 'undefined') {return;}
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     // Check if memory API is available (Chrome/Edge)
     if ('memory' in performance) {
@@ -284,7 +289,7 @@ class PerformanceMonitor {
         type: 'memory',
         totalHeapSize: memory.totalJSHeapSize / (1024 * 1024),
         heapLimit: memory.jsHeapSizeLimit / (1024 * 1024),
-        unit: 'MB'
+        unit: 'MB',
       });
     }
   }
@@ -293,15 +298,17 @@ class PerformanceMonitor {
    * Measure First Contentful Paint (FCP)
    */
   measureFCP() {
-    if (typeof window === 'undefined') {return;}
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     try {
-      const fcpObserver = new PerformanceObserver((list) => {
+      const fcpObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
-        entries.forEach((entry) => {
+        entries.forEach(entry => {
           if (entry.name === 'first-contentful-paint') {
             this.record('FCP', entry.startTime, {
-              type: 'web-vital'
+              type: 'web-vital',
             });
           }
         });
@@ -316,7 +323,9 @@ class PerformanceMonitor {
    * Measure Time to Interactive (TTI) approximation
    */
   measureTTI() {
-    if (typeof window === 'undefined') {return;}
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     window.addEventListener('load', () => {
       // Wait for network to be idle
@@ -324,7 +333,7 @@ class PerformanceMonitor {
         const perfData = window.performance.timing;
         const tti = perfData.domInteractive - perfData.navigationStart;
         this.record('TTI', tti, {
-          type: 'web-vital'
+          type: 'web-vital',
         });
       }, 0);
     });
@@ -339,7 +348,7 @@ class PerformanceMonitor {
     return () => {
       const duration = performance.now() - startTime;
       this.record(`Interaction: ${interactionName}`, duration, {
-        type: 'user-interaction'
+        type: 'user-interaction',
       });
     };
   }
@@ -355,7 +364,7 @@ class PerformanceMonitor {
       this.record('Route Change', duration, {
         type: 'navigation',
         from,
-        to
+        to,
       });
     };
   }
@@ -367,17 +376,24 @@ class PerformanceMonitor {
     const summary: Record<string, any> = {};
 
     // Group metrics by type
-    const metricsByType = this.metrics.reduce((acc, metric) => {
-      const type = metric.metadata?.type || 'other';
-      if (!acc[type]) {acc[type] = [];}
-      acc[type].push(metric);
-      return acc;
-    }, {} as Record<string, PerformanceMetric[]>);
+    const metricsByType = this.metrics.reduce(
+      (acc, metric) => {
+        const type = metric.metadata?.type || 'other';
+        if (!acc[type]) {
+          acc[type] = [];
+        }
+        acc[type].push(metric);
+        return acc;
+      },
+      {} as Record<string, PerformanceMetric[]>
+    );
 
     // Calculate averages for each type
     Object.keys(metricsByType).forEach(type => {
       const metrics = metricsByType[type];
-      if (!metrics || metrics.length === 0) return;
+      if (!metrics || metrics.length === 0) {
+        return;
+      }
 
       const values = metrics.map(m => m.value);
       summary[type] = {
@@ -385,7 +401,7 @@ class PerformanceMonitor {
         average: values.reduce((a, b) => a + b, 0) / values.length,
         min: Math.min(...values),
         max: Math.max(...values),
-        latest: metrics[metrics.length - 1]
+        latest: metrics[metrics.length - 1],
       };
     });
 
@@ -398,8 +414,8 @@ class PerformanceMonitor {
   checkBudgets(): { passed: boolean; violations: string[] } {
     const budgets = {
       LCP: 2500, // Good: < 2.5s
-      FID: 100,  // Good: < 100ms
-      CLS: 0.1,  // Good: < 0.1
+      FID: 100, // Good: < 100ms
+      CLS: 0.1, // Good: < 0.1
       FCP: 1800, // Good: < 1.8s
       TTI: 3800, // Good: < 3.8s
     };
@@ -415,7 +431,7 @@ class PerformanceMonitor {
 
     return {
       passed: violations.length === 0,
-      violations
+      violations,
     };
   }
 
@@ -423,19 +439,25 @@ class PerformanceMonitor {
    * Export metrics for analysis
    */
   exportMetrics(): string {
-    return JSON.stringify({
-      timestamp: new Date().toISOString(),
-      metrics: this.metrics,
-      summary: this.getSummary(),
-      budgets: this.checkBudgets()
-    }, null, 2);
+    return JSON.stringify(
+      {
+        timestamp: new Date().toISOString(),
+        metrics: this.metrics,
+        summary: this.getSummary(),
+        budgets: this.checkBudgets(),
+      },
+      null,
+      2
+    );
   }
 
   /**
    * Initialize all monitoring
    */
   initializeMonitoring() {
-    if (typeof window === 'undefined') {return;}
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     this.measureWebVitals();
     this.measurePageLoad();
@@ -503,7 +525,7 @@ export function usePerformanceMonitor(componentName: string) {
   const cleanup = () => {
     const duration = performance.now() - startTime;
     performanceMonitor.record(`Component: ${componentName}`, duration, {
-      type: 'component-render'
+      type: 'component-render',
     });
   };
 
@@ -511,4 +533,3 @@ export function usePerformanceMonitor(componentName: string) {
 }
 
 export default performanceMonitor;
-
