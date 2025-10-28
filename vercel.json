@@ -5,40 +5,22 @@
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
+    // Keep your API rewrite (though often optional)
     {
       "source": "/api/:path*",
       "destination": "/api/:path*"
+    },
+    // Add the SPA fallback rewrite
+    {
+      "source": "/((?!api/|assets/).*)", // Match anything NOT starting with /api/ or /assets/
+      "destination": "/index.html"      // Serve the main HTML file
     }
   ],
   "headers": [
+    // Keep your existing headers for caching and security
+    // BUT REMOVE THE MANUAL Content-Type HEADERS for JS/CSS
     {
-      "source": "/assets/(.*)\\.css",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "text/css; charset=utf-8"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/assets/(.*)\\.js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript; charset=utf-8"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
+      "source": "/assets/(.*)", // General rule for assets
       "headers": [
         {
           "key": "Cache-Control",
@@ -46,24 +28,8 @@
         }
       ]
     },
-    {
-      "source": "/(.*)\\.css",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "text/css; charset=utf-8"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)\\.js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript; charset=utf-8"
-        }
-      ]
-    },
+    // Remove specific JS/CSS Content-Type headers here...
+    // Keep the global security headers
     {
       "source": "/(.*)",
       "headers": [
@@ -79,6 +45,7 @@
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
         }
+        // Add any other security headers you need
       ]
     }
   ]
