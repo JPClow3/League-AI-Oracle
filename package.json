@@ -48,6 +48,7 @@
     "@google/genai": "^1.15.0",
     "@sentry/react": "^10.22.0",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "dexie": "^4.0.7",
