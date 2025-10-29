@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -47,9 +47,6 @@ const App = () => {
 
   const [startLabTour, setStartLabTour] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-
-  // One ref object to hold refs for all pages
-  const pageRefs = useRef<{ [key: string]: React.RefObject<HTMLDivElement> }>({});
 
   // Apply theme to the document
   useEffect(() => {
@@ -305,7 +302,6 @@ const App = () => {
         <ErrorBoundary>
           <Router
             currentPage={currentPage}
-            pageRefs={pageRefs}
             setCurrentPage={setCurrentPage}
             navigateToArmory={navigateToArmory}
             startLabTour={startLabTour}

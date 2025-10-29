@@ -54,20 +54,20 @@
         --border: 220 12% 23%;        /* #313843 */
         --border-primary: 220 12% 23%;
         --border-secondary: 220 10% 30%; /* #454852 */
-        
+
         --text-primary: 216 25% 95%;   /* #F0F2F7 */
         --text-secondary: 215 16% 68%; /* #A0AEC0 */
         --text-muted: 215 15% 44%;     /* #646C7B */
-        
+
         --accent: 42 70% 55%;         /* #C89B3C (Hextech Gold) */
         --on-accent: 220 33% 5%;      /* #0A0B0F */
         --secondary-accent: 195 90% 45%; /* #0BC4E2 (Piltover Blue) */
-        
+
         --info: 195 90% 45%;
         --success: 135 60% 45%;
         --warning: 38 92% 50%;
         --error: 354 70% 54%;
-        
+
         --team-blue: 205 100% 50%;
         --team-red: 0 85% 55%;
 
@@ -94,7 +94,7 @@
         --accent: 42 100% 36%;        /* #B8860B (Dark Gold for contrast) */
         --on-accent: 0 0% 100%;       /* #FFFFFF */
         --secondary-accent: 190 100% 28%; /* #007A8D (Dark Blue for contrast) */
-        
+
         --info: 190 100% 28%;
         --success: 135 60% 35%;
         --warning: 38 92% 45%;
@@ -113,21 +113,21 @@
         background-color: hsl(var(--bg-primary));
         color: hsl(var(--text-primary));
       }
-      
+
       .shadow-glow-accent {
         box-shadow: 0 0 15px 0px hsl(var(--accent) / 0.3), 0 0 5px 0px hsl(var(--accent) / 0.2);
       }
       .shadow-glow-info {
         box-shadow: 0 0 15px 0px hsl(var(--info) / 0.3), 0 0 5px 0px hsl(var(--info) / 0.2);
       }
-      
+
       @keyframes pulse-once {
         0% { box-shadow: 0 0 0 0 hsl(var(--accent) / 0.4); }
         70% { box-shadow: 0 0 0 10px hsl(var(--accent) / 0); }
         100% { box-shadow: 0 0 0 0 hsl(var(--accent) / 0); }
       }
       .animate-pulse-once { animation: pulse-once 1.2s ease-in-out; }
-      
+
       @keyframes mission-complete-glow {
         0% { box-shadow: 0 0 0 0 hsl(var(--accent) / 0.5), inset 0 0 0 0 hsl(var(--accent) / 0.3); }
         100% { box-shadow: 0 0 20px 10px hsl(var(--accent) / 0), inset 0 0 10px 5px hsl(var(--accent) / 0); }
@@ -146,7 +146,7 @@
         animation: scan-line 2.5s linear infinite;
         pointer-events: none;
       }
-      
+
       @keyframes bar-grow-anim {
         from { transform: scaleY(0); }
         to { transform: scaleY(1); }
@@ -158,7 +158,7 @@
         50% { filter: brightness(1.3); }
       }
       .animate-gentle-pulse { animation: gentle-pulse 2.5s ease-in-out infinite; }
-      
+
       /* Tour Spotlight */
       @keyframes tour-glow {
         0%, 100% { box-shadow: 0 0 0 9999px hsla(0, 0%, 0%, 0.7), 0 0 10px 5px hsl(var(--accent)); }
@@ -173,7 +173,7 @@
         pointer-events: none;
         animation: tour-glow 2s ease-in-out infinite;
       }
-      
+
       /* Page Transitions */
       .page-enter { opacity: 0; transform: translateY(10px); }
       .page-enter-active { opacity: 1; transform: translateY(0); transition: opacity 300ms, transform 300ms; }
@@ -215,7 +215,7 @@
       .analyzing-glow {
         animation: scanner-border 1.5s ease-in-out infinite;
       }
-      
+
       /* New Hextech Loader Animations */
       @keyframes rotate-outer {
         from { transform: rotate(0deg); }

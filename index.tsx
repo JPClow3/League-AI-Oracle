@@ -1,3 +1,4 @@
+import './styles/ui-utilities.css';
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
@@ -40,7 +41,7 @@ function Root() {
           console.warn('IndexedDB not supported. Some features may be limited.');
           logger.warn('IndexedDB not supported', { userAgent: navigator.userAgent });
         }
-        
+
         console.log('✅ All services initialized');
         setIsInitialized(true);
       } catch (error) {
@@ -64,13 +65,15 @@ function Root() {
 
   if (!isInitialized) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        height: '100vh',
-        fontSize: '1.2rem'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          fontSize: '1.2rem',
+        }}
+      >
         Loading...
       </div>
     );
@@ -97,7 +100,7 @@ function Root() {
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  throw new Error('Could not find root element to mount to');
 }
 
 const root = ReactDOM.createRoot(rootElement);
