@@ -104,23 +104,8 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
-    css: {
-      postcss: {
-        plugins: [
-          {
-            postcssPlugin: 'add-shimmer-keyframes',
-            Once(root) {
-              root.append(`
-                  @keyframes shimmer {
-                    0% { background-position: 200% 0; }
-                    100% { background-position: -200% 0; }
-                  }
-                `);
-            },
-          },
-        ],
-      },
-    },
+    // Ensure base path is root for Vercel deployment
+    base: '/',
     build: {
       rollupOptions: {
         output: {
