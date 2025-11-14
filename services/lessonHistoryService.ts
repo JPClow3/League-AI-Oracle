@@ -161,7 +161,7 @@ export const getRecentLessons = getHistory;
  */
 export const getCachedLesson = async (topic: string): Promise<LessonHistoryEntry | null> => {
   const results = await searchHistory(topic);
-  return results.length > 0 ? results[0] : null;
+  return results[0] ?? null;
 };
 
 /**

@@ -141,7 +141,7 @@ export default defineConfig(() => {
       },
       chunkSizeWarningLimit: 1000,
       sourcemap: false,
-      minify: 'terser',
+      minify: 'terser' as const,
       terserOptions: {
         compress: {
           drop_console: true,

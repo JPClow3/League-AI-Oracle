@@ -1,0 +1,50 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    './index.html',
+    './index.tsx',
+    './App.tsx',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './hooks/**/*.{js,ts,jsx,tsx}',
+    './contexts/**/*.{js,ts,jsx,tsx}',
+    './lib/**/*.{js,ts,jsx,tsx}',
+    './services/**/*.{js,ts,jsx,tsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        'bg-primary': 'hsl(var(--bg-primary) / <alpha-value>)',
+        'bg-secondary': 'hsl(var(--bg-secondary) / <alpha-value>)',
+        surface: 'hsl(var(--surface) / <alpha-value>)',
+        'surface-secondary': 'hsl(var(--surface-secondary) / <alpha-value>)',
+        'surface-tertiary': 'hsl(var(--surface-tertiary) / <alpha-value>)',
+        'surface-inset': 'hsl(var(--surface-inset) / <alpha-value>)',
+        border: 'hsl(var(--border) / <alpha-value>)',
+        'border-primary': 'hsl(var(--border-primary) / <alpha-value>)',
+        'border-secondary': 'hsl(var(--border-secondary) / <alpha-value>)',
+        'text-primary': 'hsl(var(--text-primary) / <alpha-value>)',
+        'text-secondary': 'hsl(var(--text-secondary) / <alpha-value>)',
+        'text-muted': 'hsl(var(--text-muted) / <alpha-value>)',
+        accent: 'hsl(var(--accent) / <alpha-value>)',
+        'on-accent': 'hsl(var(--on-accent) / <alpha-value>)',
+        'secondary-accent': 'hsl(var(--secondary-accent) / <alpha-value>)',
+        info: 'hsl(var(--info) / <alpha-value>)',
+        success: 'hsl(var(--success) / <alpha-value>)',
+        warning: 'hsl(var(--warning) / <alpha-value>)',
+        error: 'hsl(var(--error) / <alpha-value>)',
+        'team-blue': 'hsl(var(--team-blue) / <alpha-value>)',
+        'team-red': 'hsl(var(--team-red) / <alpha-value>)',
+        // Aliases
+        gold: 'hsl(var(--accent) / <alpha-value>)',
+        'gold-bright': 'hsl(var(--accent) / <alpha-value>)',
+        'on-gold': 'hsl(var(--on-accent) / <alpha-value>)',
+        turquoise: 'hsl(var(--secondary-accent) / <alpha-value>)',
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        display: ['Teko', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+};

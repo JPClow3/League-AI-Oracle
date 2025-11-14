@@ -11,7 +11,7 @@ export const Tooltip = ({ content, children, delay = 300 }: TooltipProps) => {
   const tooltipId = useId();
   const [isVisible, setIsVisible] = useState(false);
   const [style, setStyle] = useState<React.CSSProperties>({});
-  const targetRef = useRef<HTMLElement>(null);
+  const targetRef = useRef<HTMLElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const showTimeout = useRef<number | null>(null);
 
