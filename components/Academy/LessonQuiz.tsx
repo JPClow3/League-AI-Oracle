@@ -17,7 +17,7 @@ interface LessonQuizProps {
   onComplete: (score: number) => void;
 }
 
-export const LessonQuiz = ({ lessonId, lessonTitle, questions, onComplete }: LessonQuizProps) => {
+export const LessonQuiz = ({ questions, onComplete }: LessonQuizProps) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -238,51 +238,4 @@ export const LessonQuiz = ({ lessonId, lessonTitle, questions, onComplete }: Les
       </AnimatePresence>
     </div>
   );
-};
-
-/**
- * Generate quiz questions from lesson content using AI
- * Note: This is a placeholder implementation. In production, use Gemini API to generate contextual questions.
- */
-export const generateQuizQuestions = (lessonContent: string, lessonTopic: string): QuizQuestion[] => {
-  // Placeholder implementation with generic questions
-  // TODO: Replace with actual AI generation using Gemini API
-
-  const genericQuestions: QuizQuestion[] = [
-    {
-      question: `Based on the lesson "${lessonTopic}", what is the most important factor to consider?`,
-      options: [
-        'Champion mechanics and skill expression',
-        'Understanding the strategic context and game state',
-        'Individual player skill ratings',
-        'Random chance and luck',
-      ],
-      correctAnswer: 1,
-      explanation: 'Strategic understanding of game context is crucial for applying any League concept effectively.',
-    },
-    {
-      question: 'When should you apply the concepts from this lesson?',
-      options: [
-        'Only in ranked games',
-        'Throughout the entire game when relevant',
-        'Only during the late game',
-        'Only when you are ahead',
-      ],
-      correctAnswer: 1,
-      explanation: 'Most strategic concepts are applicable throughout the game when the situation calls for them.',
-    },
-    {
-      question: 'What is the key to improving at League of Legends?',
-      options: [
-        'Playing as many games as possible',
-        'Blaming teammates for mistakes',
-        'Understanding concepts and applying them consistently',
-        'Only playing meta champions',
-      ],
-      correctAnswer: 2,
-      explanation: 'Consistent application of strategic concepts leads to long-term improvement.',
-    },
-  ];
-
-  return genericQuestions;
 };

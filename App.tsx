@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import type { Page, DraftState } from './types';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
@@ -28,6 +26,7 @@ import { analytics } from './lib/analytics';
 import * as storageService from './services/storageService';
 import { performanceMonitor } from './lib/performanceMonitor';
 import { logAccessibilityAudit } from './lib/accessibility';
+import { useState, useEffect, useCallback } from 'react';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<Page>('Home');
@@ -155,7 +154,7 @@ const App = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setIsCommandPaletteOpen(prev => !prev);
+        setIsCommandPaletteOpen((prev: boolean) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);

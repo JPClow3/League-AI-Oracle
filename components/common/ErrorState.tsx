@@ -144,8 +144,6 @@ export const PermissionDenied = ({ onGoBack }: { onGoBack: () => void }) => (
  * Use these to show content placeholders during loading states
  */
 
-import React from 'react';
-
 interface SkeletonProps {
   className?: string;
 }
