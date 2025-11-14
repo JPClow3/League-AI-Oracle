@@ -62,7 +62,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   // Load settings on initial mount and listen for cross-tab changes
   useEffect(() => {
     // Use setTimeout to avoid setState in effect
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       loadSettings();
     }, 0);
 
@@ -79,7 +79,10 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [loadSettings]);
 
   // Save settings whenever they change
