@@ -48,7 +48,8 @@ export default async function handler(req, res) {
     }
 
     // Call Gemini API
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
+    // ✅ SECURITY FIX: API key in header, not URL
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
     const requestBody = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -73,7 +74,10 @@ export default async function handler(req, res) {
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': API_KEY, // ✅ Use header instead of URL param
+        },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
@@ -91,7 +95,7 @@ export default async function handler(req, res) {
           });
         }
 
-        if (response.status === 403 || response.status === 429) {
+        if (response.status === 403) {
           return res.status(503).json({
             error: 'AI service temporarily unavailable. Please try again in a few minutes.',
             type: 'quota_exceeded',

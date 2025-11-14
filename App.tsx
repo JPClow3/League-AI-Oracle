@@ -286,6 +286,7 @@ const App = () => {
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-error text-white rounded hover:bg-error/80 transition-colors"
+              aria-label="Reload page to retry loading champion data"
             >
               Reload Page
             </button>

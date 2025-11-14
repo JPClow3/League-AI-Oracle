@@ -9,21 +9,21 @@ import { ModalProvider } from './hooks/useModals';
 import { DraftProvider } from './contexts/DraftContext';
 import { ChampionProvider } from './contexts/ChampionContext';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { Loader } from './components/common/Loader';
+import { Button } from './components/common/Button';
 import { isIndexedDBSupported } from './lib/indexedDb';
 import { logger } from './lib/logger';
 import { featureFlags } from './lib/featureFlags';
 import { offlineService } from './lib/offlineService';
 import { analytics } from './lib/analytics';
 
-function Root() {
+export function Root() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     async function initialize() {
       try {
-        console.log('🚀 Initializing League AI Oracle...');
-
         // Initialize logging service
         logger.initialize();
 
@@ -42,7 +42,6 @@ function Root() {
           logger.warn('IndexedDB not supported', { userAgent: navigator.userAgent });
         }
 
-        console.log('✅ All services initialized');
         setIsInitialized(true);
       } catch (error) {
         console.error('Initialization failed:', error);
@@ -55,26 +54,22 @@ function Root() {
 
   if (initError) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Initialization Error</h1>
-        <p>{initError}</p>
-        <button onClick={() => window.location.reload()}>Reload</button>
+      <div className="flex items-center justify-center min-h-screen bg-[hsl(var(--bg-primary))] p-4">
+        <div className="text-center bg-[hsl(var(--error)_/_0.1)] p-8 border border-[hsl(var(--error)_/_0.2)] text-[hsl(var(--error))] max-w-md rounded-lg">
+          <h1 className="text-2xl font-bold mb-4">Initialization Error</h1>
+          <p className="mb-4 text-[hsl(var(--text-secondary))]">{initError}</p>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            Reload Page
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (!isInitialized) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          fontSize: '1.2rem',
-        }}
-      >
-        Loading...
+      <div className="flex items-center justify-center min-h-screen bg-[hsl(var(--bg-primary))]">
+        <Loader messages={['Initializing services...', 'Loading application...']} />
       </div>
     );
   }
