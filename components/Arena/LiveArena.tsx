@@ -92,11 +92,11 @@ const ArenaResults = ({
         </div>
       </div>
       <p className="text-text-secondary my-4 max-w-md mx-auto">
-        Review the final compositions below, save to your Playbook, or send to the Draft Lab for a full AI analysis.
+        Review the final compositions below, save to your Archives, or send to Strategy Forge for a full AI analysis.
       </p>
       <div className="flex flex-wrap justify-center gap-4">
         <Button onClick={onNavigateToForge} variant="primary">
-          Analyze in Lab
+          Analyze in Strategy Forge
         </Button>
         <Button onClick={onReset} variant="secondary">
           New Arena Draft
@@ -415,7 +415,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
         {isDraftStarted && (
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setIsSaveModalOpen(true)} variant="secondary" disabled={!draftFinished}>
-              Save to The Archives
+              Save to Archives
             </Button>
             <Button onClick={handleReset} variant="danger">
               Reset

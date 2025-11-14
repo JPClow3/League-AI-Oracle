@@ -25,10 +25,10 @@ const shortcuts: Shortcut[] = [
   { keys: ['↓'], description: 'Next command', category: 'Command Palette' },
   { keys: ['Enter'], description: 'Execute command', category: 'Command Palette' },
 
-  // Draft Lab
-  { keys: ['Enter'], description: 'Select champion slot', category: 'Draft Lab' },
-  { keys: ['Space'], description: 'Select champion slot', category: 'Draft Lab' },
-  { keys: ['Drag'], description: 'Reorder champions', category: 'Draft Lab' },
+  // Strategy Forge
+  { keys: ['Enter'], description: 'Select champion slot', category: 'Strategy Forge' },
+  { keys: ['Space'], description: 'Select champion slot', category: 'Strategy Forge' },
+  { keys: ['Drag'], description: 'Reorder champions', category: 'Strategy Forge' },
 
   // General
   { keys: ['?'], description: 'Show keyboard shortcuts', category: 'General' },
@@ -38,15 +38,22 @@ const KeyBadge = ({ keyLabel }: { keyLabel: string }) => {
   const isSpecial = ['Ctrl', 'Shift', 'Alt', 'Cmd', 'Enter', 'Space', 'Tab', 'Esc'].includes(keyLabel);
 
   return (
-    <kbd className={`inline-flex items-center justify-center min-w-[2rem] h-7 px-2 text-xs font-semibold rounded border shadow-sm ${
-      isSpecial 
-        ? 'bg-[hsl(var(--accent)_/_0.1)] border-[hsl(var(--accent))] text-[hsl(var(--accent))]' 
-        : 'bg-[hsl(var(--surface-secondary))] border-[hsl(var(--border))] text-[hsl(var(--text-primary))]'
-    }`}>
-      {keyLabel === '↑' ? <ArrowUp size={14} /> :
-       keyLabel === '↓' ? <ArrowDown size={14} /> :
-       keyLabel === 'Drag' ? '🖱️' :
-       keyLabel}
+    <kbd
+      className={`inline-flex items-center justify-center min-w-[2rem] h-7 px-2 text-xs font-semibold rounded border shadow-sm ${
+        isSpecial
+          ? 'bg-[hsl(var(--accent)_/_0.1)] border-[hsl(var(--accent))] text-[hsl(var(--accent))]'
+          : 'bg-[hsl(var(--surface-secondary))] border-[hsl(var(--border))] text-[hsl(var(--text-primary))]'
+      }`}
+    >
+      {keyLabel === '↑' ? (
+        <ArrowUp size={14} />
+      ) : keyLabel === '↓' ? (
+        <ArrowDown size={14} />
+      ) : keyLabel === 'Drag' ? (
+        '🖱️'
+      ) : (
+        keyLabel
+      )}
     </kbd>
   );
 };
@@ -60,9 +67,7 @@ export const KeyboardShortcutsModal = ({ isOpen, onClose }: KeyboardShortcutsMod
         <div className="mb-6 p-4 bg-[hsl(var(--surface-secondary))] border border-[hsl(var(--border))] rounded-lg">
           <div className="flex items-center gap-2 text-[hsl(var(--text-secondary))]">
             <Keyboard size={20} />
-            <p className="text-sm">
-              Use these keyboard shortcuts to navigate faster and boost your productivity!
-            </p>
+            <p className="text-sm">Use these keyboard shortcuts to navigate faster and boost your productivity!</p>
           </div>
         </div>
 
@@ -81,9 +86,7 @@ export const KeyboardShortcutsModal = ({ isOpen, onClose }: KeyboardShortcutsMod
                       key={idx}
                       className="flex items-center justify-between p-3 bg-[hsl(var(--surface))] hover:bg-[hsl(var(--surface-secondary))] border border-[hsl(var(--border))] rounded-md transition-colors"
                     >
-                      <span className="text-[hsl(var(--text-secondary))] text-sm">
-                        {shortcut.description}
-                      </span>
+                      <span className="text-[hsl(var(--text-secondary))] text-sm">{shortcut.description}</span>
                       <div className="flex items-center gap-1">
                         {shortcut.keys.map((key, keyIdx) => (
                           <React.Fragment key={keyIdx}>
@@ -110,4 +113,3 @@ export const KeyboardShortcutsModal = ({ isOpen, onClose }: KeyboardShortcutsMod
     </Modal>
   );
 };
-

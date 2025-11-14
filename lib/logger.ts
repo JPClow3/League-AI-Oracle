@@ -166,7 +166,7 @@ class LoggingService {
    */
   startSpan(name: string, operation: string) {
     if (this.isInitialized) {
-      return Sentry.startSpan({ name, op: operation }, (span) => span);
+      return Sentry.startSpan({ name, op: operation }, span => span);
     }
     return null;
   }
@@ -174,28 +174,14 @@ class LoggingService {
   /**
    * Measure performance of a function
    */
-  async measurePerformance<T>(
-    name: string,
-    operation: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
+  async measurePerformance<T>(name: string, operation: string, fn: () => Promise<T>): Promise<T> {
     if (!this.isInitialized) {
       return await fn();
     }
 
-    return await Sentry.startSpan(
-      { name, op: operation },
-      async () => {
-        try {
-          return await fn();
-        } catch (error) {
-          throw error;
-        }
-      }
-    );
+    return await Sentry.startSpan({ name, op: operation }, fn);
   }
 }
 
 // Export singleton instance
 export const logger = new LoggingService();
-

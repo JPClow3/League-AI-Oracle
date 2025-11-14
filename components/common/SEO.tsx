@@ -15,7 +15,8 @@ interface SEOProps {
 
 const DEFAULT_SEO = {
   title: 'League AI Oracle - Smart Draft Analysis & Strategy Tool',
-  description: 'Master League of Legends draft phase with AI-powered analysis, champion recommendations, and team composition insights. Perfect your strategy and climb the ranks.',
+  description:
+    'Master League of Legends draft phase with AI-powered analysis, champion recommendations, and team composition insights. Perfect your strategy and climb the ranks.',
   keywords: [
     'league of legends',
     'lol draft',
@@ -108,9 +109,9 @@ export const HomeSEO = () => (
 
 export const DraftLabSEO = () => (
   <SEO
-    title="Draft Lab"
+    title="Strategy Forge"
     description="Build and analyze your perfect League of Legends team composition. Get AI-powered suggestions for picks, bans, and synergies."
-    keywords={[...DEFAULT_SEO.keywords, 'draft lab', 'team builder', 'composition']}
+    keywords={[...DEFAULT_SEO.keywords, 'strategy forge', 'draft lab', 'team builder', 'composition']}
   />
 );
 
@@ -124,7 +125,7 @@ export const ArenaSEO = () => (
 
 export const PlaybookSEO = () => (
   <SEO
-    title="Playbook"
+    title="Archives"
     description="Browse and create champion strategies and team compositions. Save your favorite drafts and share with your team."
     keywords={[...DEFAULT_SEO.keywords, 'playbook', 'strategies', 'guides']}
   />
@@ -145,4 +146,3 @@ export const AcademySEO = () => (
     keywords={[...DEFAULT_SEO.keywords, 'academy', 'lessons', 'learn', 'tutorial']}
   />
 );
-

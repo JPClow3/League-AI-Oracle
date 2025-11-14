@@ -65,7 +65,7 @@ const App = () => {
     }
 
     // Clear Armory search/tab when leaving Armory
-    if (currentPage !== 'The Armory') {
+    if (currentPage !== 'Armory') {
       if (strategyHubInitialSearch !== null || strategyHubInitialTab !== 'champions') {
         setTimeout(() => {
           setStrategyHubInitialTab('champions');
@@ -169,7 +169,7 @@ const App = () => {
 
   const navigateToArmory = (tab: 'champions' | 'intel') => {
     setStrategyHubInitialTab(tab);
-    setCurrentPage('The Armory');
+    setCurrentPage('Armory');
   };
 
   const loadDraftAndNavigate = (draft: DraftState) => {

@@ -30,7 +30,7 @@ interface EmptyStateProps {
  *   title="No Strategies Yet"
  *   description="Save your first draft analysis to build your playbook!"
  *   action={{
- *     text: "Go to Draft Lab",
+ *     text: "Go to Strategy Forge",
  *     onClick: () => navigate('Strategy Forge')
  *   }}
  * />

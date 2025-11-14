@@ -42,7 +42,7 @@ export const usePlaybook = () => {
       } catch (error) {
         console.error('Failed to load playbook from IndexedDB:', error);
         if (isMounted) {
-          toast.error('Could not load The Archives data.');
+          toast.error('Could not load Archives data.');
         }
       } finally {
         if (isMounted) {
@@ -134,7 +134,7 @@ export const usePlaybook = () => {
         toast.success('Strategic Dossier generated!');
         addSP(50, 'Archived Lab Strategy'); // Award SP for successful lab save + dossier
       } else {
-        toast.success(`Strategy "${name}" saved to The Archives.`);
+        toast.success(`Strategy "${name}" saved to Archives.`);
         addSP(25, 'Saved Arena Draft');
       }
 

@@ -100,7 +100,7 @@ export default async function handler(req, res) {
           return res.end();
         }
 
-        if (response.status === 403 || response.status === 429) {
+        if (response.status === 403) {
           res.write(
             `data: ${JSON.stringify({ error: 'AI service temporarily unavailable. Please try again in a few minutes.', type: 'quota_exceeded' })}\n\n`
           );

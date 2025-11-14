@@ -66,7 +66,7 @@ export const Router = (props: RouterProps) => {
         );
       case 'Live Co-Pilot':
         return (
-          <FeatureErrorBoundary componentName="Live Draft" onReset={props.resetLiveDraft}>
+          <FeatureErrorBoundary componentName="Live Co-Pilot" onReset={props.resetLiveDraft}>
             <LiveDraft
               draftState={props.liveDraftState}
               setDraftState={props.setLiveDraftState}
@@ -85,9 +85,9 @@ export const Router = (props: RouterProps) => {
             />
           </FeatureErrorBoundary>
         );
-      case 'The Archives':
+      case 'Archives':
         return (
-          <FeatureErrorBoundary componentName="Playbook">
+          <FeatureErrorBoundary componentName="Archives">
             <Playbook
               onLoadDraft={props.loadDraftAndNavigate}
               setCurrentPage={props.setCurrentPage}
@@ -105,9 +105,9 @@ export const Router = (props: RouterProps) => {
             />
           </FeatureErrorBoundary>
         );
-      case 'The Armory':
+      case 'Armory':
         return (
-          <FeatureErrorBoundary componentName="Strategy Hub">
+          <FeatureErrorBoundary componentName="Armory">
             <StrategyHub
               initialTab={props.strategyHubInitialTab}
               initialSearchTerm={props.strategyHubInitialSearch}
@@ -119,7 +119,7 @@ export const Router = (props: RouterProps) => {
             />
           </FeatureErrorBoundary>
         );
-      case 'The Oracle':
+      case 'Oracle':
         return (
           <FeatureErrorBoundary componentName="Meta Oracle">
             <MetaOracle />
@@ -127,7 +127,7 @@ export const Router = (props: RouterProps) => {
         );
       case 'Daily Challenge':
         return (
-          <FeatureErrorBoundary componentName="Daily Trial">
+          <FeatureErrorBoundary componentName="Daily Challenge">
             <DailyTrial navigateToAcademy={props.navigateToAcademy} />
           </FeatureErrorBoundary>
         );
