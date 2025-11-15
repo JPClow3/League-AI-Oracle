@@ -11,12 +11,19 @@ interface SEOProps {
   author?: string;
   publishedTime?: string;
   modifiedTime?: string;
+  jsonLd?: Record<string, unknown>;
 }
+
+const IS_PREVIEW =
+  import.meta.env.VERCEL_ENV === 'preview' ||
+  import.meta.env.VITE_VERCEL_ENV === 'preview';
+
+const DEFAULT_URL = 'https://league-ai-oracle.vercel.app';
 
 const DEFAULT_SEO = {
   title: 'League AI Oracle - Smart Draft Analysis & Strategy Tool',
   description:
-    'Master League of Legends draft phase with AI-powered analysis, champion recommendations, and team composition insights. Perfect your strategy and climb the ranks.',
+    'Master the League of Legends draft phase with AI-powered analysis, champion recommendations, and team composition insights.',
   keywords: [
     'league of legends',
     'lol draft',
@@ -29,14 +36,10 @@ const DEFAULT_SEO = {
     'counter picks',
     'meta',
   ],
-  image: '/og-image.png',
-  url: 'https://league-ai-oracle.app',
+  image: `${DEFAULT_URL}/og-image.png`,
+  url: DEFAULT_URL,
 };
 
-/**
- * SEO Component
- * Manages meta tags for better discoverability
- */
 export const SEO: React.FC<SEOProps> = ({
   title,
   description,
@@ -47,6 +50,7 @@ export const SEO: React.FC<SEOProps> = ({
   author,
   publishedTime,
   modifiedTime,
+  jsonLd,
 }) => {
   const seo = {
     title: title ? `${title} | League AI Oracle` : DEFAULT_SEO.title,
@@ -64,37 +68,37 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="keywords" content={seo.keywords.join(', ')} />
       {author && <meta name="author" content={author} />}
 
-      {/* Open Graph (Facebook, LinkedIn) */}
+      {/* Canonical */}
+      <link rel="canonical" href={seo.url} />
+
+      {/* Indexing behavior */}
+      <meta
+        name="robots"
+        content={IS_PREVIEW ? 'noindex, nofollow' : 'index, follow'}
+      />
+
+      {/* Open Graph */}
       <meta property="og:type" content={type} />
       <meta property="og:title" content={seo.title} />
       <meta property="og:description" content={seo.description} />
       <meta property="og:image" content={seo.image} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta property="og:url" content={seo.url} />
       <meta property="og:site_name" content="League AI Oracle" />
-      {publishedTime && <meta property="article:published_time" content={publishedTime} />}
-      {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
 
-      {/* Twitter Card */}
+      {publishedTime && (
+        <meta property="article:published_time" content={publishedTime} />
+      )}
+      {modifiedTime && (
+        <meta property="article:modified_time" content={modifiedTime} />
+      )}
+
+      {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={seo.title} />
       <meta name="twitter:description" content={seo.description} />
       <meta name="twitter:image" content={seo.image} />
-
-      {/* Additional SEO */}
-      {/* Only block indexing on preview deployments, allow indexing in production */}
-      {/* Vercel sets VERCEL_ENV to 'preview' for preview deployments */}
-      <meta
-        name="robots"
-        content={
-          typeof window !== 'undefined' &&
-          (import.meta.env.VERCEL_ENV === 'preview' || import.meta.env.VITE_VERCEL_ENV === 'preview')
-            ? 'noindex, nofollow'
-            : 'index, follow'
-        }
-      />
-      <meta name="language" content="English" />
-      <meta name="revisit-after" content="7 days" />
-      <link rel="canonical" href={seo.url} />
 
       {/* Mobile Optimization */}
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -105,22 +109,42 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content="League AI Oracle" />
+
+      {/* JSON-LD */}
+      {jsonLd && (
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
+      )}
     </Helmet>
   );
 };
 
-// Pre-configured SEO for common pages
+// ------------------------------------------------------
+// Pre-configured SEO pages
+// ------------------------------------------------------
+
 export const HomeSEO = () => (
   <SEO
     title="Home"
     description="Master your League of Legends draft phase with AI-powered insights. Get champion recommendations, analyze team compositions, and dominate the meta."
+    jsonLd={{
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: "League AI Oracle",
+      url: DEFAULT_URL,
+      description:
+        "AI-powered League of Legends draft analysis and team composition insights.",
+      applicationCategory: "GameApplication",
+      operatingSystem: "Any",
+    }}
   />
 );
 
 export const DraftLabSEO = () => (
   <SEO
     title="Strategy Forge"
-    description="Build and analyze your perfect League of Legends team composition. Get AI-powered suggestions for picks, bans, and synergies."
+    description="Build and analyze your perfect League of Legends team composition with AI-powered synergy and counter insights."
     keywords={[...DEFAULT_SEO.keywords, 'strategy forge', 'draft lab', 'team builder', 'composition']}
   />
 );
@@ -128,7 +152,7 @@ export const DraftLabSEO = () => (
 export const ArenaSEO = () => (
   <SEO
     title="Arena Mode"
-    description="Practice your draft strategy in real-time with Arena Mode. Compete against AI or friends in full draft simulations."
+    description="Practice draft strategy in real-time with AI or friends in full LoL draft simulations."
     keywords={[...DEFAULT_SEO.keywords, 'arena', 'practice', 'simulation']}
   />
 );
@@ -136,7 +160,7 @@ export const ArenaSEO = () => (
 export const PlaybookSEO = () => (
   <SEO
     title="Archives"
-    description="Browse and create champion strategies and team compositions. Save your favorite drafts and share with your team."
+    description="Browse and create champion strategies, save drafts, and share compositions."
     keywords={[...DEFAULT_SEO.keywords, 'playbook', 'strategies', 'guides']}
   />
 );
@@ -144,7 +168,7 @@ export const PlaybookSEO = () => (
 export const MetaOracleSEO = () => (
   <SEO
     title="Meta Oracle"
-    description="Stay ahead of the meta with AI-analyzed trends, champion tier lists, and patch insights for League of Legends."
+    description="Stay ahead of the League of Legends meta with AI-analyzed trends, champion tiers, and patch insights."
     keywords={[...DEFAULT_SEO.keywords, 'meta', 'tier list', 'trends', 'patch notes']}
   />
 );
@@ -152,7 +176,7 @@ export const MetaOracleSEO = () => (
 export const AcademySEO = () => (
   <SEO
     title="Academy"
-    description="Learn draft fundamentals, advanced strategies, and team composition theory with interactive lessons."
+    description="Learn draft fundamentals and advanced strategies with interactive lessons."
     keywords={[...DEFAULT_SEO.keywords, 'academy', 'lessons', 'learn', 'tutorial']}
   />
 );
