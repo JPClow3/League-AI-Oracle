@@ -22,6 +22,7 @@ export interface Settings {
   primaryRole: string;
   secondaryRole: string;
   favoriteChampions: string[]; // Champion IDs
+  recentChampions: string[]; // Champion IDs, most recent first
   language: 'en' | 'pt';
   enableSound: boolean;
   dashboardCards: DashboardCardSetting[];

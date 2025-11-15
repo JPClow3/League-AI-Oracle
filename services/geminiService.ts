@@ -21,6 +21,17 @@ import type {
 } from '../types';
 import { STRATEGIC_PRIMER } from '../data/strategyInsights';
 import { cacheService } from './cacheService';
+import {
+  AIAdviceSchema,
+  BotDraftActionSchema,
+  TeamBuilderSuggestionSchema,
+  TrialQuestionSchema,
+  GroundedAnswerSchema,
+  StructuredTierListSchema,
+  safeValidateResponse,
+  StructuredPatchNotesSchema,
+  validateResponse,
+} from '../lib/apiValidation';
 
 // Determine proxy URL based on environment
 // In production (Vercel), API routes are at /api
@@ -28,6 +39,17 @@ import { cacheService } from './cacheService';
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Simple hash function for string deduplication
+const hashString = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+};
 
 // ============================================================================
 // REQUEST QUEUE MANAGEMENT
@@ -47,14 +69,34 @@ class RequestQueue {
   private activeRequests = 0;
   private readonly MIN_DELAY_MS = 200; // Minimum delay between requests
   private lastRequestTime = 0;
+  // Request deduplication: track pending requests by key
+  private pendingRequests = new Map<string, Promise<any>>();
 
-  async enqueue<T>(execute: () => Promise<T>, priority: number = 0): Promise<T> {
-    return new Promise((resolve, reject) => {
+  async enqueue<T>(execute: () => Promise<T>, priority: number = 0, key?: string): Promise<T> {
+    // If key is provided and request is already pending, return existing promise
+    if (key && this.pendingRequests.has(key)) {
+      console.debug(`[RequestQueue] Deduplicating request: ${key}`);
+      return this.pendingRequests.get(key) as Promise<T>;
+    }
+
+    // Create the promise that will execute the request
+    const promise = new Promise<T>((resolve, reject) => {
       this.queue.push({ execute, resolve, reject, priority });
       // Sort by priority (higher first)
       this.queue.sort((a, b) => b.priority - a.priority);
       this.processQueue();
     });
+
+    // Store in pending map if key provided
+    if (key) {
+      this.pendingRequests.set(key, promise);
+      // Remove from map when promise settles (success or failure)
+      promise.finally(() => {
+        this.pendingRequests.delete(key);
+      });
+    }
+
+    return promise;
   }
 
   private async processQueue(): Promise<void> {
@@ -283,34 +325,95 @@ const callGemini = async (
     throw new DOMException('Aborted', 'AbortError');
   }
 
-  // Use request queue to prevent overwhelming the API
-  return requestQueue.enqueue(async () => {
-    if (signal.aborted) {
-      throw new DOMException('Aborted', 'AbortError');
-    }
+  // Generate a key for request deduplication based on request parameters
+  // Use a hash of the prompt and model to identify identical requests
+  const requestKey = `gemini_${model}_${isJson ? 'json' : 'text'}_${useSearch ? 'search' : 'no-search'}_${hashString(prompt)}`;
 
-    let response: Response | undefined;
-    let data: any;
-
-    try {
-      response = await fetch(`${PROXY_URL}/api/gemini`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, model, isJson, useSearch }),
-        signal,
-      });
-
+  // Use request queue to prevent overwhelming the API with deduplication
+  return requestQueue.enqueue(
+    async () => {
       if (signal.aborted) {
         throw new DOMException('Aborted', 'AbortError');
       }
 
-      data = await response.json();
+      let response: Response | undefined;
+      let data: any;
 
-      if (!response.ok) {
-        const errorType = classifyError(data, response);
+      try {
+        response = await fetch(`${PROXY_URL}/api/gemini`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, model, isJson, useSearch }),
+          signal,
+        });
+
+        if (signal.aborted) {
+          throw new DOMException('Aborted', 'AbortError');
+        }
+
+        data = await response.json();
+
+        if (!response.ok) {
+          const errorType = classifyError(data, response);
+          const strategy = RETRY_STRATEGIES[errorType];
+
+          // Check if we should retry
+          if (strategy.shouldRetry && retryCount < strategy.maxRetries) {
+            const retryDelay = getRetryDelay(errorType, retryCount);
+            console.debug(
+              `[Gemini] Retrying after ${retryDelay}ms (attempt ${retryCount + 1}/${strategy.maxRetries}) - Error: ${errorType}`
+            );
+            await delay(retryDelay);
+            return callGemini(prompt, signal, model, isJson, retryCount + 1, useSearch, priority);
+          }
+
+          // Handle specific error types with user-friendly messages
+          if (data.type === 'quota_exceeded') {
+            throw new Error('AI service temporarily unavailable. Please try again in a few minutes.');
+          }
+
+          if (data.type === 'rate_limit') {
+            throw new Error('Too many requests. Please wait a moment and try again.');
+          }
+
+          throw new Error(data.error || 'AI service error');
+        }
+
+        const text = data.text ?? '';
+
+        if (!text) {
+          throw new Error('The AI returned an empty response. Please try again.');
+        }
+
+        if (isJson) {
+          // Clean the response to ensure it's valid JSON
+          const jsonString = text
+            .replace(/^```json/, '')
+            .replace(/```$/, '')
+            .trim();
+          try {
+            const parsed = JSON.parse(jsonString);
+            // Note: Schema validation is done in the specific functions (getDraftAdvice, etc.)
+            // to use the appropriate schema for each response type
+            return parsed;
+          } catch (e) {
+            console.error('Failed to parse JSON from Gemini:', jsonString);
+            throw new Error('The AI returned an invalid response. Please try again.');
+          }
+        }
+
+        return text;
+      } catch (error) {
+        // Don't retry on abort
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw error;
+        }
+
+        // Classify error and determine retry strategy
+        const errorType = classifyError(error, response);
         const strategy = RETRY_STRATEGIES[errorType];
 
-        // Check if we should retry
+        // Retry if appropriate
         if (strategy.shouldRetry && retryCount < strategy.maxRetries) {
           const retryDelay = getRetryDelay(errorType, retryCount);
           console.debug(
@@ -320,62 +423,12 @@ const callGemini = async (
           return callGemini(prompt, signal, model, isJson, retryCount + 1, useSearch, priority);
         }
 
-        // Handle specific error types with user-friendly messages
-        if (data.type === 'quota_exceeded') {
-          throw new Error('AI service temporarily unavailable. Please try again in a few minutes.');
-        }
-
-        if (data.type === 'rate_limit') {
-          throw new Error('Too many requests. Please wait a moment and try again.');
-        }
-
-        throw new Error(data.error || 'AI service error');
-      }
-
-      const text = data.text ?? '';
-
-      if (!text) {
-        throw new Error('The AI returned an empty response. Please try again.');
-      }
-
-      if (isJson) {
-        // Clean the response to ensure it's valid JSON
-        const jsonString = text
-          .replace(/^```json/, '')
-          .replace(/```$/, '')
-          .trim();
-        try {
-          return JSON.parse(jsonString);
-        } catch (e) {
-          console.error('Failed to parse JSON from Gemini:', jsonString);
-          throw new Error('The AI returned an invalid response. Please try again.');
-        }
-      }
-
-      return text;
-    } catch (error) {
-      // Don't retry on abort
-      if (error instanceof DOMException && error.name === 'AbortError') {
         throw error;
       }
-
-      // Classify error and determine retry strategy
-      const errorType = classifyError(error, response);
-      const strategy = RETRY_STRATEGIES[errorType];
-
-      // Retry if appropriate
-      if (strategy.shouldRetry && retryCount < strategy.maxRetries) {
-        const retryDelay = getRetryDelay(errorType, retryCount);
-        console.debug(
-          `[Gemini] Retrying after ${retryDelay}ms (attempt ${retryCount + 1}/${strategy.maxRetries}) - Error: ${errorType}`
-        );
-        await delay(retryDelay);
-        return callGemini(prompt, signal, model, isJson, retryCount + 1, useSearch, priority);
-      }
-
-      throw error;
-    }
-  }, priority);
+    },
+    priority,
+    requestKey
+  );
 };
 
 const formatDraftStateForPrompt = (draftState: DraftState, userSide: TeamSide, userRole: string): string => {
@@ -451,7 +504,14 @@ Your response MUST be a single, valid JSON object following this exact structure
 }
 \`\`\`
 `;
-  return callGemini(prompt, signal, model);
+  const response = await callGemini(prompt, signal, model);
+  // Use safe validation to provide better error messages
+  const validationResult = safeValidateResponse(response, AIAdviceSchema);
+  if (!validationResult.success) {
+    console.error('[Gemini] Validation failed for draft advice:', validationResult.error.errors);
+    throw new Error('The AI returned an invalid response format. Please try again.');
+  }
+  return validationResult.data;
 };
 
 export const getBotDraftAction = async ({
@@ -497,7 +557,8 @@ JSON response format:
 }
 \`\`\`
 `;
-  return callGemini(prompt, signal);
+  const response = await callGemini(prompt, signal);
+  return validateResponse(response, BotDraftActionSchema);
 };
 
 export const getTeambuilderSuggestion = async ({
@@ -535,7 +596,8 @@ Your response MUST be a single, valid JSON array following this exact structure:
 ]
 \`\`\`
 `;
-  return callGemini(prompt, signal);
+  const response = await callGemini(prompt, signal);
+  return validateResponse(response, TeamBuilderSuggestionSchema);
 };
 
 export const getTrialQuestion = async (signal: AbortSignal): Promise<TrialQuestion> => {
@@ -554,7 +616,8 @@ JSON Format:
 }
 \`\`\`
 `;
-  return callGemini(prompt, signal);
+  const response = await callGemini(prompt, signal);
+  return validateResponse(response, TrialQuestionSchema);
 };
 
 // Meta Oracle - Grounded Answer (uses Google Search with caching)
@@ -621,10 +684,13 @@ Format your answer in markdown with clear explanations and bullet points where a
 
     const result = { text, sources };
 
-    // Cache the result
-    cacheService.set(cacheKey, result, CACHE_CONFIG.GROUNDED_ANSWER);
+    // Validate response
+    const validated = validateResponse(result, GroundedAnswerSchema);
 
-    return result;
+    // Cache the validated result
+    cacheService.set(cacheKey, validated, CACHE_CONFIG.GROUNDED_ANSWER);
+
+    return validated;
   } catch (error) {
     // If grounded search fails, try without search as fallback
     console.warn('[Gemini] Grounded search failed, falling back to non-grounded:', error);
@@ -690,12 +756,15 @@ JSON Format:
 Respond ONLY with the JSON object, no markdown formatting.
 `;
 
-  const result = await callGemini(prompt, signal, 'gemini-2.5-flash', true, 0, false, 3); // Medium-high priority
+  const response = await callGemini(prompt, signal, 'gemini-2.5-flash', true, 0, false, 3); // Medium-high priority
 
-  // Cache the result
-  cacheService.set(cacheKey, result, CACHE_CONFIG.TIER_LIST);
+  // Validate response
+  const validated = validateResponse(response, StructuredTierListSchema);
 
-  return result;
+  // Cache the validated result
+  cacheService.set(cacheKey, validated, CACHE_CONFIG.TIER_LIST);
+
+  return validated;
 };
 
 // Intel Hub - Patch Notes Summary (with caching)
@@ -742,12 +811,15 @@ JSON Format:
 Respond ONLY with the JSON object, no markdown formatting.
 `;
 
-  const result = await callGemini(prompt, signal, 'gemini-2.5-flash', true, 0, false, 3); // Medium-high priority
+  const response = await callGemini(prompt, signal, 'gemini-2.5-flash', true, 0, false, 3); // Medium-high priority
 
-  // Cache the result
-  cacheService.set(cacheKey, result, CACHE_CONFIG.PATCH_NOTES);
+  // Validate response
+  const validated = validateResponse(response, StructuredPatchNotesSchema);
 
-  return result;
+  // Cache the validated result
+  cacheService.set(cacheKey, validated, CACHE_CONFIG.PATCH_NOTES);
+
+  return validated;
 };
 
 // Personalized Patch Summary

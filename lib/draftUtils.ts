@@ -3,89 +3,90 @@ import toast from 'react-hot-toast';
 import { CHAMPION_ROLES } from '../data/championRoles';
 
 // --- Hardened LocalStorage Utilities ---
-const QUOTA_EXCEEDED_MESSAGE = "Could not save data. Your browser's storage may be full or disabled. Please clear some space and try again.";
+const QUOTA_EXCEEDED_MESSAGE =
+  "Could not save data. Your browser's storage may be full or disabled. Please clear some space and try again.";
 
 /**
  * Attempts to clear expired cache entries to free up space
  * @returns true if cache was cleared, false otherwise
  */
 const tryEvictCache = (): boolean => {
-    try {
-        let evictedCount = 0;
-        const CACHE_PREFIX = 'cache_';
-        const ONE_HOUR_MS = 60 * 60 * 1000;
+  try {
+    let evictedCount = 0;
+    const CACHE_PREFIX = 'cache_';
+    const ONE_HOUR_MS = 60 * 60 * 1000;
 
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-            const key = localStorage.key(i);
-            if (key && (key.startsWith(CACHE_PREFIX) || key.startsWith('championAnalysis_'))) {
-                try {
-                    const item = localStorage.getItem(key);
-                    if (item) {
-                        const entry = JSON.parse(item);
-                        if (!entry.timestamp || (Date.now() - entry.timestamp >= ONE_HOUR_MS)) {
-                            localStorage.removeItem(key);
-                            evictedCount++;
-                        }
-                    }
-                } catch {
-                    localStorage.removeItem(key);
-                    evictedCount++;
-                }
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith(CACHE_PREFIX) || key.startsWith('championAnalysis_'))) {
+        try {
+          const item = localStorage.getItem(key);
+          if (item) {
+            const entry = JSON.parse(item);
+            if (!entry.timestamp || Date.now() - entry.timestamp >= ONE_HOUR_MS) {
+              localStorage.removeItem(key);
+              evictedCount++;
             }
+          }
+        } catch {
+          localStorage.removeItem(key);
+          evictedCount++;
         }
-
-        console.log(`[Storage] Evicted ${evictedCount} expired cache entries`);
-        return evictedCount > 0;
-    } catch (e) {
-        console.error('Failed to evict cache:', e);
-        return false;
+      }
     }
+
+    console.log(`[Storage] Evicted ${evictedCount} expired cache entries`);
+    return evictedCount > 0;
+  } catch (e) {
+    console.error('Failed to evict cache:', e);
+    return false;
+  }
 };
 
 export const safeSetLocalStorage = (key: string, value: string): boolean => {
-    try {
-        localStorage.setItem(key, value);
-        return true;
-    } catch (e) {
-        if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-            console.warn(`LocalStorage quota exceeded for key: ${key}`);
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      console.warn(`LocalStorage quota exceeded for key: ${key}`);
 
-            // Try to free space by removing old cache entries
-            if (tryEvictCache()) {
-                // Retry once after cleanup
-                try {
-                    localStorage.setItem(key, value);
-                    toast.success('Freed storage space and saved successfully');
-                    return true;
-                } catch (retryError) {
-                    console.error('Retry failed after cache eviction:', retryError);
-                }
-            }
-
-            toast.error(QUOTA_EXCEEDED_MESSAGE);
-        } else {
-            console.error(`Failed to set localStorage for key: ${key}`, e);
-            toast.error("An unexpected error occurred while saving data.");
+      // Try to free space by removing old cache entries
+      if (tryEvictCache()) {
+        // Retry once after cleanup
+        try {
+          localStorage.setItem(key, value);
+          toast.success('Freed storage space and saved successfully');
+          return true;
+        } catch (retryError) {
+          console.error('Retry failed after cache eviction:', retryError);
         }
-        return false;
+      }
+
+      toast.error(QUOTA_EXCEEDED_MESSAGE);
+    } else {
+      console.error(`Failed to set localStorage for key: ${key}`, e);
+      toast.error('An unexpected error occurred while saving data.');
     }
+    return false;
+  }
 };
 
 export const safeGetLocalStorage = (key: string): string | null => {
-    try {
-        return localStorage.getItem(key);
-    } catch (e) {
-        console.error(`Failed to get localStorage for key: ${key}`, e);
-        return null;
-    }
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    console.error(`Failed to get localStorage for key: ${key}`, e);
+    return null;
+  }
 };
 
 export const safeRemoveLocalStorage = (key: string) => {
-    try {
-        localStorage.removeItem(key);
-    } catch (e) {
-        console.error(`Failed to remove localStorage for key: ${key}`, e);
-    }
+  try {
+    localStorage.removeItem(key);
+  } catch (e) {
+    console.error(`Failed to remove localStorage for key: ${key}`, e);
+  }
 };
 // --- End Hardened LocalStorage Utilities ---
 
@@ -95,20 +96,20 @@ export const safeRemoveLocalStorage = (key: string) => {
  * @returns A SavedDraft object for safe storage.
  */
 export const toSavedDraft = (draftState: DraftState): SavedDraft => {
-    const mapSlots = (slots: DraftSlot[]): (string | null)[] => slots.map(s => s.champion?.id || null);
-    
-    return {
-        blue: {
-            picks: mapSlots(draftState.blue.picks),
-            bans: mapSlots(draftState.blue.bans),
-        },
-        red: {
-            picks: mapSlots(draftState.red.picks),
-            bans: mapSlots(draftState.red.bans),
-        },
-        turn: draftState.turn,
-        phase: draftState.phase,
-    };
+  const mapSlots = (slots: DraftSlot[]): (string | null)[] => slots.map(s => s.champion?.id || null);
+
+  return {
+    blue: {
+      picks: mapSlots(draftState.blue.picks),
+      bans: mapSlots(draftState.blue.bans),
+    },
+    red: {
+      picks: mapSlots(draftState.red.picks),
+      bans: mapSlots(draftState.red.bans),
+    },
+    turn: draftState.turn,
+    phase: draftState.phase,
+  };
 };
 
 /**
@@ -119,21 +120,22 @@ export const toSavedDraft = (draftState: DraftState): SavedDraft => {
  * @returns A full, up-to-date DraftState object.
  */
 export const fromSavedDraft = (savedDraft: SavedDraft, champions: Champion[]): DraftState => {
-    const findChamp = (id: string | null): Champion | null => id ? champions.find(c => c.id === id) || null : null;
-    const mapSlots = (ids: (string | null)[]): DraftSlot[] => ids.map(id => ({ champion: findChamp(id), isActive: false }));
-    
-    return {
-        blue: {
-            picks: mapSlots(savedDraft.blue.picks),
-            bans: mapSlots(savedDraft.blue.bans),
-        },
-        red: {
-            picks: mapSlots(savedDraft.red.picks),
-            bans: mapSlots(savedDraft.red.bans),
-        },
-        turn: savedDraft.turn,
-        phase: savedDraft.phase,
-    };
+  const findChamp = (id: string | null): Champion | null => (id ? champions.find(c => c.id === id) || null : null);
+  const mapSlots = (ids: (string | null)[]): DraftSlot[] =>
+    ids.map(id => ({ champion: findChamp(id), isActive: false }));
+
+  return {
+    blue: {
+      picks: mapSlots(savedDraft.blue.picks),
+      bans: mapSlots(savedDraft.blue.bans),
+    },
+    red: {
+      picks: mapSlots(savedDraft.red.picks),
+      bans: mapSlots(savedDraft.red.bans),
+    },
+    turn: savedDraft.turn,
+    phase: savedDraft.phase,
+  };
 };
 
 /**
@@ -143,11 +145,17 @@ export const fromSavedDraft = (savedDraft: SavedDraft, champions: Champion[]): D
  * @returns An array of ChampionLite objects that have not been picked or banned.
  */
 export const getAvailableChampions = (draftState: DraftState, championsLite: ChampionLite[]): ChampionLite[] => {
-    const allPicksAndBans = [
-        ...draftState.blue.picks, ...draftState.red.picks, ...draftState.blue.bans, ...draftState.red.bans
-    ];
-    const pickedIds = new Set(allPicksAndBans.filter(s => s.champion).map(s => s.champion!.id));
-    return championsLite.filter(c => !pickedIds.has(c.id));
+  const allPicksAndBans = [
+    ...draftState.blue.picks,
+    ...draftState.red.picks,
+    ...draftState.blue.bans,
+    ...draftState.red.bans,
+  ];
+  // Filter and map safely without non-null assertion
+  const pickedIds = new Set(
+    allPicksAndBans.filter(s => s.champion !== null).map(s => s.champion!.id) // Safe after filter
+  );
+  return championsLite.filter(c => !pickedIds.has(c.id));
 };
 
 /**
@@ -161,29 +169,27 @@ export const getAvailableChampions = (draftState: DraftState, championsLite: Cha
  * @returns A new, updated DraftState object.
  */
 export const updateSlotInDraft = (
-    draftState: DraftState, 
-    team: TeamSide, 
-    type: 'pick' | 'ban', 
-    index: number, 
-    champion: Champion | null
+  draftState: DraftState,
+  team: TeamSide,
+  type: 'pick' | 'ban',
+  index: number,
+  champion: Champion | null
 ): DraftState => {
-    const isPick = type === 'pick';
-    const teamState = draftState[team];
-    const targetArray = isPick ? teamState.picks : teamState.bans;
+  const isPick = type === 'pick';
+  const teamState = draftState[team];
+  const targetArray = isPick ? teamState.picks : teamState.bans;
 
-    // Create a new array with the updated slot
-    const newArray = targetArray.map((slot, i) =>
-        i === index ? { ...slot, champion } : slot
-    );
+  // Create a new array with the updated slot
+  const newArray = targetArray.map((slot, i) => (i === index ? { ...slot, champion } : slot));
 
-    // Return a new state object with the changes applied
-    return {
-        ...draftState,
-        [team]: {
-          ...teamState,
-          [isPick ? 'picks' : 'bans']: newArray,
-        },
-    };
+  // Return a new state object with the changes applied
+  return {
+    ...draftState,
+    [team]: {
+      ...teamState,
+      [isPick ? 'picks' : 'bans']: newArray,
+    },
+  };
 };
 
 /**
@@ -196,93 +202,116 @@ export const updateSlotInDraft = (
  * @returns A new, updated DraftState object with the champions swapped.
  */
 export const swapChampionsInDraft = (
-    draftState: DraftState,
-    team: TeamSide,
-    sourceIndex: number,
-    destinationIndex: number
+  draftState: DraftState,
+  team: TeamSide,
+  sourceIndex: number,
+  destinationIndex: number
 ): DraftState => {
-    const teamState = draftState[team];
-    const newPicks = [...teamState.picks];
-    
-    // Simple array swap with null checks
-    const temp = newPicks[sourceIndex];
-    newPicks[sourceIndex] = newPicks[destinationIndex]!;
-    newPicks[destinationIndex] = temp!;
+  const teamState = draftState[team];
+  const newPicks = [...teamState.picks];
 
-    return {
-        ...draftState,
-        [team]: {
-            ...teamState,
-            picks: newPicks,
-        },
-    };
+  // Simple array swap with null checks
+  const temp = newPicks[sourceIndex];
+  newPicks[sourceIndex] = newPicks[destinationIndex]!;
+  newPicks[destinationIndex] = temp!;
+
+  return {
+    ...draftState,
+    [team]: {
+      ...teamState,
+      picks: newPicks,
+    },
+  };
 };
-
 
 // --- Data Dragon Transformation Helpers ---
 
 const deriveDamageType = (info: { attack: number; magic: number }): 'AD' | 'AP' | 'Mixed' => {
-    const total = info.attack + info.magic;
-    if (total === 0) {return 'Mixed';}
-    const adRatio = info.attack / total;
-
-    if (adRatio > 0.7) {return 'AD';}
-    if (adRatio < 0.3) {return 'AP';}
+  const total = info.attack + info.magic;
+  if (total === 0) {
     return 'Mixed';
+  }
+  const adRatio = info.attack / total;
+
+  if (adRatio > 0.7) {
+    return 'AD';
+  }
+  if (adRatio < 0.3) {
+    return 'AP';
+  }
+  return 'Mixed';
 };
 
-const deriveStatLevel = (text: string, heavyKeywords: string[], mediumKeywords: string[]): 'Low' | 'Medium' | 'High' => {
-    let score = 0;
-    const lowerText = text.toLowerCase();
+const deriveStatLevel = (
+  text: string,
+  heavyKeywords: string[],
+  mediumKeywords: string[]
+): 'Low' | 'Medium' | 'High' => {
+  let score = 0;
+  const lowerText = text.toLowerCase();
 
-    heavyKeywords.forEach(kw => {
-        if (lowerText.includes(kw)) {score += 2;}
-    });
-    mediumKeywords.forEach(kw => {
-        if (lowerText.includes(kw)) {score += 1;}
-    });
+  heavyKeywords.forEach(kw => {
+    if (lowerText.includes(kw)) {
+      score += 2;
+    }
+  });
+  mediumKeywords.forEach(kw => {
+    if (lowerText.includes(kw)) {
+      score += 1;
+    }
+  });
 
-    if (score >= 3) {return 'High';}
-    if (score >= 1) {return 'Medium';}
-    return 'Low';
+  if (score >= 3) {
+    return 'High';
+  }
+  if (score >= 1) {
+    return 'Medium';
+  }
+  return 'Low';
 };
 
 const deriveRoles = (id: string): string[] => {
-    return CHAMPION_ROLES[id] || ['Top']; // Sensible fallback for unmapped champions
+  return CHAMPION_ROLES[id] || ['Top']; // Sensible fallback for unmapped champions
 };
 
 export const transformDdragonData = (ddragonData: any, version: string): Champion[] => {
-    const championData = ddragonData.data;
-    const champions: Champion[] = [];
+  const championData = ddragonData.data;
+  const champions: Champion[] = [];
 
-    for (const key in championData) {
-        const champ = championData[key];
-        const allAbilitiesText = [champ.passive.description, ...champ.spells.map((s: any) => s.description)].join(' ').toLowerCase();
+  for (const key in championData) {
+    const champ = championData[key];
+    const allAbilitiesText = [champ.passive.description, ...champ.spells.map((s: any) => s.description)]
+      .join(' ')
+      .toLowerCase();
 
-        const transformed: Champion = {
-            id: champ.id,
-            name: champ.name,
-            title: champ.title,
-            lore: champ.lore,
-            image: `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${champ.image.full}`,
-            splashUrl: `https://ddragon.leagueoflegends.com/cdn/img/splash/${champ.id}_0.jpg`,
-            loadingScreenUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champ.id}_0.jpg`,
-            playstyle: champ.blurb, // Use blurb as a proxy for playstyle
-            roles: deriveRoles(champ.id),
-            class: champ.tags,
-            subclass: [], // Subclass is too specific to derive accurately
-            damageType: deriveDamageType(champ.info),
-            cc: deriveStatLevel(allAbilitiesText, ['stun', 'knockup', 'knock up', 'root', 'suppress', 'fear', 'charm', 'taunt'], ['slow', 'silence', 'blind']),
-            engage: deriveStatLevel(allAbilitiesText, ['dash', 'leap', 'charge', 'unstoppable'], ['speed']),
-            abilities: [
-                { key: 'Passive', name: champ.passive.name, description: champ.passive.description },
-                { key: 'Q', name: champ.spells[0].name, description: champ.spells[0].description },
-                { key: 'W', name: champ.spells[1].name, description: champ.spells[1].description },
-                { key: 'E', name: champ.spells[2].name, description: champ.spells[2].description },
-                { key: 'R', name: champ.spells[3].name, description: champ.spells[3].description },
-            ],
-        };
-        champions.push(transformed);
-    }
-    return champions.sort((a, b) => a.name.localeCompare(b.name));
+    const transformed: Champion = {
+      id: champ.id,
+      name: champ.name,
+      title: champ.title,
+      lore: champ.lore,
+      image: `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${champ.image.full}`,
+      splashUrl: `https://ddragon.leagueoflegends.com/cdn/img/splash/${champ.id}_0.jpg`,
+      loadingScreenUrl: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champ.id}_0.jpg`,
+      playstyle: champ.blurb, // Use blurb as a proxy for playstyle
+      roles: deriveRoles(champ.id),
+      class: champ.tags,
+      subclass: [], // Subclass is too specific to derive accurately
+      damageType: deriveDamageType(champ.info),
+      cc: deriveStatLevel(
+        allAbilitiesText,
+        ['stun', 'knockup', 'knock up', 'root', 'suppress', 'fear', 'charm', 'taunt'],
+        ['slow', 'silence', 'blind']
+      ),
+      engage: deriveStatLevel(allAbilitiesText, ['dash', 'leap', 'charge', 'unstoppable'], ['speed']),
+      abilities: [
+        { key: 'Passive', name: champ.passive.name, description: champ.passive.description },
+        { key: 'Q', name: champ.spells[0].name, description: champ.spells[0].description },
+        { key: 'W', name: champ.spells[1].name, description: champ.spells[1].description },
+        { key: 'E', name: champ.spells[2].name, description: champ.spells[2].description },
+        { key: 'R', name: champ.spells[3].name, description: champ.spells[3].description },
+      ],
+    };
+    champions.push(transformed);
+  }
+  return champions.sort((a, b) => a.name.localeCompare(b.name));
 };

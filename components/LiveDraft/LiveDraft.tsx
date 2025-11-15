@@ -112,6 +112,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
 
     timeoutId = setTimeout(performAnalysis, 500); // Debounce analysis
 
+    // Cleanup timeout and abort controller on unmount or when effect re-runs
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);

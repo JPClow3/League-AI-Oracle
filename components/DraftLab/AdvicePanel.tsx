@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import type { AIAdvice, TeamAnalysis } from '../../types';
 import { Loader } from '../common/Loader';
 import { ErrorState } from '../common/ErrorState';
@@ -423,103 +423,108 @@ const analysisMessages = [
   'Finalizing recommendations...',
 ];
 
-export const AdvicePanel = ({
-  advice,
-  isLoading,
-  error,
-  navigateToAcademy,
-  analysisCompleted,
-  onAnimationEnd,
-  isStale,
-}: AdvicePanelProps) => {
-  const [activeTab, setActiveTab] = useState<'blue' | 'red' | 'head-to-head' | 'builds'>('blue');
+export const AdvicePanel = memo(
+  ({ advice, isLoading, error, navigateToAcademy, analysisCompleted, onAnimationEnd, isStale }: AdvicePanelProps) => {
+    const [activeTab, setActiveTab] = useState<'blue' | 'red' | 'head-to-head' | 'builds'>('blue');
 
-  if (isLoading) {
-    return (
-      <div className="bg-bg-secondary p-4 border border-border-primary h-full">
-        <Loader messages={analysisMessages} />
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="bg-bg-secondary p-4 border border-border-primary h-full">
-        <ErrorState title="Analysis Failed" message={error} onRetry={undefined} className="h-full" />
-      </div>
-    );
-  }
-  if (!advice) {
-    return (
-      <div className="bg-bg-secondary text-text-secondary p-4 border border-border-primary text-center flex flex-col justify-center items-center h-full min-h-[300px]">
-        <Info className="h-12 w-12 text-border-secondary mb-2" />
-        <p className="font-semibold text-text-primary">Awaiting Analysis</p>
-        <p className="text-sm">Complete a 5v5 draft and press &apos;Analyze&apos; to receive AI-powered feedback.</p>
-      </div>
-    );
-  }
+    if (isLoading) {
+      return (
+        <div className="bg-bg-secondary p-4 border border-border-primary h-full">
+          <Loader
+            messages={analysisMessages}
+            showProgress={true}
+            currentStage={0}
+            totalStages={analysisMessages.length}
+          />
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="bg-bg-secondary p-4 border border-border-primary h-full">
+          <ErrorState title="Analysis Failed" message={error} onRetry={undefined} className="h-full" />
+        </div>
+      );
+    }
+    if (!advice) {
+      return (
+        <div className="bg-bg-secondary text-text-secondary p-4 border border-border-primary text-center flex flex-col justify-center items-center h-full min-h-[300px]">
+          <Info className="h-12 w-12 text-border-secondary mb-2" />
+          <p className="font-semibold text-text-primary">Awaiting Analysis</p>
+          <p className="text-sm">Complete a 5v5 draft and press &apos;Analyze&apos; to receive AI-powered feedback.</p>
+        </div>
+      );
+    }
 
-  return (
-    <div
-      className={`bg-bg-secondary border border-border-primary p-4 space-y-4 transition-shadow duration-1000 ${analysisCompleted ? 'shadow-glow-accent animate-pulse-once' : ''}`}
-      onAnimationEnd={onAnimationEnd}
-    >
-      {isStale && <StaleWarning />}
+    return (
+      <div
+        className={`bg-bg-secondary border border-border-primary p-4 space-y-4 transition-shadow duration-1000 ${analysisCompleted ? 'shadow-glow-accent animate-pulse-once' : ''}`}
+        onAnimationEnd={onAnimationEnd}
+      >
+        {isStale && <StaleWarning />}
 
-      <div className="border-b border-border flex justify-center flex-wrap" role="tablist" aria-label="Analysis tabs">
-        <TabButton
-          active={activeTab === 'blue'}
-          onClick={() => setActiveTab('blue')}
-          ariaLabel="View Blue Team analysis"
-        >
-          Blue Team
-        </TabButton>
-        <TabButton active={activeTab === 'red'} onClick={() => setActiveTab('red')} ariaLabel="View Red Team analysis">
-          Red Team
-        </TabButton>
-        <TabButton
-          active={activeTab === 'head-to-head'}
-          onClick={() => setActiveTab('head-to-head')}
-          ariaLabel="View head-to-head matchups"
-        >
-          Head-to-Head
-        </TabButton>
-        {advice.buildSuggestions && advice.buildSuggestions.length > 0 && (
+        <div className="border-b border-border flex justify-center flex-wrap" role="tablist" aria-label="Analysis tabs">
           <TabButton
-            active={activeTab === 'builds'}
-            onClick={() => setActiveTab('builds')}
-            ariaLabel="View build suggestions"
+            active={activeTab === 'blue'}
+            onClick={() => setActiveTab('blue')}
+            ariaLabel="View Blue Team analysis"
           >
-            Builds
+            Blue Team
           </TabButton>
-        )}
-      </div>
-
-      <div className="pt-4 min-h-[400px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            {...{
-              initial: { opacity: 0, y: 10 },
-              animate: { opacity: 1, y: 0 },
-              exit: { opacity: 0, y: -10 },
-              transition: { duration: 0.2 },
-            }}
+          <TabButton
+            active={activeTab === 'red'}
+            onClick={() => setActiveTab('red')}
+            ariaLabel="View Red Team analysis"
           >
-            {activeTab === 'blue' && (
-              <TeamAnalysisContent analysis={advice.teamAnalysis.blue} navigateToAcademy={navigateToAcademy} />
-            )}
-            {activeTab === 'red' && (
-              <TeamAnalysisContent analysis={advice.teamAnalysis.red} navigateToAcademy={navigateToAcademy} />
-            )}
-            {activeTab === 'head-to-head' && (
-              <HeadToHeadContent advice={advice} navigateToAcademy={navigateToAcademy} />
-            )}
-            {activeTab === 'builds' && advice.buildSuggestions && (
-              <BuildSuggestionsContent builds={advice.buildSuggestions} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+            Red Team
+          </TabButton>
+          <TabButton
+            active={activeTab === 'head-to-head'}
+            onClick={() => setActiveTab('head-to-head')}
+            ariaLabel="View head-to-head matchups"
+          >
+            Head-to-Head
+          </TabButton>
+          {advice.buildSuggestions && advice.buildSuggestions.length > 0 && (
+            <TabButton
+              active={activeTab === 'builds'}
+              onClick={() => setActiveTab('builds')}
+              ariaLabel="View build suggestions"
+            >
+              Builds
+            </TabButton>
+          )}
+        </div>
+
+        <div className="pt-4 min-h-[400px]">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              {...{
+                initial: { opacity: 0, y: 10 },
+                animate: { opacity: 1, y: 0 },
+                exit: { opacity: 0, y: -10 },
+                transition: { duration: 0.2 },
+              }}
+            >
+              {activeTab === 'blue' && (
+                <TeamAnalysisContent analysis={advice.teamAnalysis.blue} navigateToAcademy={navigateToAcademy} />
+              )}
+              {activeTab === 'red' && (
+                <TeamAnalysisContent analysis={advice.teamAnalysis.red} navigateToAcademy={navigateToAcademy} />
+              )}
+              {activeTab === 'head-to-head' && (
+                <HeadToHeadContent advice={advice} navigateToAcademy={navigateToAcademy} />
+              )}
+              {activeTab === 'builds' && advice.buildSuggestions && (
+                <BuildSuggestionsContent builds={advice.buildSuggestions} />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
+
+AdvicePanel.displayName = 'AdvicePanel';

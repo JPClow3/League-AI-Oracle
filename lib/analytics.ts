@@ -5,12 +5,11 @@ import posthog from 'posthog-js';
  * Uses PostHog for product analytics with user privacy in mind
  */
 
-
 interface UserProperties {
   rank?: string;
   mainRole?: string;
   region?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 class AnalyticsService {
@@ -52,13 +51,15 @@ class AnalyticsService {
 
         // Advanced privacy
         property_blacklist: ['$ip'], // Don't capture IP addresses
-        sanitize_properties: (properties) => {
+        sanitize_properties: properties => {
           // Remove any API keys or tokens
           const sanitized = { ...properties };
           Object.keys(sanitized).forEach(key => {
-            if (key.toLowerCase().includes('token') ||
-                key.toLowerCase().includes('key') ||
-                key.toLowerCase().includes('password')) {
+            if (
+              key.toLowerCase().includes('token') ||
+              key.toLowerCase().includes('key') ||
+              key.toLowerCase().includes('password')
+            ) {
               delete sanitized[key];
             }
           });
@@ -76,8 +77,10 @@ class AnalyticsService {
   /**
    * Track a page view
    */
-  pageView(pageName: string, properties?: Record<string, any>) {
-    if (!this.isInitialized) {return;}
+  pageView(pageName: string, properties?: Record<string, string | number | boolean | null | undefined>) {
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.capture('$pageview', {
       page: pageName,
@@ -88,8 +91,10 @@ class AnalyticsService {
   /**
    * Track a custom event
    */
-  track(event: string, properties?: Record<string, any>) {
-    if (!this.isInitialized) {return;}
+  track(event: string, properties?: Record<string, string | number | boolean | null | undefined>) {
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.capture(event, properties);
 
@@ -102,7 +107,11 @@ class AnalyticsService {
   /**
    * Track feature usage
    */
-  trackFeature(featureName: string, action: string, properties?: Record<string, any>) {
+  trackFeature(
+    featureName: string,
+    action: string,
+    properties?: Record<string, string | number | boolean | null | undefined>
+  ) {
     this.track(`feature_${featureName}`, {
       action,
       ...properties,
@@ -112,7 +121,11 @@ class AnalyticsService {
   /**
    * Track user action
    */
-  trackAction(action: string, category: string, properties?: Record<string, any>) {
+  trackAction(
+    action: string,
+    category: string,
+    properties?: Record<string, string | number | boolean | null | undefined>
+  ) {
     this.track(`action_${action}`, {
       category,
       ...properties,
@@ -142,7 +155,7 @@ class AnalyticsService {
   /**
    * Track error
    */
-  trackError(error: string, context?: Record<string, any>) {
+  trackError(error: string, context?: Record<string, string | number | boolean | null | undefined>) {
     this.track('error_occurred', {
       error_message: error,
       ...context,
@@ -153,7 +166,9 @@ class AnalyticsService {
    * Identify user
    */
   identifyUser(userId: string, properties?: UserProperties) {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     this.userId = userId;
 
@@ -164,7 +179,9 @@ class AnalyticsService {
    * Set user properties
    */
   setUserProperties(properties: UserProperties) {
-    if (!this.isInitialized || !this.userId) {return;}
+    if (!this.isInitialized || !this.userId) {
+      return;
+    }
 
     posthog.people.set(properties);
   }
@@ -173,7 +190,9 @@ class AnalyticsService {
    * Reset user (logout)
    */
   resetUser() {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.reset();
     this.userId = null;
@@ -183,7 +202,9 @@ class AnalyticsService {
    * Opt out of tracking
    */
   optOut() {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.opt_out_capturing();
     console.log('Analytics opt-out enabled');
@@ -193,7 +214,9 @@ class AnalyticsService {
    * Opt in to tracking
    */
   optIn() {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.opt_in_capturing();
     console.log('Analytics opt-in enabled');
@@ -203,7 +226,9 @@ class AnalyticsService {
    * Check if user has opted out
    */
   hasOptedOut(): boolean {
-    if (!this.isInitialized) {return true;}
+    if (!this.isInitialized) {
+      return true;
+    }
 
     return posthog.has_opted_out_capturing();
   }
@@ -212,7 +237,9 @@ class AnalyticsService {
    * Enable session recording (with user consent)
    */
   enableSessionRecording() {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.startSessionRecording();
   }
@@ -221,7 +248,9 @@ class AnalyticsService {
    * Disable session recording
    */
   disableSessionRecording() {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.stopSessionRecording();
   }
@@ -230,7 +259,9 @@ class AnalyticsService {
    * Get feature flags (PostHog can also manage feature flags)
    */
   getFeatureFlag(flagName: string): boolean | string | undefined {
-    if (!this.isInitialized) {return undefined;}
+    if (!this.isInitialized) {
+      return undefined;
+    }
 
     return posthog.getFeatureFlag(flagName);
   }
@@ -239,7 +270,9 @@ class AnalyticsService {
    * Check if feature flag is enabled
    */
   isFeatureEnabled(flagName: string): boolean {
-    if (!this.isInitialized) {return false;}
+    if (!this.isInitialized) {
+      return false;
+    }
 
     return posthog.isFeatureEnabled(flagName) || false;
   }
@@ -248,7 +281,9 @@ class AnalyticsService {
    * Flush events immediately
    */
   flush() {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     posthog.capture('$flush');
   }
@@ -257,7 +292,9 @@ class AnalyticsService {
    * Clean up
    */
   cleanup() {
-    if (!this.isInitialized) {return;}
+    if (!this.isInitialized) {
+      return;
+    }
 
     this.flush();
   }
@@ -267,12 +304,9 @@ class AnalyticsService {
 export const analytics = new AnalyticsService();
 
 // Convenience functions for common events
-export const trackEvent = (name: string, properties?: Record<string, any>) =>
+export const trackEvent = (name: string, properties?: Record<string, string | number | boolean | null | undefined>) =>
   analytics.track(name, properties);
 
-export const trackPageView = (pageName: string) =>
-  analytics.pageView(pageName);
+export const trackPageView = (pageName: string) => analytics.pageView(pageName);
 
-export const trackFeature = (featureName: string, action: string) =>
-  analytics.trackFeature(featureName, action);
-
+export const trackFeature = (featureName: string, action: string) => analytics.trackFeature(featureName, action);

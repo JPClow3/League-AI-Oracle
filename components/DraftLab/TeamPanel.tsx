@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import type { TeamState, TeamSide } from '../../types';
 import { PickSlot } from './PickSlot';
 import { BanSlot } from './BanSlot';
@@ -11,7 +11,7 @@ interface TeamPanelProps {
   state: TeamState;
   onSlotClick: (team: TeamSide, type: 'pick' | 'ban', index: number) => void;
   activeSlot?: { type: 'pick' | 'ban'; index: number } | null;
-  
+
   onClearSlot?: (team: TeamSide, type: 'pick' | 'ban', index: number) => void;
   onDrop?: (event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => void;
   onDragStart?: (event: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => void;
@@ -24,20 +24,117 @@ interface TeamPanelProps {
   analysisCompleted?: boolean;
 }
 
-export const TeamPanel = ({ id, side, state, onSlotClick, onClearSlot, onDrop, onDragStart, onDragOver, onDragEnter, onDragLeave, activeSlot, draggedOverSlot, isTurnActive = false, isAnalyzing = false, analysisCompleted = false }: TeamPanelProps) => {
-  const isBlue = side === 'blue';
-  const teamColorClass = isBlue ? 'border-team-blue' : 'border-team-red';
-  const teamName = isBlue ? 'Blue Team' : 'Red Team';
-  const gradientClass = isBlue ? 'from-team-blue/5 to-bg-secondary' : 'from-team-red/5 to-bg-secondary';
-  const turnGlowClass = isTurnActive ? (isBlue ? 'shadow-glow-accent' : 'shadow-lg shadow-error/30') : '';
-  const analyzingClass = isAnalyzing ? 'analyzing-glow' : '';
-  const analysisCompleteClass = analysisCompleted ? 'animate-pulse-once' : '';
-  const isAnySlotActive = !!activeSlot;
+export const TeamPanel = memo(
+  ({
+    id,
+    side,
+    state,
+    onSlotClick,
+    onClearSlot,
+    onDrop,
+    onDragStart,
+    onDragOver,
+    onDragEnter,
+    onDragLeave,
+    activeSlot,
+    draggedOverSlot,
+    isTurnActive = false,
+    isAnalyzing = false,
+    analysisCompleted = false,
+  }: TeamPanelProps) => {
+    const isBlue = side === 'blue';
+    const teamColorClass = isBlue ? 'border-team-blue' : 'border-team-red';
+    const teamName = isBlue ? 'Blue Team' : 'Red Team';
+    const gradientClass = isBlue ? 'from-team-blue/5 to-bg-secondary' : 'from-team-red/5 to-bg-secondary';
+    const turnGlowClass = isTurnActive ? (isBlue ? 'shadow-glow-accent' : 'shadow-lg shadow-error/30') : '';
+    const analyzingClass = isAnalyzing ? 'analyzing-glow' : '';
+    const analysisCompleteClass = analysisCompleted ? 'animate-pulse-once' : '';
+    const isAnySlotActive = !!activeSlot;
 
-  return (
-    <div id={id} className={`bg-bg-secondary p-4 shadow-sm border ${teamColorClass} border-t-4 bg-gradient-to-b ${gradientClass} transition-shadow duration-300 ${turnGlowClass} ${analyzingClass} ${analysisCompleteClass}`}>
+    const handlePickSlotClick = useCallback(
+      (index: number) => {
+        onSlotClick(side, 'pick', index);
+      },
+      [onSlotClick, side]
+    );
+
+    const handleBanSlotClick = useCallback(
+      (index: number) => {
+        onSlotClick(side, 'ban', index);
+      },
+      [onSlotClick, side]
+    );
+
+    const handlePickClear = useCallback(
+      (index: number) => {
+        if (onClearSlot) {
+          onClearSlot(side, 'pick', index);
+        }
+      },
+      [onClearSlot, side]
+    );
+
+    const handleBanClear = useCallback(
+      (index: number) => {
+        if (onClearSlot) {
+          onClearSlot(side, 'ban', index);
+        }
+      },
+      [onClearSlot, side]
+    );
+
+    const handlePickDrop = useCallback(
+      (e: React.DragEvent, index: number) => {
+        if (onDrop) {
+          onDrop(e, side, 'pick', index);
+        }
+      },
+      [onDrop, side]
+    );
+
+    const handleBanDrop = useCallback(
+      (e: React.DragEvent, index: number) => {
+        if (onDrop) {
+          onDrop(e, side, 'ban', index);
+        }
+      },
+      [onDrop, side]
+    );
+
+    const handlePickDragStart = useCallback(
+      (e: React.DragEvent, index: number) => {
+        if (onDragStart) {
+          onDragStart(e, side, 'pick', index);
+        }
+      },
+      [onDragStart, side]
+    );
+
+    const handlePickDragEnter = useCallback(
+      (e: React.DragEvent, index: number) => {
+        if (onDragEnter) {
+          onDragEnter(e, side, 'pick', index);
+        }
+      },
+      [onDragEnter, side]
+    );
+
+    const handleBanDragEnter = useCallback(
+      (e: React.DragEvent, index: number) => {
+        if (onDragEnter) {
+          onDragEnter(e, side, 'ban', index);
+        }
+      },
+      [onDragEnter, side]
+    );
+
+    return (
+      <div
+        id={id}
+        className={`bg-bg-secondary p-4 shadow-sm border ${teamColorClass} border-t-4 bg-gradient-to-b ${gradientClass} transition-shadow duration-300 ${turnGlowClass} ${analyzingClass} ${analysisCompleteClass}`}
+      >
         <h2 className={`text-2xl font-bold font-display mb-4 text-center text-text-primary`}>{teamName}</h2>
-        
+
         <TeamAnalytics picks={state.picks} />
 
         <div className="space-y-4">
@@ -52,16 +149,20 @@ export const TeamPanel = ({ id, side, state, onSlotClick, onClearSlot, onDrop, o
                       side={side}
                       champion={pick.champion}
                       role={ROLES[index] || 'Unknown'}
-                      onClick={() => onSlotClick(side, 'pick', index)}
-                      onClear={onClearSlot ? () => onClearSlot(side, 'pick', index) : undefined}
-                      onDrop={onDrop ? (e) => onDrop(e, side, 'pick', index) : undefined}
-                      onDragStart={onDragStart ? (e) => onDragStart(e, side, 'pick', index) : undefined}
+                      onClick={() => handlePickSlotClick(index)}
+                      onClear={onClearSlot ? () => handlePickClear(index) : undefined}
+                      onDrop={onDrop ? e => handlePickDrop(e, index) : undefined}
+                      onDragStart={onDragStart ? e => handlePickDragStart(e, index) : undefined}
                       onDragOver={onDragOver}
-                      onDragEnter={onDragEnter ? (e) => onDragEnter(e, side, 'pick', index) : undefined}
+                      onDragEnter={onDragEnter ? e => handlePickDragEnter(e, index) : undefined}
                       onDragLeave={onDragLeave}
                       isActive={isThisSlotActive}
                       isDimmed={isAnySlotActive && !isThisSlotActive}
-                      isDraggedOver={draggedOverSlot?.team === side && draggedOverSlot?.type === 'pick' && draggedOverSlot?.index === index}
+                      isDraggedOver={
+                        draggedOverSlot?.team === side &&
+                        draggedOverSlot?.type === 'pick' &&
+                        draggedOverSlot?.index === index
+                      }
                     />
                   </React.Fragment>
                 );
@@ -71,7 +172,9 @@ export const TeamPanel = ({ id, side, state, onSlotClick, onClearSlot, onDrop, o
 
           {/* Bans Section */}
           <div className="pt-3 border-t-2 border-border-primary/50">
-            <h3 className="text-xs font-semibold text-text-secondary mb-2 text-center uppercase tracking-wider">Bans</h3>
+            <h3 className="text-xs font-semibold text-text-secondary mb-2 text-center uppercase tracking-wider">
+              Bans
+            </h3>
             <div className="flex justify-center items-center gap-2 flex-wrap">
               {state.bans.map((ban, index) => {
                 const isThisSlotActive = activeSlot?.type === 'ban' && activeSlot?.index === index;
@@ -80,16 +183,20 @@ export const TeamPanel = ({ id, side, state, onSlotClick, onClearSlot, onDrop, o
                     <BanSlot
                       side={side}
                       index={index}
-                      champion={ban.champion} 
-                      onClick={() => onSlotClick(side, 'ban', index)}
-                      onClear={onClearSlot ? () => onClearSlot(side, 'ban', index) : undefined}
-                      onDrop={onDrop ? (e) => onDrop(e, side, 'ban', index) : undefined}
+                      champion={ban.champion}
+                      onClick={() => handleBanSlotClick(index)}
+                      onClear={onClearSlot ? () => handleBanClear(index) : undefined}
+                      onDrop={onDrop ? e => handleBanDrop(e, index) : undefined}
                       onDragOver={onDragOver}
-                      onDragEnter={onDragEnter ? (e) => onDragEnter(e, side, 'ban', index) : undefined}
+                      onDragEnter={onDragEnter ? e => handleBanDragEnter(e, index) : undefined}
                       onDragLeave={onDragLeave}
                       isActive={isThisSlotActive}
                       isDimmed={isAnySlotActive && !isThisSlotActive}
-                      isDraggedOver={draggedOverSlot?.team === side && draggedOverSlot?.type === 'ban' && draggedOverSlot?.index === index}
+                      isDraggedOver={
+                        draggedOverSlot?.team === side &&
+                        draggedOverSlot?.type === 'ban' &&
+                        draggedOverSlot?.index === index
+                      }
                     />
                   </React.Fragment>
                 );
@@ -97,6 +204,9 @@ export const TeamPanel = ({ id, side, state, onSlotClick, onClearSlot, onDrop, o
             </div>
           </div>
         </div>
-    </div>
-  );
-};
+      </div>
+    );
+  }
+);
+
+TeamPanel.displayName = 'TeamPanel';

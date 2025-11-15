@@ -17,317 +17,602 @@ import { GuidedTour } from '../Onboarding/GuidedTour';
 import type { TourStep } from '../Onboarding/GuidedTour';
 import { TeamBuilderModal } from './TeamBuilderModal';
 import { TeamBuilderAssistant } from './TeamBuilderAssistant';
+import html2canvas from 'html2canvas';
+import { Download } from 'lucide-react';
+import { logger } from '../../lib/logger';
 
 const DRAFT_LAB_TOUR_STEPS: TourStep[] = [
-    { selector: '#draftlab-blue-team', title: 'Your Team Panel', content: 'This is where you build your team. Click on an empty slot to select a champion.' },
-    { selector: '#draftlab-champion-grid', title: 'The Champion Grid', content: 'Search, filter, and select champions here. You can also drag-and-drop champions into the slots.' },
-    { selector: '#draftlab-red-team', title: 'The Opponent Panel', content: 'This is the enemy team. Fill this out to simulate a real draft scenario.' },
-    { selector: '#draftlab-analyze-button', title: 'Get AI Analysis', content: 'Once both teams have 5 champions, click here to get instant, in-depth feedback on the matchup from the AI.' },
-    { selector: '#draftlab-advice-panel', title: 'The Advice Panel', content: 'Your AI-powered analysis will appear here, packed with insights on strengths, weaknesses, and win conditions.' },
+  {
+    selector: '#draftlab-blue-team',
+    title: 'Your Team Panel',
+    content: 'This is where you build your team. Click on an empty slot to select a champion.',
+  },
+  {
+    selector: '#draftlab-champion-grid',
+    title: 'The Champion Grid',
+    content: 'Search, filter, and select champions here. You can also drag-and-drop champions into the slots.',
+  },
+  {
+    selector: '#draftlab-red-team',
+    title: 'The Opponent Panel',
+    content: 'This is the enemy team. Fill this out to simulate a real draft scenario.',
+  },
+  {
+    selector: '#draftlab-analyze-button',
+    title: 'Get AI Analysis',
+    content:
+      'Once both teams have 5 champions, click here to get instant, in-depth feedback on the matchup from the AI.',
+  },
+  {
+    selector: '#draftlab-advice-panel',
+    title: 'The Advice Panel',
+    content:
+      'Your AI-powered analysis will appear here, packed with insights on strengths, weaknesses, and win conditions.',
+  },
 ];
 
-export const DraftLab = ({ startTour, onTourComplete, navigateToAcademy }: { startTour: boolean, onTourComplete: () => void, navigateToAcademy: (lessonId: string) => void }) => {
-    const { draftState, setDraftState, resetDraft } = useDraft();
-    const { champions, championsLite } = useChampions();
-    const { settings } = useSettings();
-    const { profile, addSP, completeMission, addChampionMastery } = useUserProfile();
+export const DraftLab = ({
+  startTour,
+  onTourComplete,
+  navigateToAcademy,
+}: {
+  startTour: boolean;
+  onTourComplete: () => void;
+  navigateToAcademy: (lessonId: string) => void;
+}) => {
+  const { draftState, setDraftState, resetDraft } = useDraft();
+  const { champions, championsLite } = useChampions();
+  const { settings } = useSettings();
+  const { profile, addSP, completeMission, addChampionMastery } = useUserProfile();
 
-    const [activeSlot, setActiveSlot] = useState<{ team: TeamSide; type: 'pick' | 'ban'; index: number } | null>(null);
-    const [draggedOverSlot, setDraggedOverSlot] = useState<{ team: TeamSide; type: 'pick' | 'ban'; index: number } | null>(null);
+  const [activeSlot, setActiveSlot] = useState<{ team: TeamSide; type: 'pick' | 'ban'; index: number } | null>(null);
+  const [draggedOverSlot, setDraggedOverSlot] = useState<{
+    team: TeamSide;
+    type: 'pick' | 'ban';
+    index: number;
+  } | null>(null);
 
-    const [advice, setAdvice] = useState<AIAdvice | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [analysisCompleted, setAnalysisCompleted] = useState(false);
-    
-    const [isTourOpen, setIsTourOpen] = useState(startTour);
-    const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
-    
-    // Team Builder State
-    const [isBuilding, setIsBuilding] = useState(false);
-    const [builderStep, setBuilderStep] = useState(0);
-    const [builderSuggestions, setBuilderSuggestions] = useState<(ChampionSuggestion & {champion: ChampionLite})[]>([]);
-    const [isBuilderLoading, setIsBuilderLoading] = useState(false);
-    const [builderCore, setBuilderCore] = useState('');
-    const [isOpponentLoading, setIsOpponentLoading] = useState(false);
+  const [advice, setAdvice] = useState<AIAdvice | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [analysisCompleted, setAnalysisCompleted] = useState(false);
 
-    const abortControllerRef = useRef<AbortController | null>(null);
-    const isMountedRef = useRef(true);
+  const [isTourOpen, setIsTourOpen] = useState(startTour);
+  const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
 
-    useEffect(() => {
-        setIsTourOpen(startTour);
-    }, [startTour]);
-    
-    // Cleanup abort controller on unmount and mark as unmounted
-    useEffect(() => {
-        isMountedRef.current = true;
-        return () => {
-            isMountedRef.current = false;
-            abortControllerRef.current?.abort();
-        };
-    }, []);
+  // Team Builder State
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [builderStep, setBuilderStep] = useState(0);
+  const [builderSuggestions, setBuilderSuggestions] = useState<(ChampionSuggestion & { champion: ChampionLite })[]>([]);
+  const [isBuilderLoading, setIsBuilderLoading] = useState(false);
+  const [builderCore, setBuilderCore] = useState('');
+  const [isOpponentLoading, setIsOpponentLoading] = useState(false);
 
-    const isDraftComplete = draftState.blue.picks.every(p => p.champion) && draftState.red.picks.every(p => p.champion);
-    const isStale = advice && JSON.stringify(draftState) !== advice.draftId;
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
-    const handleSlotClick = (team: TeamSide, type: 'pick' | 'ban', index: number) => {
-        setActiveSlot({ team, type, index });
+  useEffect(() => {
+    setIsTourOpen(startTour);
+  }, [startTour]);
+
+  // Cleanup abort controller on unmount and mark as unmounted
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
     };
+  }, []);
 
-    const handleChampionSelect = (champion: Champion) => {
-        if (!activeSlot) {return;}
-        setDraftState(prev => updateSlotInDraft(prev, activeSlot.team, activeSlot.type, activeSlot.index, champion));
-        setActiveSlot(null);
-    };
+  const isDraftComplete = draftState.blue.picks.every(p => p.champion) && draftState.red.picks.every(p => p.champion);
+  const isStale = advice && JSON.stringify(draftState) !== advice.draftId;
 
-    const handleClearSlot = (team: TeamSide, type: 'pick' | 'ban', index: number) => {
-        setDraftState(prev => updateSlotInDraft(prev, team, type, index, null));
-    };
+  const handleSlotClick = useCallback((team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    setActiveSlot({ team, type, index });
+  }, []);
 
-    const handleAnalyze = async () => {
-        if (!isDraftComplete || isLoading) {return;}
-        setIsLoading(true);
-        // Abort any previous request to prevent race conditions
-        setError(null);
-        setAnalysisCompleted(false);
+  const handleChampionSelect = useCallback(
+    (champion: Champion) => {
+      if (!activeSlot) {
+        return;
+      }
+      setDraftState(prev => updateSlotInDraft(prev, activeSlot.team, activeSlot.type, activeSlot.index, champion));
+      setActiveSlot(null);
+    },
+    [activeSlot]
+  );
 
-        abortControllerRef.current?.abort();
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
+  const handleClearSlot = useCallback((team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    setDraftState(prev => updateSlotInDraft(prev, team, type, index, null));
+  }, []);
 
-            // Check if request was aborted or component unmounted
-            if (controller.signal.aborted || !isMountedRef.current) {return;}
-        try {
-            const result = await getDraftAdvice(draftState, 'blue', settings.primaryRole, profile.skillLevel, 'gemini-2.5-pro', controller.signal);
-            if(controller.signal.aborted) {return;}
-            
-            setAdvice({ ...result, draftId: JSON.stringify(draftState) });
-            setAnalysisCompleted(true);
-            
-            const userScore = result.teamAnalysis.blue.draftScore;
-            if (userScore) {
-                if (userScore.startsWith('S')) {
-                    addSP(150, "S-Grade Draft Analysis");
-                    completeMission(MISSION_IDS.WEEKLY.PERFECT_COMP);
-                    addChampionMastery(draftState.blue.picks.map(p => p.champion!), userScore);
-                } else if (userScore.startsWith('A')) {
-                    addChampionMastery(draftState.blue.picks.map(p => p.champion!), userScore);
-                }
-            }
-            addSP(25, "Draft Analysis");
-            completeMission(MISSION_IDS.GETTING_STARTED.FIRST_ANALYSIS);
-            completeMission(MISSION_IDS.DAILY.FIRST_DRAFT_OF_DAY);
+  const handleAnalyze = async () => {
+    if (!isDraftComplete || isLoading) {
+      return;
+    }
+    setIsLoading(true);
+    // Abort any previous request to prevent race conditions
+    setError(null);
+    setAnalysisCompleted(false);
 
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') {return;}
-            if (!isMountedRef.current) {return;}
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-            setError(errorMessage);
-            toast.error(errorMessage);
-        } finally {
-            if (!controller.signal.aborted && isMountedRef.current) {
-                setIsLoading(false);
-            }
+    // Check if request was aborted or component unmounted
+    if (controller.signal.aborted || !isMountedRef.current) {
+      return;
+    }
+    try {
+      const result = await getDraftAdvice(
+        draftState,
+        'blue',
+        settings.primaryRole,
+        profile.skillLevel,
+        'gemini-2.5-pro',
+        controller.signal
+      );
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setAdvice({ ...result, draftId: JSON.stringify(draftState) });
+      setAnalysisCompleted(true);
+
+      const userScore = result.teamAnalysis.blue.draftScore;
+      if (userScore) {
+        const blueChampions = draftState.blue.picks.filter(p => p.champion).map(p => p.champion!);
+        if (userScore.startsWith('S')) {
+          addSP(150, 'S-Grade Draft Analysis');
+          completeMission(MISSION_IDS.WEEKLY.PERFECT_COMP);
+          addChampionMastery(blueChampions, userScore);
+        } else if (userScore.startsWith('A')) {
+          addChampionMastery(blueChampions, userScore);
         }
-    };
+      }
+      addSP(25, 'Draft Analysis');
+      completeMission(MISSION_IDS.GETTING_STARTED.FIRST_ANALYSIS);
+      completeMission(MISSION_IDS.DAILY.FIRST_DRAFT_OF_DAY);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      if (!isMountedRef.current) {
+        return;
+      }
 
-    // --- Drag and Drop Logic ---
-    const handleDragStart = (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number, champion: Champion) => {
-        e.dataTransfer.setData('application/json', JSON.stringify({ champion, source: { team, type, index } }));
-        e.dataTransfer.effectAllowed = 'copyMove';
-    };
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      if (!controller.signal.aborted && isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  };
 
-    const handleDrop = (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
-        e.preventDefault();
-        setDraggedOverSlot(null);
-        try {
-            const data = JSON.parse(e.dataTransfer.getData('application/json'));
-            const champion = data.champion as Champion;
+  // --- Drag and Drop Logic ---
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number, champion: Champion) => {
+      e.dataTransfer.setData('application/json', JSON.stringify({ champion, source: { team, type, index } }));
+      e.dataTransfer.effectAllowed = 'copyMove';
+    },
+    []
+  );
 
-            if (data.source) { // It's a swap
-                setDraftState(prev => swapChampionsInDraft(prev, team, data.source.index, index));
-            } else { // It's a drag from the grid
-                const available = getAvailableChampions(draftState, championsLite);
-                if (available.some(c => c.id === champion.id)) {
-                    setDraftState(prev => updateSlotInDraft(prev, team, type, index, champion));
-                }
-            }
-        } catch (error) {
-            console.error("Drag and drop failed:", error);
+  const handleDrop = useCallback(
+    (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+      e.preventDefault();
+      setDraggedOverSlot(null);
+      try {
+        const dataString = e.dataTransfer.getData('application/json');
+        if (!dataString) {
+          logger.error('Drag and drop failed: No data', { component: 'DraftLab' });
+          return;
         }
-    };
-    const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-    const handleDragEnter = (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => { e.preventDefault(); setDraggedOverSlot({ team, type, index }); };
-    const handleDragLeave = () => setDraggedOverSlot(null);
 
-    // --- Blueprint Logic ---
-    const handleLoadBlueprint = (championIds: string[]) => {
-        const newPicks = Array(5).fill(null).map((_, i) => ({
-            champion: championIds[i] ? champions.find(c => c.id === championIds[i]) || null : null,
-            isActive: false
+        const data = JSON.parse(dataString);
+        if (!data || !data.champion) {
+          logger.error('Drag and drop failed: Invalid data structure', { component: 'DraftLab' });
+          return;
+        }
+
+        const champion = data.champion as Champion;
+
+        if (data.source) {
+          // It's a swap
+          // Only allow swaps within the same team and same type
+          if (data.source.team === team && data.source.type === type) {
+            setDraftState(prev => swapChampionsInDraft(prev, team, data.source.index, index));
+          } else {
+            // Cross-team or cross-type drag: treat as new placement
+            const available = getAvailableChampions(draftState, championsLite);
+            if (available.some(c => c.id === champion.id)) {
+              setDraftState(prev => updateSlotInDraft(prev, team, type, index, champion));
+            }
+          }
+        } else {
+          // It's a drag from the grid
+          const available = getAvailableChampions(draftState, championsLite);
+          if (available.some(c => c.id === champion.id)) {
+            setDraftState(prev => updateSlotInDraft(prev, team, type, index, champion));
+          }
+        }
+      } catch (error) {
+        logger.error(error instanceof Error ? error : new Error('Drag and drop failed'), { component: 'DraftLab' });
+        toast.error('Failed to move champion. Please try again.');
+      }
+    },
+    [draftState, championsLite]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {
+    e.preventDefault();
+    setDraggedOverSlot({ team, type, index });
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDraggedOverSlot(null);
+  }, []);
+
+  // --- Blueprint Logic ---
+  const handleLoadBlueprint = useCallback(
+    (championIds: string[]) => {
+      const newPicks = Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          champion: championIds[i] ? champions.find(c => c.id === championIds[i]) || null : null,
+          isActive: false,
         }));
-        setDraftState(prev => ({ ...prev, blue: { ...prev.blue, picks: newPicks } }));
-        toast.success("Blueprint loaded!");
-    };
+      setDraftState(prev => ({ ...prev, blue: { ...prev.blue, picks: newPicks } }));
+      toast.success('Blueprint loaded!');
+    },
+    [champions]
+  );
 
-    // --- Team Builder Assistant Logic ---
-    const fetchBuilderSuggestions = useCallback(async (currentDraft: DraftState, step: number, _core: string, signal: AbortSignal) => {
-        setIsBuilderLoading(true);
-        try {
-            const roleToPick = ROLES[step];
-            const available = getAvailableChampions(currentDraft, championsLite);
-            
-            const suggestions = await getTeambuilderSuggestion({
-                coreConcept: builderCore,
-                currentPicks: draftState.blue.picks.filter(p => p.champion).map(p => p.champion!.name),
-                roleToPick: roleToPick || 'Any',
-                availableChampions: available,
-                signal
-            });
-            if (signal.aborted) {return;}
-            
-            const suggestionsWithData = suggestions.map(s => ({
-                ...s,
-                champion: championsLite.find(c => c.name === s.championName)!
-            })).filter(s => s.champion);
-
-            setBuilderSuggestions(suggestionsWithData);
-
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') {return;}
-            toast.error(err instanceof Error ? err.message : "Failed to get suggestions.");
-            setIsBuilding(false); // Abort builder on error
-        } finally {
-            if (!signal.aborted) {setIsBuilderLoading(false);}
+  // --- Team Builder Assistant Logic ---
+  const fetchBuilderSuggestions = useCallback(
+    async (currentDraft: DraftState, step: number, _core: string, signal: AbortSignal) => {
+      setIsBuilderLoading(true);
+      try {
+        // Bounds check for ROLES array
+        if (step < 0 || step >= ROLES.length) {
+          logger.error(`Invalid step index: ${step}`, { component: 'DraftLab', step, rolesLength: ROLES.length });
+          setIsBuilderLoading(false);
+          return;
         }
-    }, [championsLite]);
 
-    const handleStartBuilder = (core: { type: 'champion' | 'strategy'; value: string }) => {
-        const newCoreConcept = core.type === 'champion' ? `Build around ${core.value}` : core.value;
-        resetDraft();
-        setIsBuilding(true);
-        setBuilderStep(0);
-        setBuilderCore(newCoreConcept);
-        setIsBuilderModalOpen(false);
-        
+        const roleToPick = ROLES[step];
+        const available = getAvailableChampions(currentDraft, championsLite);
+
+        // Use currentDraft parameter instead of closure draftState
+        const currentPicks = currentDraft.blue.picks.filter(p => p.champion).map(p => p.champion!.name);
+
+        const suggestions = await getTeambuilderSuggestion({
+          coreConcept: _core, // Use parameter instead of closure variable to avoid stale state
+          currentPicks,
+          roleToPick: roleToPick || 'Any',
+          availableChampions: available,
+          signal,
+        });
+        if (signal.aborted) {
+          return;
+        }
+
+        // Handle undefined find results gracefully
+        const suggestionsWithData = suggestions
+          .map(s => {
+            const champion = championsLite.find(c => c.name === s.championName);
+            return champion ? { ...s, champion } : null;
+          })
+          .filter((s): s is ChampionSuggestion & { champion: ChampionLite } => s !== null);
+
+        setBuilderSuggestions(suggestionsWithData);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        toast.error(err instanceof Error ? err.message : 'Failed to get suggestions.');
+        setIsBuilding(false); // Abort builder on error
+      } finally {
+        if (!signal.aborted) {
+          setIsBuilderLoading(false);
+        }
+      }
+    },
+    [championsLite, builderCore]
+  );
+
+  const handleStartBuilder = useCallback(
+    (core: { type: 'champion' | 'strategy'; value: string }) => {
+      const newCoreConcept = core.type === 'champion' ? `Build around ${core.value}` : core.value;
+      resetDraft();
+      setIsBuilding(true);
+      setBuilderStep(0);
+      setBuilderCore(newCoreConcept);
+      setIsBuilderModalOpen(false);
+
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      fetchBuilderSuggestions(draftState, 0, newCoreConcept, controller.signal);
+    },
+    [draftState, fetchBuilderSuggestions, resetDraft]
+  );
+
+  const handleBuilderSelect = useCallback(
+    (champion: ChampionLite) => {
+      const fullChampion = champions.find(c => c.id === champion.id);
+      if (!fullChampion) {
+        return;
+      }
+
+      const nextState = updateSlotInDraft(draftState, 'blue', 'pick', builderStep, fullChampion);
+      setDraftState(nextState);
+
+      const nextStep = builderStep + 1;
+      setBuilderStep(nextStep);
+
+      if (nextStep < 5) {
         abortControllerRef.current?.abort();
         const controller = new AbortController();
         abortControllerRef.current = controller;
+        fetchBuilderSuggestions(nextState, nextStep, builderCore, controller.signal);
+      }
+    },
+    [champions, draftState, builderStep, builderCore, fetchBuilderSuggestions]
+  );
 
-        fetchBuilderSuggestions(draftState, 0, newCoreConcept, controller.signal);
-    };
+  const handleGenerateOpponent = useCallback(async () => {
+    setIsOpponentLoading(true);
+    let currentRedDraft = draftState;
 
-    const handleBuilderSelect = (champion: ChampionLite) => {
-        const fullChampion = champions.find(c => c.id === champion.id);
-        if (!fullChampion) {return;}
+    // Abort any previous generation attempt
+    abortControllerRef.current?.abort();
+    const mainController = new AbortController();
+    abortControllerRef.current = mainController;
 
-        const nextState = updateSlotInDraft(draftState, 'blue', 'pick', builderStep, fullChampion);
-        setDraftState(nextState);
-        
-        const nextStep = builderStep + 1;
-        setBuilderStep(nextStep);
+    for (let i = 0; i < 5; i++) {
+      // Check if main controller was aborted
+      if (mainController.signal.aborted) {
+        break;
+      }
 
-        if (nextStep < 5) {
-            abortControllerRef.current?.abort();
-            const controller = new AbortController();
-            abortControllerRef.current = controller;
-            fetchBuilderSuggestions(nextState, nextStep, builderCore, controller.signal);
+      // Create a new controller for each request, but abort it if main is aborted
+      const controller = new AbortController();
+      if (mainController.signal.aborted) {
+        controller.abort();
+      }
+
+      try {
+        const available = getAvailableChampions(currentRedDraft, championsLite);
+        if (available.length === 0) {
+          toast.error('No more champions available for opponent team.');
+          break;
         }
-    };
-    
-    const handleGenerateOpponent = async () => {
-        setIsOpponentLoading(true);
-        let currentRedDraft = draftState;
-        
-        for (let i = 0; i < 5; i++) {
-            abortControllerRef.current?.abort();
-            const controller = new AbortController();
-            abortControllerRef.current = controller;
-            try {
-                const available = getAvailableChampions(currentRedDraft, championsLite);
-                const suggestion = await getBotDraftAction({
-                    draftState: currentRedDraft,
-                    turn: { team: 'red', type: 'pick', index: i },
-                    persona: 'The Strategist',
-                    availableChampions: available,
-                    signal: controller.signal
-                });
-                if (controller.signal.aborted) {break;}
 
-                const champ = champions.find(c => c.name === suggestion.championName);
-                if (champ) {
-                    currentRedDraft = updateSlotInDraft(currentRedDraft, 'red', 'pick', i, champ);
-                    setDraftState(currentRedDraft);
-                }
-            } catch (e) {
-                if (e instanceof DOMException && e.name === 'AbortError') {break;}
-                toast.error("Failed to generate part of the opponent team.");
-                break;
-            }
+        const suggestion = await getBotDraftAction({
+          draftState: currentRedDraft,
+          turn: { team: 'red', type: 'pick', index: i },
+          persona: 'The Strategist',
+          availableChampions: available,
+          signal: controller.signal,
+        });
+
+        if (controller.signal.aborted || mainController.signal.aborted) {
+          break;
         }
-        setIsOpponentLoading(false);
-        setIsBuilding(false); // Exit builder mode
-    };
-    
-    const handleReset = () => {
-        resetDraft();
-        setIsBuilding(false);
-        setBuilderStep(0);
-        setBuilderCore('');
-        setBuilderSuggestions([]);
+
+        const champ = champions.find(c => c.name === suggestion.championName);
+        if (champ) {
+          currentRedDraft = updateSlotInDraft(currentRedDraft, 'red', 'pick', i, champ);
+          // Only update state if not aborted
+          if (!mainController.signal.aborted && isMountedRef.current) {
+            setDraftState(currentRedDraft);
+          }
+        } else {
+          console.warn(`Champion ${suggestion.championName} not found in champions list`);
+        }
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          break;
+        }
+        toast.error('Failed to generate part of the opponent team.');
+        break;
+      }
     }
 
-    return (
-        <div className="space-y-6">
-            <GuidedTour isOpen={isTourOpen} onClose={() => { setIsTourOpen(false); onTourComplete(); }} steps={DRAFT_LAB_TOUR_STEPS} />
-            <TeamBuilderModal isOpen={isBuilderModalOpen} onClose={() => setIsBuilderModalOpen(false)} onStart={handleStartBuilder}/>
+    if (!mainController.signal.aborted && isMountedRef.current) {
+      setIsOpponentLoading(false);
+      setIsBuilding(false); // Exit builder mode
+    }
+  }, [draftState, championsLite, champions]);
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="font-display text-3xl font-bold text-text-primary tracking-wide">Strategy Forge</h1>
-                    <p className="text-sm text-text-secondary">Theory-craft team compositions and get instant AI-powered feedback.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <Button id="draftlab-teambuilder-button" variant="secondary" onClick={() => setIsBuilderModalOpen(true)}>Team Builder Assistant</Button>
-                    <Button variant="secondary" onClick={handleReset}>Reset Draft</Button>
-                    <Button id="draftlab-analyze-button" variant="primary" onClick={handleAnalyze} disabled={!isDraftComplete || isLoading}>
-                        {isLoading ? 'Analyzing...' : 'Analyze'}
-                    </Button>
-                </div>
-            </div>
+  const handleReset = useCallback(() => {
+    resetDraft();
+    setIsBuilding(false);
+    setBuilderStep(0);
+    setBuilderCore('');
+    setBuilderSuggestions([]);
+  }, [resetDraft]);
 
-            <BlueprintPanel onLoad={handleLoadBlueprint} />
+  const handleExportDraft = useCallback(async () => {
+    try {
+      const draftContainer = document.getElementById('draftlab-draft-container');
+      if (!draftContainer) {
+        toast.error('Could not find draft to export');
+        return;
+      }
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <TeamPanel id="draftlab-blue-team" side="blue" state={draftState.blue} onSlotClick={handleSlotClick} onClearSlot={handleClearSlot} activeSlot={activeSlot?.team === 'blue' ? activeSlot : null} onDrop={handleDrop} onDragStart={(e, t, y, i) => draftState.blue.picks[i]?.champion && handleDragStart(e, t, y, i, draftState.blue.picks[i].champion as any)} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
-                        <TeamPanel id="draftlab-red-team" side="red" state={draftState.red} onSlotClick={handleSlotClick} onClearSlot={handleClearSlot} activeSlot={activeSlot?.team === 'red' ? activeSlot : null} onDrop={handleDrop} onDragStart={(e, t, y, i) => draftState.red.picks[i]?.champion && handleDragStart(e, t, y, i, draftState.red.picks[i].champion as any)} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} draggedOverSlot={draggedOverSlot} />
-                    </div>
-                    <div id="draftlab-advice-panel">
-                        <AdvicePanel advice={advice} isLoading={isLoading} error={error} navigateToAcademy={navigateToAcademy} analysisCompleted={analysisCompleted} onAnimationEnd={() => setAnalysisCompleted(false)} isStale={isStale || false} />
-                    </div>
-                </div>
+      toast.loading('Exporting draft as image...', { id: 'export-draft' });
 
-                <div id="draftlab-champion-grid" className="lg:col-span-1">
-                   {isBuilding ? 
-                     <TeamBuilderAssistant 
-                        step={builderStep} 
-                        coreConcept={builderCore} 
-                        suggestions={builderSuggestions} 
-                        isLoading={isBuilderLoading} 
-                        onSelect={handleBuilderSelect} 
-                        onGenerateOpponent={handleGenerateOpponent} 
-                        isOpponentLoading={isOpponentLoading}
-                    />
-                   : 
-                     <ChampionGrid onSelect={(champLite) => { const champ = champions.find(c => c.id === champLite.id); if (champ) {handleChampionSelect(champ);} }} onQuickLook={() => {}} onWhyThisPick={() => {}} recommendations={[]} isRecsLoading={false} activeRole={null} draftState={draftState} onDragStart={(e, champ) => handleDragStart(e, 'blue', 'pick', -1, champ)} />
-                   }
-                </div>
-            </div>
+      const canvas = await html2canvas(draftContainer, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+
+      canvas.toBlob(blob => {
+        if (!blob) {
+          toast.error('Failed to create image', { id: 'export-draft' });
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `draft-${new Date().toISOString().split('T')[0]}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast.success('Draft exported successfully!', { id: 'export-draft' });
+      }, 'image/png');
+    } catch (error) {
+      logger.error(error instanceof Error ? error : new Error('Failed to export draft'), { component: 'DraftLab' });
+      toast.error('Failed to export draft', { id: 'export-draft' });
+    }
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <GuidedTour
+        isOpen={isTourOpen}
+        onClose={() => {
+          setIsTourOpen(false);
+          onTourComplete();
+        }}
+        steps={DRAFT_LAB_TOUR_STEPS}
+      />
+      <TeamBuilderModal
+        isOpen={isBuilderModalOpen}
+        onClose={() => setIsBuilderModalOpen(false)}
+        onStart={handleStartBuilder}
+      />
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-text-primary tracking-wide">Strategy Forge</h1>
+          <p className="text-sm text-text-secondary">
+            Theory-craft team compositions and get instant AI-powered feedback.
+          </p>
         </div>
-    );
+        <div className="flex flex-wrap gap-2">
+          <Button id="draftlab-teambuilder-button" variant="secondary" onClick={() => setIsBuilderModalOpen(true)}>
+            Team Builder Assistant
+          </Button>
+          <Button variant="secondary" onClick={handleReset}>
+            Reset Draft
+          </Button>
+          <Button variant="secondary" onClick={handleExportDraft} disabled={!isDraftComplete}>
+            <Download size={16} className="mr-2" aria-hidden="true" />
+            Export
+          </Button>
+          <Button
+            id="draftlab-analyze-button"
+            variant="primary"
+            onClick={handleAnalyze}
+            disabled={!isDraftComplete || isLoading}
+          >
+            {isLoading ? 'Analyzing...' : 'Analyze'}
+          </Button>
+        </div>
+      </div>
+
+      <BlueprintPanel onLoad={handleLoadBlueprint} />
+
+      <div id="draftlab-draft-container" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <TeamPanel
+              id="draftlab-blue-team"
+              side="blue"
+              state={draftState.blue}
+              onSlotClick={handleSlotClick}
+              onClearSlot={handleClearSlot}
+              activeSlot={activeSlot?.team === 'blue' ? activeSlot : null}
+              onDrop={handleDrop}
+              onDragStart={(e, t, y, i) => {
+                const champ = draftState.blue.picks[i]?.champion;
+                if (champ) {
+                  handleDragStart(e, t, y, i, champ);
+                }
+              }}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              draggedOverSlot={draggedOverSlot}
+            />
+            <TeamPanel
+              id="draftlab-red-team"
+              side="red"
+              state={draftState.red}
+              onSlotClick={handleSlotClick}
+              onClearSlot={handleClearSlot}
+              activeSlot={activeSlot?.team === 'red' ? activeSlot : null}
+              onDrop={handleDrop}
+              onDragStart={(e, t, y, i) => {
+                const champ = draftState.red.picks[i]?.champion;
+                if (champ) {
+                  handleDragStart(e, t, y, i, champ);
+                }
+              }}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              draggedOverSlot={draggedOverSlot}
+            />
+          </div>
+          <div id="draftlab-advice-panel">
+            <AdvicePanel
+              advice={advice}
+              isLoading={isLoading}
+              error={error}
+              navigateToAcademy={navigateToAcademy}
+              analysisCompleted={analysisCompleted}
+              onAnimationEnd={() => setAnalysisCompleted(false)}
+              isStale={isStale || false}
+            />
+          </div>
+        </div>
+
+        <div id="draftlab-champion-grid" className="lg:col-span-1">
+          {isBuilding ? (
+            <TeamBuilderAssistant
+              step={builderStep}
+              coreConcept={builderCore}
+              suggestions={builderSuggestions}
+              isLoading={isBuilderLoading}
+              onSelect={handleBuilderSelect}
+              onGenerateOpponent={handleGenerateOpponent}
+              isOpponentLoading={isOpponentLoading}
+            />
+          ) : (
+            <ChampionGrid
+              onSelect={champLite => {
+                const champ = champions.find(c => c.id === champLite.id);
+                if (champ) {
+                  handleChampionSelect(champ);
+                }
+              }}
+              onQuickLook={() => {}}
+              onWhyThisPick={() => {}}
+              recommendations={[]}
+              isRecsLoading={false}
+              activeRole={null}
+              draftState={draftState}
+              onDragStart={(e, champ) => handleDragStart(e, 'blue', 'pick', -1, champ)}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
-
-

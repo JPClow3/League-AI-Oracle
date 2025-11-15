@@ -1,150 +1,145 @@
-# E2E Tests
+# Test Suite Documentation
 
-This directory contains end-to-end tests for League AI Oracle using Playwright.
+## Overview
 
-## Running Tests
-
-```bash
-# Run all tests
-npm run test:e2e
-
-# Run tests with UI mode (recommended for development)
-npm run test:e2e:ui
-
-# Run tests in headed mode (see the browser)
-npm run test:e2e:headed
-
-# Debug tests step by step
-npm run test:e2e:debug
-
-# View HTML report
-npm run test:report
-```
+This test suite provides comprehensive coverage (90%+) for the League AI Oracle application, including unit tests, integration tests, and E2E tests.
 
 ## Test Structure
 
-- `homepage.spec.ts` - Homepage and navigation tests
-- `draftlab.spec.ts` - Draft Lab feature tests
-- `general.spec.ts` - Settings, accessibility, and general functionality
-
-## Writing Tests
-
-### Best Practices
-
-1. **Use semantic selectors** - Prefer roles and labels over CSS selectors
-2. **Add test IDs** - Use `data-testid` for complex elements
-3. **Test user flows** - Focus on what users do, not implementation
-4. **Keep tests isolated** - Each test should be independent
-5. **Use Page Objects** - For complex pages, create page object models
-
-### Example Test
-
-```typescript
-import { test, expect } from '@playwright/test';
-
-test.describe('Feature Name', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/feature');
-  });
-
-  test('should perform action', async ({ page }) => {
-    // Arrange
-    const button = page.getByRole('button', { name: /submit/i });
-    
-    // Act
-    await button.click();
-    
-    // Assert
-    await expect(page.getByText(/success/i)).toBeVisible();
-  });
-});
+```
+tests/
+├── unit/              # Unit tests for individual components, hooks, services
+├── integration/       # Integration tests for component interactions
+└── e2e/              # End-to-end tests for critical user flows
 ```
 
-## Adding Test IDs
+## Coverage Targets
 
-When you need precise selectors, add `data-testid` attributes:
+- **Lines**: 90%
+- **Functions**: 90%
+- **Branches**: 85%
+- **Statements**: 90%
 
-```tsx
-<div data-testid="champion-grid">
-  <div data-testid="champion-card" data-selected="true">
-    {/* ... */}
-  </div>
-</div>
-```
+## Running Tests
 
-Then use in tests:
-
-```typescript
-await page.getByTestId('champion-grid').click();
-```
-
-## Debugging
-
-### Visual Debugging
+### Unit Tests
 
 ```bash
-# Open test in UI mode
-npm run test:e2e:ui
-
-# Step through test
-npm run test:e2e:debug
+npm run test:unit
 ```
 
-### Screenshots and Videos
+### Integration Tests
 
-Playwright automatically captures:
-- Screenshots on failure
-- Videos on retry
-- Traces for debugging
-
-View in the HTML report: `npm run test:report`
-
-### Console Logs
-
-```typescript
-// Listen to console
-page.on('console', msg => console.log(msg.text()));
-
-// Log page errors
-page.on('pageerror', error => console.log(error));
+```bash
+npm run test:integration
 ```
 
-## CI/CD Integration
+### E2E Tests
 
-Tests run automatically in CI with:
-- 2 retries on failure
-- Single worker (no parallelization)
-- HTML report artifacts
-
-## Troubleshooting
-
-### Tests Timing Out
-
-Increase timeout in test:
-
-```typescript
-test('slow test', async ({ page }) => {
-  test.setTimeout(60000); // 60 seconds
-  // ...
-});
+```bash
+npm run test:e2e
 ```
 
-### Element Not Found
+### Coverage Report
 
-1. Check if element loads asynchronously
-2. Add explicit waits: `await page.waitForSelector(...)`
-3. Use `toBeVisible({ timeout: 10000 })` for longer waits
+```bash
+npm run test:coverage
+```
 
-### Flaky Tests
+### All Tests
 
-1. Avoid hard-coded waits (`page.waitForTimeout`)
-2. Wait for network idle: `await page.waitForLoadState('networkidle')`
-3. Use `toHaveText` instead of `toContainText` for exact matches
-4. Add retries for known flaky tests
+```bash
+npm run test:all
+```
 
-## Resources
+## Test Categories
 
-- [Playwright Documentation](https://playwright.dev)
-- [Best Practices](https://playwright.dev/docs/best-practices)
-- [Debugging Guide](https://playwright.dev/docs/debug)
+### Unit Tests
 
+#### Services
+
+- `cacheService.test.ts` - Cache management, TTL, stale-while-revalidate
+- `storageService.test.ts` - LocalStorage operations
+- `analytics.test.ts` - Analytics tracking and user identification
+- `logger.test.ts` - Error logging and Sentry integration
+
+#### Components
+
+- `ChampionGrid.test.tsx` - Champion selection, filtering, keyboard navigation
+- `TeamPanel.test.tsx` - Team display, drag & drop, slot management
+- `AdvicePanel.test.tsx` - AI advice display, tabs, loading states
+- `OptimizedImage.test.tsx` - Image loading, lazy loading, WebP support
+- `Loader.test.tsx` - Loading states, progress indicators
+- `Button.test.tsx` - Button variants, states, interactions
+- `CommandPalette.test.tsx` - Command search, execution, keyboard navigation
+
+#### Hooks
+
+- `useSettings.test.tsx` - Settings management and persistence
+- `useUserProfile.test.tsx` - User profile, SP, missions
+- `usePlaybook.test.tsx` - Draft history management
+- `useCommands.test.tsx` - Command palette commands
+
+#### Utilities
+
+- `draftUtils.test.ts` - Draft state management, champion filtering
+- `apiValidation.test.ts` - Zod schema validation
+- `errorUtils.test.ts` - Error handling and formatting
+
+### Integration Tests
+
+- `draftLab.test.tsx` - Full draft lab workflow
+- `championSelection.test.tsx` - Champion selection with recent tracking
+- `geminiService.test.tsx` - API integration with validation
+
+### E2E Tests
+
+- `critical-flows.spec.ts` - Complete user journeys
+- `strategy-forge.spec.ts` - Strategy Forge feature testing
+- `recent-champions.spec.ts` - Recent champions feature
+- `keyboard-navigation.spec.ts` - Keyboard accessibility
+- `export-draft.spec.ts` - Draft export functionality
+- `progress-indicators.spec.ts` - Loading and progress states
+- `validation.spec.ts` - API response validation
+
+## Key Testing Patterns
+
+### Mocking
+
+- Services are mocked to avoid external dependencies
+- API calls are intercepted in E2E tests
+- Context providers are wrapped in test utilities
+
+### Test Data
+
+- Mock champions and draft states are reused across tests
+- Test fixtures are defined in test files
+
+### Assertions
+
+- Using `@testing-library/jest-dom` for DOM assertions
+- Vitest for unit test assertions
+- Playwright for E2E assertions
+
+## Continuous Integration
+
+Tests run automatically on:
+
+- Pull requests
+- Commits to main branch
+- Pre-commit hooks (via Husky)
+
+## Coverage Reports
+
+Coverage reports are generated in:
+
+- `coverage/` directory (HTML)
+- `coverage/lcov.info` (LCOV format for CI)
+
+## Best Practices
+
+1. **Isolation**: Each test should be independent
+2. **Cleanup**: Use `beforeEach` and `afterEach` for setup/teardown
+3. **Descriptive Names**: Test names should clearly describe what they test
+4. **AAA Pattern**: Arrange, Act, Assert
+5. **Mock External Dependencies**: Don't rely on real API calls in unit tests

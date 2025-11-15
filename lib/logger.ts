@@ -6,7 +6,7 @@ import * as Sentry from '@sentry/react';
  */
 
 interface LogContext {
-  [key: string]: any;
+  [key: string]: string | number | boolean | null | undefined | LogContext | LogContext[];
 }
 
 class LoggingService {

@@ -9,6 +9,7 @@ const defaultSettings: Settings = {
   primaryRole: 'All',
   secondaryRole: 'All',
   favoriteChampions: [],
+  recentChampions: [],
   language: 'en',
   enableSound: false,
   dashboardCards: [

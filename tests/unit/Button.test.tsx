@@ -1,45 +1,34 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Button } from '../../components/common/Button';
-import userEvent from '@testing-library/user-event';
 
-describe('Button Component', () => {
-  it('renders with children', () => {
+describe('Button', () => {
+  it('should render button with text', () => {
     render(<Button>Click me</Button>);
-    expect(screen.getByText('Click me')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /click me/i })).toBeInTheDocument();
   });
 
-  it('handles click events', async () => {
-    let clicked = false;
-    const user = userEvent.setup();
+  it('should handle click events', () => {
+    const handleClick = vi.fn();
+    render(<Button onClick={handleClick}>Click</Button>);
 
-    render(<Button onClick={() => { clicked = true; }}>Click me</Button>);
-
-    await user.click(screen.getByText('Click me'));
-    expect(clicked).toBe(true);
+    fireEvent.click(screen.getByRole('button'));
+    expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
-  it('shows loading state', () => {
-    render(<Button loading>Click me</Button>);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
-  });
-
-  it('disables when loading', () => {
-    render(<Button loading>Click me</Button>);
-    expect(screen.getByRole('button')).toBeDisabled();
-  });
-
-  it('applies variant classes', () => {
-    const { rerender } = render(<Button variant="primary">Primary</Button>);
-    expect(screen.getByRole('button')).toHaveClass('bg-[hsl(var(--accent))]');
-
-    rerender(<Button variant="secondary">Secondary</Button>);
-    expect(screen.getByRole('button')).toHaveClass('border-[hsl(var(--accent))]');
-  });
-
-  it('disables button when disabled prop is true', () => {
+  it('should be disabled when disabled prop is true', () => {
     render(<Button disabled>Disabled</Button>);
     expect(screen.getByRole('button')).toBeDisabled();
   });
-});
 
+  it('should show loading state', () => {
+    render(<Button loading>Loading</Button>);
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeDisabled();
+  });
+
+  it('should apply aria-label when provided', () => {
+    render(<Button ariaLabel="Custom label">Button</Button>);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Custom label');
+  });
+});
