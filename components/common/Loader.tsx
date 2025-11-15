@@ -79,7 +79,7 @@ export const Loader = ({
     showProgress && currentStage !== undefined && totalStages ? ((currentStage + 1) / totalStages) * 100 : null;
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center p-8">
+    <div className="relative w-full h-full flex flex-col items-center justify-center p-8 min-h-[400px]">
       <div className="relative z-10 flex flex-col items-center justify-center space-y-6 w-full max-w-md">
         <HextechSpinner />
         <p className="text-lg font-medium text-[hsl(var(--text-secondary))] text-center">

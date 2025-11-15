@@ -101,7 +101,7 @@ export const CommandPalette = ({ isOpen, onClose, commands }: CommandPaletteProp
     <div
       className={`fixed inset-0 z-50 transition-opacity duration-300 cursor-pointer ${isOpen ? 'bg-[hsl(var(--bg-primary)_/_0.9)] hover:bg-[hsl(var(--bg-primary)_/_0.95)]' : 'pointer-events-none opacity-0'}`}
       onClick={onClose}
-      aria-hidden={!isOpen}
+      aria-hidden={!isOpen ? 'true' : undefined}
     >
       <FocusTrap
         active={isOpen}

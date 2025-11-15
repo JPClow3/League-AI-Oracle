@@ -81,7 +81,17 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="twitter:image" content={seo.image} />
 
       {/* Additional SEO */}
-      <meta name="robots" content="index, follow" />
+      {/* Only block indexing on preview deployments, allow indexing in production */}
+      {/* Vercel sets VERCEL_ENV to 'preview' for preview deployments */}
+      <meta
+        name="robots"
+        content={
+          typeof window !== 'undefined' &&
+          (import.meta.env.VERCEL_ENV === 'preview' || import.meta.env.VITE_VERCEL_ENV === 'preview')
+            ? 'noindex, nofollow'
+            : 'index, follow'
+        }
+      />
       <meta name="language" content="English" />
       <meta name="revisit-after" content="7 days" />
       <link rel="canonical" href={seo.url} />

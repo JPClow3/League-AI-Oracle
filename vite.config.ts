@@ -12,7 +12,9 @@ export default defineConfig(() => {
     plugins: [
       react(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt', // Manual registration handled in offlineService.ts to avoid blocking render
+        // Note: We handle service worker registration manually in offlineService.ts
+        // to defer it until after page load, preventing render blocking
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,jpg,jpeg,woff2}'],
           runtimeCaching: [
@@ -114,6 +116,8 @@ export default defineConfig(() => {
             'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
             'framer-motion': ['framer-motion'],
             'ui-vendor': ['react-hot-toast', 'lucide-react'],
+            // Heavy libraries that are lazy loaded
+            'export-vendor': ['html2canvas'],
 
             // Feature chunks
             'draft-lab': [

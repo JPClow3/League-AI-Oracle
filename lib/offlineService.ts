@@ -67,23 +67,41 @@ class OfflineService {
 
   /**
    * Initialize the service and register service worker
+   * Service worker registration is deferred to avoid blocking initial render
    */
   async initialize() {
-    // Register service worker if available
+    // Defer service worker registration until after page load
     if ('serviceWorker' in navigator && import.meta.env.PROD) {
-      try {
-        const registration = await navigator.serviceWorker.register('/sw.js', {
-          scope: '/',
-        });
-        console.log('Service Worker registered:', registration.scope);
+      // Use requestIdleCallback if available, otherwise setTimeout
+      const deferRegistration = () => {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(() => this.registerServiceWorker(), { timeout: 2000 });
+        } else {
+          setTimeout(() => this.registerServiceWorker(), 2000);
+        }
+      };
 
-        // Check for updates periodically
-        setInterval(() => {
-          registration.update();
-        }, 60000); // Check every minute
-      } catch (error) {
-        console.error('Service Worker registration failed:', error);
+      if (document.readyState === 'complete') {
+        deferRegistration();
+      } else {
+        window.addEventListener('load', deferRegistration, { once: true });
       }
+    }
+  }
+
+  private async registerServiceWorker() {
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/',
+      });
+      console.log('Service Worker registered:', registration.scope);
+
+      // Check for updates periodically
+      setInterval(() => {
+        registration.update();
+      }, 60000); // Check every minute
+    } catch (error) {
+      console.error('Service Worker registration failed:', error);
     }
   }
 

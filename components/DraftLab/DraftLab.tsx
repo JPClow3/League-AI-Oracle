@@ -17,7 +17,6 @@ import { GuidedTour } from '../Onboarding/GuidedTour';
 import type { TourStep } from '../Onboarding/GuidedTour';
 import { TeamBuilderModal } from './TeamBuilderModal';
 import { TeamBuilderAssistant } from './TeamBuilderAssistant';
-import html2canvas from 'html2canvas';
 import { Download } from 'lucide-react';
 import { logger } from '../../lib/logger';
 
@@ -450,6 +449,9 @@ export const DraftLab = ({
       }
 
       toast.loading('Exporting draft as image...', { id: 'export-draft' });
+
+      // Lazy load html2canvas only when needed (reduces initial bundle size)
+      const html2canvas = (await import('html2canvas')).default;
 
       const canvas = await html2canvas(draftContainer, {
         backgroundColor: null,

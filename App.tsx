@@ -268,7 +268,7 @@ const App = () => {
   const renderContent = () => {
     if (isChampionsLoading || !isHydrated) {
       return (
-        <div className="flex-grow flex items-center justify-center">
+        <div className="flex-grow flex items-center justify-center min-h-[400px]">
           <Loader messages={['Loading Champion Database...', 'Personalizing Your Experience...']} />
         </div>
       );
