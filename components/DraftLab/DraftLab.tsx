@@ -19,6 +19,10 @@ import { TeamBuilderModal } from './TeamBuilderModal';
 import { TeamBuilderAssistant } from './TeamBuilderAssistant';
 import { Download } from 'lucide-react';
 import { logger } from '../../lib/logger';
+import { ConfirmationModal } from '../common/ConfirmationModal';
+import { MobileTabs, type TabType } from './MobileTabs';
+import { MobileTeamView } from './MobileTeamView';
+import { UndoRedoControls } from './UndoRedoControls';
 
 const DRAFT_LAB_TOUR_STEPS: TourStep[] = [
   {
@@ -59,7 +63,7 @@ export const DraftLab = ({
   onTourComplete: () => void;
   navigateToAcademy: (lessonId: string) => void;
 }) => {
-  const { draftState, setDraftState, resetDraft } = useDraft();
+  const { draftState, setDraftState, resetDraft, canUndo, canRedo, undo, redo } = useDraft();
   const { champions, championsLite } = useChampions();
   const { settings } = useSettings();
   const { profile, addSP, completeMission, addChampionMastery } = useUserProfile();
@@ -86,6 +90,9 @@ export const DraftLab = ({
   const [isBuilderLoading, setIsBuilderLoading] = useState(false);
   const [builderCore, setBuilderCore] = useState('');
   const [isOpponentLoading, setIsOpponentLoading] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<TabType>('team');
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
@@ -93,6 +100,42 @@ export const DraftLab = ({
   useEffect(() => {
     setIsTourOpen(startTour);
   }, [startTour]);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z or Cmd+Z for undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) {
+          undo();
+          toast.success('Undone', { duration: 2000 });
+        }
+      }
+      // Ctrl+Shift+Z or Cmd+Shift+Z for redo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        if (canRedo) {
+          redo();
+          toast.success('Redone', { duration: 2000 });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, undo, redo]);
 
   // Cleanup abort controller on unmount and mark as unmounted
   useEffect(() => {
@@ -118,12 +161,15 @@ export const DraftLab = ({
       setDraftState(prev => updateSlotInDraft(prev, activeSlot.team, activeSlot.type, activeSlot.index, champion));
       setActiveSlot(null);
     },
-    [activeSlot]
+    [activeSlot, setDraftState]
   );
 
-  const handleClearSlot = useCallback((team: TeamSide, type: 'pick' | 'ban', index: number) => {
-    setDraftState(prev => updateSlotInDraft(prev, team, type, index, null));
-  }, []);
+  const handleClearSlot = useCallback(
+    (team: TeamSide, type: 'pick' | 'ban', index: number) => {
+      setDraftState(prev => updateSlotInDraft(prev, team, type, index, null));
+    },
+    [setDraftState]
+  );
 
   const handleAnalyze = async () => {
     if (!isDraftComplete || isLoading) {
@@ -160,7 +206,9 @@ export const DraftLab = ({
 
       const userScore = result.teamAnalysis.blue.draftScore;
       if (userScore) {
-        const blueChampions = draftState.blue.picks.filter(p => p.champion).map(p => p.champion!);
+        const blueChampions = draftState.blue.picks
+          .filter((p): p is { champion: ChampionLite } => !!p.champion)
+          .map(p => p.champion);
         if (userScore.startsWith('S')) {
           addSP(150, 'S-Grade Draft Analysis');
           completeMission(MISSION_IDS.WEEKLY.PERFECT_COMP);
@@ -242,7 +290,7 @@ export const DraftLab = ({
         toast.error('Failed to move champion. Please try again.');
       }
     },
-    [draftState, championsLite]
+    [draftState, championsLite, setDraftState]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -270,7 +318,7 @@ export const DraftLab = ({
       setDraftState(prev => ({ ...prev, blue: { ...prev.blue, picks: newPicks } }));
       toast.success('Blueprint loaded!');
     },
-    [champions]
+    [champions, setDraftState]
   );
 
   // --- Team Builder Assistant Logic ---
@@ -289,7 +337,9 @@ export const DraftLab = ({
         const available = getAvailableChampions(currentDraft, championsLite);
 
         // Use currentDraft parameter instead of closure draftState
-        const currentPicks = currentDraft.blue.picks.filter(p => p.champion).map(p => p.champion!.name);
+        const currentPicks = currentDraft.blue.picks
+          .filter((p): p is { champion: ChampionLite } => !!p.champion)
+          .map(p => p.champion.name);
 
         const suggestions = await getTeambuilderSuggestion({
           coreConcept: _core, // Use parameter instead of closure variable to avoid stale state
@@ -323,7 +373,7 @@ export const DraftLab = ({
         }
       }
     },
-    [championsLite, builderCore]
+    [championsLite]
   );
 
   const handleStartBuilder = useCallback(
@@ -364,7 +414,7 @@ export const DraftLab = ({
         fetchBuilderSuggestions(nextState, nextStep, builderCore, controller.signal);
       }
     },
-    [champions, draftState, builderStep, builderCore, fetchBuilderSuggestions]
+    [champions, draftState, builderStep, builderCore, fetchBuilderSuggestions, setDraftState]
   );
 
   const handleGenerateOpponent = useCallback(async () => {
@@ -430,14 +480,20 @@ export const DraftLab = ({
       setIsOpponentLoading(false);
       setIsBuilding(false); // Exit builder mode
     }
-  }, [draftState, championsLite, champions]);
+  }, [draftState, championsLite, champions, setDraftState]);
 
   const handleReset = useCallback(() => {
+    setIsResetConfirmOpen(true);
+  }, []);
+
+  const confirmReset = useCallback(() => {
     resetDraft();
     setIsBuilding(false);
     setBuilderStep(0);
     setBuilderCore('');
     setBuilderSuggestions([]);
+    setIsResetConfirmOpen(false);
+    toast.success('Draft reset');
   }, [resetDraft]);
 
   const handleExportDraft = useCallback(async () => {
@@ -507,12 +563,34 @@ export const DraftLab = ({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <UndoRedoControls
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={() => {
+              undo();
+              toast.success('Undone', { duration: 2000 });
+            }}
+            onRedo={() => {
+              redo();
+              toast.success('Redone', { duration: 2000 });
+            }}
+          />
           <Button id="draftlab-teambuilder-button" variant="secondary" onClick={() => setIsBuilderModalOpen(true)}>
             Team Builder Assistant
           </Button>
           <Button variant="secondary" onClick={handleReset}>
             Reset Draft
           </Button>
+          <ConfirmationModal
+            isOpen={isResetConfirmOpen}
+            onClose={() => setIsResetConfirmOpen(false)}
+            onConfirm={confirmReset}
+            title="Reset Draft"
+            message="Are you sure you want to reset the draft? This will clear all picks and bans. This action cannot be undone."
+            confirmText="Reset"
+            cancelText="Cancel"
+            variant="danger"
+          />
           <Button variant="secondary" onClick={handleExportDraft} disabled={!isDraftComplete}>
             <Download size={16} className="mr-2" aria-hidden="true" />
             Export
@@ -530,19 +608,20 @@ export const DraftLab = ({
 
       <BlueprintPanel onLoad={handleLoadBlueprint} />
 
-      <div id="draftlab-draft-container" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <TeamPanel
-              id="draftlab-blue-team"
-              side="blue"
-              state={draftState.blue}
+      {/* Mobile Layout */}
+      {isMobile ? (
+        <MobileTabs
+          activeTab={activeMobileTab}
+          onTabChange={setActiveMobileTab}
+          teamContent={
+            <MobileTeamView
+              draftState={draftState}
               onSlotClick={handleSlotClick}
               onClearSlot={handleClearSlot}
-              activeSlot={activeSlot?.team === 'blue' ? activeSlot : null}
+              activeSlot={activeSlot}
               onDrop={handleDrop}
               onDragStart={(e, t, y, i) => {
-                const champ = draftState.blue.picks[i]?.champion;
+                const champ = t === 'blue' ? draftState.blue.picks[i]?.champion : draftState.red.picks[i]?.champion;
                 if (champ) {
                   handleDragStart(e, t, y, i, champ);
                 }
@@ -552,27 +631,37 @@ export const DraftLab = ({
               onDragLeave={handleDragLeave}
               draggedOverSlot={draggedOverSlot}
             />
-            <TeamPanel
-              id="draftlab-red-team"
-              side="red"
-              state={draftState.red}
-              onSlotClick={handleSlotClick}
-              onClearSlot={handleClearSlot}
-              activeSlot={activeSlot?.team === 'red' ? activeSlot : null}
-              onDrop={handleDrop}
-              onDragStart={(e, t, y, i) => {
-                const champ = draftState.red.picks[i]?.champion;
-                if (champ) {
-                  handleDragStart(e, t, y, i, champ);
-                }
-              }}
-              onDragOver={handleDragOver}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              draggedOverSlot={draggedOverSlot}
-            />
-          </div>
-          <div id="draftlab-advice-panel">
+          }
+          championsContent={
+            isBuilding ? (
+              <TeamBuilderAssistant
+                step={builderStep}
+                coreConcept={builderCore}
+                suggestions={builderSuggestions}
+                isLoading={isBuilderLoading}
+                onSelect={handleBuilderSelect}
+                onGenerateOpponent={handleGenerateOpponent}
+                isOpponentLoading={isOpponentLoading}
+              />
+            ) : (
+              <ChampionGrid
+                onSelect={champLite => {
+                  const champ = champions.find(c => c.id === champLite.id);
+                  if (champ) {
+                    handleChampionSelect(champ);
+                  }
+                }}
+                onQuickLook={() => {}}
+                onWhyThisPick={() => {}}
+                recommendations={[]}
+                isRecsLoading={false}
+                activeRole={null}
+                draftState={draftState}
+                onDragStart={(e, champ) => handleDragStart(e, 'blue', 'pick', -1, champ)}
+              />
+            )
+          }
+          adviceContent={
             <AdvicePanel
               advice={advice}
               isLoading={isLoading}
@@ -582,39 +671,96 @@ export const DraftLab = ({
               onAnimationEnd={() => setAnalysisCompleted(false)}
               isStale={isStale || false}
             />
+          }
+        />
+      ) : (
+        /* Desktop Layout */
+        <div id="draftlab-draft-container" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <TeamPanel
+                id="draftlab-blue-team"
+                side="blue"
+                state={draftState.blue}
+                onSlotClick={handleSlotClick}
+                onClearSlot={handleClearSlot}
+                activeSlot={activeSlot?.team === 'blue' ? activeSlot : null}
+                onDrop={handleDrop}
+                onDragStart={(e, t, y, i) => {
+                  const champ = draftState.blue.picks[i]?.champion;
+                  if (champ) {
+                    handleDragStart(e, t, y, i, champ);
+                  }
+                }}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                draggedOverSlot={draggedOverSlot}
+              />
+              <TeamPanel
+                id="draftlab-red-team"
+                side="red"
+                state={draftState.red}
+                onSlotClick={handleSlotClick}
+                onClearSlot={handleClearSlot}
+                activeSlot={activeSlot?.team === 'red' ? activeSlot : null}
+                onDrop={handleDrop}
+                onDragStart={(e, t, y, i) => {
+                  const champ = draftState.red.picks[i]?.champion;
+                  if (champ) {
+                    handleDragStart(e, t, y, i, champ);
+                  }
+                }}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                draggedOverSlot={draggedOverSlot}
+              />
+            </div>
+            <div id="draftlab-advice-panel">
+              <AdvicePanel
+                advice={advice}
+                isLoading={isLoading}
+                error={error}
+                navigateToAcademy={navigateToAcademy}
+                analysisCompleted={analysisCompleted}
+                onAnimationEnd={() => setAnalysisCompleted(false)}
+                isStale={isStale || false}
+              />
+            </div>
+          </div>
+
+          <div id="draftlab-champion-grid" className="lg:col-span-1">
+            {isBuilding ? (
+              <TeamBuilderAssistant
+                step={builderStep}
+                coreConcept={builderCore}
+                suggestions={builderSuggestions}
+                isLoading={isBuilderLoading}
+                onSelect={handleBuilderSelect}
+                onGenerateOpponent={handleGenerateOpponent}
+                isOpponentLoading={isOpponentLoading}
+              />
+            ) : (
+              <ChampionGrid
+                onSelect={champLite => {
+                  const champ = champions.find(c => c.id === champLite.id);
+                  if (champ) {
+                    handleChampionSelect(champ);
+                  }
+                }}
+                onQuickLook={() => {}}
+                onWhyThisPick={() => {}}
+                recommendations={[]}
+                isRecsLoading={false}
+                activeRole={null}
+                draftState={draftState}
+                onDragStart={(e, champ) => handleDragStart(e, 'blue', 'pick', -1, champ)}
+              />
+            )}
           </div>
         </div>
-
-        <div id="draftlab-champion-grid" className="lg:col-span-1">
-          {isBuilding ? (
-            <TeamBuilderAssistant
-              step={builderStep}
-              coreConcept={builderCore}
-              suggestions={builderSuggestions}
-              isLoading={isBuilderLoading}
-              onSelect={handleBuilderSelect}
-              onGenerateOpponent={handleGenerateOpponent}
-              isOpponentLoading={isOpponentLoading}
-            />
-          ) : (
-            <ChampionGrid
-              onSelect={champLite => {
-                const champ = champions.find(c => c.id === champLite.id);
-                if (champ) {
-                  handleChampionSelect(champ);
-                }
-              }}
-              onQuickLook={() => {}}
-              onWhyThisPick={() => {}}
-              recommendations={[]}
-              isRecsLoading={false}
-              activeRole={null}
-              draftState={draftState}
-              onDragStart={(e, champ) => handleDragStart(e, 'blue', 'pick', -1, champ)}
-            />
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

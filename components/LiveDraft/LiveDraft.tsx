@@ -13,6 +13,7 @@ import { ArenaChampionSelectModal } from '../Arena/ArenaChampionSelectModal'; //
 import { Signal, AlertTriangle } from 'lucide-react';
 import { TurnIndicator } from '../Arena/TurnIndicator';
 import { COMPETITIVE_SEQUENCE, DraftTurn } from '../Arena/arenaConstants';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 interface LiveDraftProps {
   draftState: DraftState;
@@ -31,6 +32,7 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
   const [advice, setAdvice] = useState<AIAdvice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
@@ -158,9 +160,23 @@ export const LiveDraft = ({ draftState, setDraftState, onReset }: LiveDraftProps
             Input picks and bans as they happen to get real-time AI guidance.
           </p>
         </div>
-        <Button variant="danger" onClick={onReset}>
+        <Button variant="danger" onClick={() => setIsResetConfirmOpen(true)}>
           Reset
         </Button>
+        <ConfirmationModal
+          isOpen={isResetConfirmOpen}
+          onClose={() => setIsResetConfirmOpen(false)}
+          onConfirm={() => {
+            onReset();
+            setIsResetConfirmOpen(false);
+            toast.success('Live draft reset');
+          }}
+          title="Reset Live Draft"
+          message="Are you sure you want to reset the live draft? This will clear all picks, bans, and analysis. This action cannot be undone."
+          confirmText="Reset"
+          cancelText="Cancel"
+          variant="danger"
+        />
       </div>
 
       {currentTurn && <TurnIndicator turn={currentTurn} isBotThinking={false} userSide={'blue'} context="live" />}

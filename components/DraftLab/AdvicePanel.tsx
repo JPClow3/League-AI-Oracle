@@ -1,15 +1,16 @@
 import React, { useState, useMemo, memo } from 'react';
 import type { AIAdvice, TeamAnalysis } from '../../types';
-import { Loader } from '../common/Loader';
 import { ErrorState } from '../common/ErrorState';
 import { KeywordHighlighter } from '../Academy/KeywordHighlighter';
 import { PowerSpikeTimeline } from './PowerSpikeTimeline';
-import { ThumbsUp, ThumbsDown, Info, AlertTriangle, Swords, Link, Sparkles, Copy, GraduationCap } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Info, AlertTriangle, Swords, Link, Sparkles, GraduationCap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
 import { KEYWORDS } from '../Academy/lessons';
 import { Button } from '../common/Button';
 import { useChampions } from '../../contexts/ChampionContext';
+import { SkeletonCard, SkeletonText, SkeletonList } from '../common/Skeleton';
+import { ProgressBar } from '../common/ProgressBar';
+import { CopyInsightButton } from './CopyInsightButton';
 
 interface AdvicePanelProps {
   advice: AIAdvice | null;
@@ -308,17 +309,15 @@ const HeadToHeadContent = ({
             <div className="space-y-2">
               {advice.pickSuggestions.slice(0, 3).map(p => (
                 <div key={p.championName} className="bg-surface p-3 border border-border group relative">
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(p.championName);
-                      toast.success(`${p.championName} copied!`);
-                    }}
-                    className="absolute top-2 right-2 p-1 text-text-muted opacity-50 group-hover:opacity-100 transition-opacity"
-                    aria-label={`Copy ${p.championName}`}
-                  >
-                    <Copy size={14} />
-                  </button>
-                  <h4 className="font-bold text-text-primary">
+                  <div className="absolute top-2 right-2">
+                    <CopyInsightButton
+                      text={p.championName}
+                      label={p.championName}
+                      variant="icon"
+                      className="opacity-50 group-hover:opacity-100"
+                    />
+                  </div>
+                  <h4 className="font-bold text-text-primary pr-8">
                     {p.championName} ({p.role})
                   </h4>
                   <p className="text-xs text-text-secondary">
@@ -335,17 +334,15 @@ const HeadToHeadContent = ({
             <div className="space-y-2">
               {advice.banSuggestions.slice(0, 2).map(b => (
                 <div key={b.championName} className="bg-surface p-3 border border-border group relative">
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(b.championName);
-                      toast.success(`${b.championName} copied!`);
-                    }}
-                    className="absolute top-2 right-2 p-1 text-text-muted opacity-50 group-hover:opacity-100 transition-opacity"
-                    aria-label={`Copy ${b.championName}`}
-                  >
-                    <Copy size={14} />
-                  </button>
-                  <h4 className="font-bold text-text-primary">{b.championName}</h4>
+                  <div className="absolute top-2 right-2">
+                    <CopyInsightButton
+                      text={b.championName}
+                      label={b.championName}
+                      variant="icon"
+                      className="opacity-50 group-hover:opacity-100"
+                    />
+                  </div>
+                  <h4 className="font-bold text-text-primary pr-8">{b.championName}</h4>
                   <p className="text-xs text-text-secondary">
                     <KeywordHighlighter text={b.reasoning} onKeywordClick={navigateToAcademy} />
                   </p>
@@ -426,16 +423,50 @@ const analysisMessages = [
 export const AdvicePanel = memo(
   ({ advice, isLoading, error, navigateToAcademy, analysisCompleted, onAnimationEnd, isStale }: AdvicePanelProps) => {
     const [activeTab, setActiveTab] = useState<'blue' | 'red' | 'head-to-head' | 'builds'>('blue');
+    const [currentStage, setCurrentStage] = useState(0);
+    const [progress, setProgress] = useState(0);
+
+    // Simulate progress during loading
+    React.useEffect(() => {
+      if (!isLoading) {
+        setCurrentStage(0);
+        setProgress(0);
+        return;
+      }
+
+      const interval = setInterval(() => {
+        setCurrentStage(prev => {
+          const next = prev + 1;
+          if (next >= analysisMessages.length) {
+            clearInterval(interval);
+            return prev;
+          }
+          setProgress((next / analysisMessages.length) * 100);
+          return next;
+        });
+      }, 1500);
+      return () => clearInterval(interval);
+    }, [isLoading]);
 
     if (isLoading) {
       return (
-        <div className="bg-bg-secondary p-4 border border-border-primary h-full">
-          <Loader
-            messages={analysisMessages}
-            showProgress={true}
-            currentStage={0}
-            totalStages={analysisMessages.length}
-          />
+        <div className="bg-bg-secondary p-4 border border-border-primary h-full space-y-4">
+          <div className="space-y-2">
+            <SkeletonText lines={1} width="60%" />
+            <SkeletonText lines={2} width="100%" />
+          </div>
+          <ProgressBar value={progress} className="h-2" />
+          <div className="text-sm text-text-secondary text-center">
+            {analysisMessages[currentStage] || 'Analyzing draft...'}
+          </div>
+          <div className="space-y-3 mt-6">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonList items={3} />
+          </div>
+          <div className="text-xs text-text-muted text-center mt-4">
+            Estimated time: {Math.max(1, Math.ceil((analysisMessages.length - currentStage) * 1.5))}s remaining
+          </div>
         </div>
       );
     }

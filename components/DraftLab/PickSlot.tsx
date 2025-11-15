@@ -19,10 +19,26 @@ interface PickSlotProps {
   isDimmed?: boolean;
 }
 
-export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart, onDragOver, onDragEnter, onDragLeave, isActive = false, isDraggedOver = false, side, isDimmed = false }: PickSlotProps) => {
-  const activeClasses = isActive ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-accent shadow-glow-accent' :
-                      isDraggedOver ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-info' : 
-                      'ring-1 ring-border-primary/50';
+export const PickSlot = ({
+  champion,
+  role,
+  onClick,
+  onClear,
+  onDrop,
+  onDragStart,
+  onDragOver,
+  onDragEnter,
+  onDragLeave,
+  isActive = false,
+  isDraggedOver = false,
+  side,
+  isDimmed = false,
+}: PickSlotProps) => {
+  const activeClasses = isActive
+    ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-accent shadow-glow-accent'
+    : isDraggedOver
+      ? 'ring-2 ring-offset-2 ring-offset-bg-secondary ring-info'
+      : 'ring-1 ring-border-primary/50';
   const dimmedClasses = isDimmed ? 'opacity-50 pointer-events-none' : '';
   const clearingRef = React.useRef(false);
 
@@ -35,7 +51,9 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (clearingRef.current || !onClear) {return;}
+    if (clearingRef.current || !onClear) {
+      return;
+    }
     clearingRef.current = true;
     onClear();
     setTimeout(() => {
@@ -44,12 +62,12 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
   };
 
   const teamName = side.charAt(0).toUpperCase() + side.slice(1);
-  const ariaLabel = champion 
+  const ariaLabel = champion
     ? `${teamName} Team ${role} pick: ${champion.name}. Press Enter or Space to change. Draggable to swap position.`
     : `${teamName} Team ${role} pick: Empty. Press Enter or Space to select a champion.`;
 
   return (
-    <div 
+    <div
       onClick={onClick}
       onDrop={onDrop}
       onDragStart={champion ? onDragStart : undefined}
@@ -61,17 +79,17 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
-      className={`relative flex items-center bg-surface p-2 cursor-pointer group transition-all duration-200 hover:ring-accent/70 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:-translate-y-0.5 active:translate-y-0 ${activeClasses} ${dimmedClasses}`}
+      className={`relative flex items-center bg-surface p-2 cursor-pointer group transition-all duration-200 hover:ring-accent/70 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-secondary focus-visible:ring-accent transform hover:-translate-y-0.5 active:translate-y-0 min-h-[48px] ${activeClasses} ${dimmedClasses}`}
     >
-       {champion && onClear && (
-          <button 
-            onClick={handleClear}
-            className="absolute top-1 right-1 z-20 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center text-white/70 hover:bg-error hover:text-white transition-all opacity-0 group-hover:opacity-100"
-            aria-label={`Clear ${champion.name}`}
-          >
-            <X size={14} />
-          </button>
-        )}
+      {champion && onClear && (
+        <button
+          onClick={handleClear}
+          className="absolute top-1 right-1 z-20 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center text-white/70 hover:bg-error hover:text-white transition-all opacity-0 group-hover:opacity-100"
+          aria-label={`Clear ${champion.name}`}
+        >
+          <X size={14} />
+        </button>
+      )}
       <AnimatePresence>
         {champion && (
           <motion.div
@@ -82,7 +100,7 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
             }}
             className="absolute inset-0 z-0"
           >
-            <div 
+            <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
               style={{ backgroundImage: `url(${champion.loadingScreenUrl})` }}
             />
@@ -111,8 +129,11 @@ export const PickSlot = ({ champion, role, onClick, onClear, onDrop, onDragStart
         </AnimatePresence>
       </div>
       <div className="relative z-10 ml-4 flex-grow">
-        <p className="font-semibold text-text-primary text-lg truncate" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>
-            {champion ? champion.name : 'Select Pick'}
+        <p
+          className="font-semibold text-text-primary text-lg truncate"
+          style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}
+        >
+          {champion ? champion.name : 'Select Pick'}
         </p>
         <p className="text-xs uppercase font-medium tracking-wider text-text-secondary">{role}</p>
       </div>

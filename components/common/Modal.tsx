@@ -4,7 +4,7 @@ import { CSSTransition } from 'react-transition-group';
 import { Button } from './Button';
 import { X } from 'lucide-react';
 
-type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl';
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | 'bottom-sheet';
 
 interface ModalProps {
   isOpen: boolean;
@@ -75,18 +75,27 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBa
     '4xl': 'max-w-4xl',
     '5xl': 'max-w-5xl',
     '6xl': 'max-w-6xl',
+    'bottom-sheet': 'max-w-full md:max-w-2xl',
   };
+
+  const isBottomSheet = size === 'bottom-sheet';
 
   return (
     <CSSTransition in={isOpen} timeout={200} classNames="modal" unmountOnExit nodeRef={backdropRef}>
       <div
         ref={backdropRef}
-        className={`fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] flex justify-center items-center z-50 p-4 ${shouldBlur ? 'backdrop-blur-sm' : ''}`}
+        className={`fixed inset-0 bg-[hsl(var(--bg-primary)_/_0.7)] ${isBottomSheet ? 'flex items-end justify-center' : 'flex justify-center items-center'} z-50 ${isBottomSheet ? '' : 'p-4'} ${shouldBlur ? 'backdrop-blur-sm' : ''}`}
         onClick={onClose}
         aria-modal="true"
         role="dialog"
       >
-        <CSSTransition in={isOpen} timeout={200} classNames="modal-content" unmountOnExit nodeRef={contentRef}>
+        <CSSTransition
+          in={isOpen}
+          timeout={200}
+          classNames={isBottomSheet ? 'modal-content-bottom' : 'modal-content'}
+          unmountOnExit
+          nodeRef={contentRef}
+        >
           <FocusTrap
             active={isOpen}
             focusTrapOptions={{
@@ -96,7 +105,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = '4xl', enableBa
             <div
               ref={contentRef}
               tabIndex={-1}
-              className={`bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full max-h-[90vh] flex flex-col m-4 focus:outline-none border border-[hsl(var(--border))] ${sizeClasses[size]}`}
+              className={`bg-[hsl(var(--surface))] shadow-lg shadow-black/20 w-full ${isBottomSheet ? 'max-h-[85vh] rounded-t-2xl' : 'max-h-[90vh] m-4'} flex flex-col focus:outline-none border border-[hsl(var(--border))] ${sizeClasses[size]}`}
               onClick={e => e.stopPropagation()}
             >
               <div className="flex flex-col h-full">

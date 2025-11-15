@@ -3,3 +3,105 @@
 @tailwind utilities;
 
 /* Custom theme variables are in index.html <style> tag */
+
+/* Typography CSS Variables */
+:root {
+  --typography-h1-size: 2.5rem;
+  --typography-h1-line-height: 1.2;
+  --typography-h1-weight: 700;
+
+  --typography-h2-size: 2rem;
+  --typography-h2-line-height: 1.25;
+  --typography-h2-weight: 600;
+
+  --typography-h3-size: 1.5rem;
+  --typography-h3-line-height: 1.3;
+  --typography-h3-weight: 600;
+
+  --typography-h4-size: 1.25rem;
+  --typography-h4-line-height: 1.4;
+  --typography-h4-weight: 600;
+
+  --typography-body-size: 1rem;
+  --typography-body-line-height: 1.5;
+  --typography-body-weight: 400;
+
+  --typography-small-size: 0.875rem;
+  --typography-small-line-height: 1.5;
+  --typography-small-weight: 400;
+
+  --typography-tiny-size: 0.75rem;
+  --typography-tiny-line-height: 1.4;
+  --typography-tiny-weight: 400;
+}
+
+/* Modal Animations */
+.modal-enter {
+  opacity: 0;
+}
+
+.modal-enter-active {
+  opacity: 1;
+  transition: opacity 200ms ease-in;
+}
+
+.modal-exit {
+  opacity: 1;
+}
+
+.modal-exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.modal-content-enter {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.modal-content-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 200ms ease-in,
+    transform 200ms ease-in;
+}
+
+.modal-content-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.modal-content-exit-active {
+  opacity: 0;
+  transform: scale(0.95);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out;
+}
+
+.modal-content-bottom-enter {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.modal-content-bottom-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 200ms ease-in,
+    transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.modal-content-bottom-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.modal-content-bottom-exit-active {
+  opacity: 0;
+  transform: translateY(100%);
+  transition:
+    opacity 200ms ease-out,
+    transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
