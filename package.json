@@ -62,7 +62,7 @@
     "framer-motion": "^12.23.12",
     "html2canvas": "^1.4.1",
     "launchdarkly-react-client-sdk": "^3.9.0",
-    "lucide-react": "^0.552.0",
+    "lucide-react": "^0.553.0",
     "posthog-js": "^1.280.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
