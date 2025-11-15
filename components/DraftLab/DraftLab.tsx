@@ -19,6 +19,7 @@ import { TeamBuilderModal } from './TeamBuilderModal';
 import { TeamBuilderAssistant } from './TeamBuilderAssistant';
 import { Download } from 'lucide-react';
 import { logger } from '../../lib/logger';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 const DRAFT_LAB_TOUR_STEPS: TourStep[] = [
   {
@@ -86,6 +87,7 @@ export const DraftLab = ({
   const [isBuilderLoading, setIsBuilderLoading] = useState(false);
   const [builderCore, setBuilderCore] = useState('');
   const [isOpponentLoading, setIsOpponentLoading] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
@@ -433,11 +435,17 @@ export const DraftLab = ({
   }, [draftState, championsLite, champions]);
 
   const handleReset = useCallback(() => {
+    setIsResetConfirmOpen(true);
+  }, []);
+
+  const confirmReset = useCallback(() => {
     resetDraft();
     setIsBuilding(false);
     setBuilderStep(0);
     setBuilderCore('');
     setBuilderSuggestions([]);
+    setIsResetConfirmOpen(false);
+    toast.success('Draft reset');
   }, [resetDraft]);
 
   const handleExportDraft = useCallback(async () => {
@@ -513,6 +521,16 @@ export const DraftLab = ({
           <Button variant="secondary" onClick={handleReset}>
             Reset Draft
           </Button>
+          <ConfirmationModal
+            isOpen={isResetConfirmOpen}
+            onClose={() => setIsResetConfirmOpen(false)}
+            onConfirm={confirmReset}
+            title="Reset Draft"
+            message="Are you sure you want to reset the draft? This will clear all picks and bans. This action cannot be undone."
+            confirmText="Reset"
+            cancelText="Cancel"
+            variant="danger"
+          />
           <Button variant="secondary" onClick={handleExportDraft} disabled={!isDraftComplete}>
             <Download size={16} className="mr-2" aria-hidden="true" />
             Export

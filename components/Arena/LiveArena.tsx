@@ -17,6 +17,7 @@ import { Swords, Bot, Trophy, BrainCircuit } from 'lucide-react';
 import { useChampions } from '../../contexts/ChampionContext';
 import { Loader } from '../common/Loader';
 import { useSettings } from '../../hooks/useSettings';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 interface LiveArenaProps {
   draftState: DraftState;
@@ -98,9 +99,19 @@ const ArenaResults = ({
         <Button onClick={onNavigateToForge} variant="primary">
           Analyze in Strategy Forge
         </Button>
-        <Button onClick={onReset} variant="secondary">
+        <Button onClick={handleReset} variant="secondary">
           New Arena Draft
         </Button>
+        <ConfirmationModal
+          isOpen={isResetConfirmOpen}
+          onClose={() => setIsResetConfirmOpen(false)}
+          onConfirm={confirmReset}
+          title="Reset Arena Draft"
+          message="Are you sure you want to reset the arena draft? This will clear all picks, bans, and progress. This action cannot be undone."
+          confirmText="Reset"
+          cancelText="Cancel"
+          variant="danger"
+        />
       </div>
     </div>
   );
@@ -121,6 +132,7 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   const { champions, championsLite } = useChampions();
   const [finalAnalysis, setFinalAnalysis] = useState<AIAdvice | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
@@ -362,11 +374,17 @@ export const LiveArena = ({ draftState, setDraftState, onReset, onNavigateToForg
   };
 
   const handleReset = () => {
+    setIsResetConfirmOpen(true);
+  };
+
+  const confirmReset = () => {
     onReset();
     setCurrentTurnIndex(-1);
     setLastUpdatedIndex(-1);
     setIsBotThinking(false);
     setFinalAnalysis(null);
+    setIsResetConfirmOpen(false);
+    toast.success('Arena draft reset');
   };
 
   const handleDragStart = (e: React.DragEvent, team: TeamSide, type: 'pick' | 'ban', index: number) => {

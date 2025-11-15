@@ -1,8 +1,9 @@
 import React from 'react';
 import type { Page, UserProfile, HistoryEntry, DashboardCardSetting } from '../../types';
 import { Button } from '../common/Button';
-import { Sun, Library, FlaskConical } from 'lucide-react';
+import { Sun, Library, FlaskConical, Clock, TrendingUp, Target } from 'lucide-react';
 import { useSettings } from '../../hooks/useSettings';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface SmartDashboardProps {
   profile: UserProfile;
@@ -39,7 +40,23 @@ const SmartCard = ({
 
 export const SmartDashboard = ({ profile, latestPlaybookEntry, setCurrentPage }: SmartDashboardProps) => {
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const isTrialCompleted = profile.missions.daily.find(m => m.id === 'd2')?.completed ?? false;
+  
+  // Get recent activity (last 3 completed missions)
+  const recentMissions = [...profile.missions.daily, ...profile.missions.weekly]
+    .filter(m => m.completed)
+    .sort((a, b) => {
+      // Sort by completion time (most recent first)
+      // Since we don't have timestamps, we'll use the order they appear
+      return 0;
+    })
+    .slice(0, 3);
+  
+  // Calculate progress percentage
+  const totalMissions = [...profile.missions.daily, ...profile.missions.weekly, ...profile.missions.gettingStarted];
+  const completedMissions = totalMissions.filter(m => m.completed).length;
+  const progressPercentage = totalMissions.length > 0 ? (completedMissions / totalMissions.length) * 100 : 0;
 
   const potentialCards: { id: DashboardCardSetting['id']; condition: boolean; component: React.ReactNode }[] = [
     {
@@ -97,9 +114,62 @@ export const SmartDashboard = ({ profile, latestPlaybookEntry, setCurrentPage }:
   }
 
   return (
-    <div>
-      <h2 className="font-display text-2xl font-semibold text-text-primary mb-4 tracking-wide">Your Dashboard</h2>
-      <div className="flex flex-col sm:flex-row gap-4">{cards}</div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-2xl md:text-3xl font-semibold text-[hsl(var(--text-primary))] tracking-wide">
+          {t('home_dashboard_title')}
+        </h2>
+        {profile.level > 0 && (
+          <div className="text-sm text-[hsl(var(--text-secondary))]">
+            Level {profile.level} • {profile.sp} SP
+          </div>
+        )}
+      </div>
+
+      {/* Progress Section */}
+      {totalMissions.length > 0 && (
+        <div className="bg-[hsl(var(--bg-secondary))] p-4 rounded-lg border border-[hsl(var(--border))]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-[hsl(var(--text-primary))]">Overall Progress</span>
+            <span className="text-sm text-[hsl(var(--text-secondary))]">
+              {completedMissions} / {totalMissions.length} missions
+            </span>
+          </div>
+          <div className="w-full bg-[hsl(var(--surface-tertiary))] rounded-full h-2">
+            <div
+              className="bg-[hsl(var(--accent))] h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Recent Activity */}
+      {recentMissions.length > 0 && (
+        <div className="bg-[hsl(var(--bg-secondary))] p-4 rounded-lg border border-[hsl(var(--border))]">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="h-5 w-5 text-[hsl(var(--accent))]" />
+            <h3 className="font-semibold text-[hsl(var(--text-primary))]">Recent Activity</h3>
+          </div>
+          <div className="space-y-2">
+            {recentMissions.map((mission, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm text-[hsl(var(--text-secondary))]">
+                <Target className="h-4 w-4 text-[hsl(var(--accent))]" />
+                <span>{mission.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Personalized Recommendations */}
+      <div className="bg-[hsl(var(--bg-secondary))] p-4 rounded-lg border border-[hsl(var(--border))]">
+        <div className="flex items-center gap-2 mb-3">
+          <TrendingUp className="h-5 w-5 text-[hsl(var(--accent))]" />
+          <h3 className="font-semibold text-[hsl(var(--text-primary))]">Recommendations</h3>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">{cards}</div>
+      </div>
     </div>
   );
 };

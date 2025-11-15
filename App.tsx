@@ -5,6 +5,8 @@ import type { Page, DraftState } from './types';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { BottomNav } from './components/Layout/BottomNav';
+import { SidebarNav } from './components/Layout/SidebarNav';
+import { Breadcrumbs } from './components/common/Breadcrumbs';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { SEO } from './components/common/SEO';
 import { OfflineIndicator } from './components/common/OfflineIndicator';
@@ -47,6 +49,7 @@ const App = () => {
 
   const [startLabTour, setStartLabTour] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Apply theme to the document
   useEffect(() => {
@@ -298,7 +301,7 @@ const App = () => {
 
     // Only render Router if champions are loaded successfully
     return (
-      <main className="flex-grow w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+      <>
         {/* ✅ BUG FIX: Wrap Router in ErrorBoundary to prevent full app crashes */}
         <ErrorBoundary>
           <Router
@@ -325,7 +328,7 @@ const App = () => {
             setStrategyHubInitialSearch={setStrategyHubInitialSearch}
           />
         </ErrorBoundary>
-      </main>
+      </>
     );
   };
 
@@ -361,8 +364,21 @@ const App = () => {
           setCurrentPage={setCurrentPage}
           profile={profile}
           spForNextLevel={spForNextLevel}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
-        {renderContent()}
+        <SidebarNav
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+        <main className={`flex-grow transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : ''}`}>
+          <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+            <Breadcrumbs currentPage={currentPage} onNavigate={setCurrentPage} />
+            {renderContent()}
+          </div>
+        </main>
         <Footer />
         <BottomNav currentPage={currentPage} setCurrentPage={setCurrentPage} />
         <OfflineIndicator />
