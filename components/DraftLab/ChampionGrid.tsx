@@ -5,11 +5,13 @@ import { useSettings } from '../../hooks/useSettings';
 import { getAvailableChampions } from '../../lib/draftUtils';
 import { ROLES, DAMAGE_TYPES } from '../../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Clock, GripVertical, Star, Sparkles } from 'lucide-react';
+import { Clock, GripVertical, Star, Sparkles } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { FilterChips, type FilterChip } from './FilterChips';
 import { ChampionQuickPick } from './ChampionQuickPick';
+import { SearchAutocomplete } from './SearchAutocomplete';
 import { useChampionHistory } from '../../hooks/useChampionHistory';
+import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { getMetaChampions } from '../../lib/metaChampions';
 import { SkeletonGrid } from '../common/Skeleton';
 
@@ -42,14 +44,89 @@ export const ChampionGrid = memo(({ onSelect, onQuickLook, draftState, onDragSta
   const { champions, championsLite, isLoading } = useChampions();
   const { settings, setSettings } = useSettings();
   const { addToHistory } = useChampionHistory();
+  const { searchHistory, addToHistory: addSearchToHistory, clearHistory: clearSearchHistory } = useSearchHistory();
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('All');
-  const [damageFilter, setDamageFilter] = useState('All');
+
+  // Load filter preferences from settings (lazy initialization for initial state)
+  const [roleFilter, setRoleFilter] = useState(() => settings.filterPreferences?.roleFilter || 'All');
+  const [damageFilter, setDamageFilter] = useState(() => settings.filterPreferences?.damageFilter || 'All');
+
   const [quickPickMode, setQuickPickMode] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const championRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const searchBarRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const hasInitializedFromSettingsRef = useRef(false);
+  const lastSavedPreferencesRef = useRef<string>('');
+
+  // Sync filter preferences from settings when they load (handles async loading)
+  // Only syncs once on initial load or when settings change externally (e.g., cross-tab sync)
+  useEffect(() => {
+    const currentPreferences = settings.filterPreferences || {};
+    const currentPreferencesKey = JSON.stringify({
+      roleFilter: currentPreferences.roleFilter || 'All',
+      damageFilter: currentPreferences.damageFilter || 'All',
+    });
+
+    // Skip if this matches what we last saved (to avoid syncing our own changes back)
+    if (currentPreferencesKey === lastSavedPreferencesRef.current) {
+      return;
+    }
+
+    // Only sync on initial load or external changes (not after user changes)
+    if (!hasInitializedFromSettingsRef.current) {
+      hasInitializedFromSettingsRef.current = true;
+
+      // Use requestAnimationFrame to defer state updates and avoid cascading renders
+      requestAnimationFrame(() => {
+        const rolePref = currentPreferences.roleFilter;
+        const damagePref = currentPreferences.damageFilter;
+
+        if (rolePref && rolePref !== roleFilter) {
+          setRoleFilter(rolePref);
+        }
+        if (damagePref && damagePref !== damageFilter) {
+          setDamageFilter(damagePref);
+        }
+      });
+    }
+  }, [settings.filterPreferences, roleFilter, damageFilter]);
+
+  // Save filter preferences when they change (user-initiated changes)
+  useEffect(() => {
+    // Only save if we've initialized from settings (to avoid saving during initial sync)
+    if (!hasInitializedFromSettingsRef.current) {
+      return;
+    }
+
+    const newPreferences = {
+      roleFilter: roleFilter !== 'All' ? roleFilter : undefined,
+      damageFilter: damageFilter !== 'All' ? damageFilter : undefined,
+    };
+
+    // Track what we're saving to avoid syncing it back
+    lastSavedPreferencesRef.current = JSON.stringify({
+      roleFilter: roleFilter,
+      damageFilter: damageFilter,
+    });
+
+    setSettings({
+      filterPreferences: newPreferences,
+    });
+  }, [roleFilter, damageFilter, setSettings]);
+
+  // Keyboard shortcut: Ctrl+K or Cmd+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const availableChampions = useMemo(
     () => getAvailableChampions(draftState, championsLite),
@@ -163,10 +240,63 @@ export const ChampionGrid = memo(({ onSelect, onQuickLook, draftState, onDragSta
     (champ: ChampionLite) => {
       // Track recent champion usage
       addToHistory(champ.id);
+      // Add to search history if searching
+      if (searchTerm.trim()) {
+        addSearchToHistory(searchTerm);
+      }
       onSelect(champ);
     },
-    [onSelect, addToHistory]
+    [onSelect, addToHistory, addSearchToHistory, searchTerm]
   );
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
+
+  const handleSelectFromHistory = useCallback((term: string) => {
+    setSearchTerm(term);
+    searchInputRef.current?.focus();
+  }, []);
+
+  // Keyboard shortcuts for filters
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Ctrl+1-9 for role filters
+      if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '9') {
+        const index = parseInt(e.key) - 1;
+        const roles = ['All', ...ROLES];
+        if (roles[index]) {
+          e.preventDefault();
+          setRoleFilter(roles[index]);
+        }
+      }
+
+      // Ctrl+Shift+A/D/M for damage type filters
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        if (e.key === 'A' || e.key === 'a') {
+          e.preventDefault();
+          setDamageFilter('All');
+        } else if (e.key === 'D' || e.key === 'd') {
+          e.preventDefault();
+          setDamageFilter('AD');
+        } else if (e.key === 'M' || e.key === 'm') {
+          e.preventDefault();
+          setDamageFilter('Mixed');
+        } else if (e.key === 'P' || e.key === 'p') {
+          e.preventDefault();
+          setDamageFilter('AP');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Sticky search bar detection
   useEffect(() => {
@@ -303,20 +433,29 @@ export const ChampionGrid = memo(({ onSelect, onQuickLook, draftState, onDragSta
         </label>
       </div>
 
-      {/* Sticky Search Bar */}
+      {/* Sticky Search Bar with Autocomplete */}
       <div
         ref={searchBarRef}
         className={`relative mb-2 flex-shrink-0 transition-all ${isSticky ? 'sticky top-0 z-10 bg-surface backdrop-blur-sm pb-2' : ''}`}
       >
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={20} aria-hidden="true" />
-        <input
-          type="text"
-          placeholder="Search champions..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          aria-label="Search champions"
-          className="w-full bg-surface-inset border border-border rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px]"
-        />
+        <div id="search">
+          <SearchAutocomplete
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            champions={availableChampions}
+            searchHistory={searchHistory}
+            onSelectFromHistory={handleSelectFromHistory}
+            onClearHistory={clearSearchHistory}
+            placeholder="Search champions... (Ctrl+K)"
+            inputRef={searchInputRef}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && filteredAndSortedChampions.length > 0) {
+                e.preventDefault();
+                handleChampionClick(filteredAndSortedChampions[0]);
+              }
+            }}
+          />
+        </div>
       </div>
 
       {/* Filter Chips */}

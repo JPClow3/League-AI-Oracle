@@ -26,6 +26,10 @@ export interface Settings {
   language: 'en' | 'pt';
   enableSound: boolean;
   dashboardCards: DashboardCardSetting[];
+  filterPreferences?: {
+    roleFilter?: string;
+    damageFilter?: string;
+  };
 }
 
 export interface Ability {

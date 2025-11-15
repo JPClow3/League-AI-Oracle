@@ -3,11 +3,9 @@ import type { Page } from '../../types';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Home, Signal, FlaskConical, Shield, User, MoreHorizontal } from 'lucide-react';
 import { MoreMenu } from './MoreMenu';
+import { useHapticFeedback } from '../../hooks/useHapticFeedback';
 
-interface BottomNavProps {
-  currentPage: Page;
-  setCurrentPage: (page: Page) => void;
-}
+// Interface moved to export statement below
 
 const ICONS: Record<string, React.ReactNode> = {
   Home: <Home className="h-6 w-6" />,
@@ -23,36 +21,62 @@ const NavItem = ({
   label,
   currentPage,
   onClick,
+  badge,
 }: {
   pageName: Page;
   label: string;
   currentPage: Page;
   onClick: (page: Page) => void;
+  badge?: number;
 }) => {
   const isActive = currentPage === pageName;
+  const haptic = useHapticFeedback();
+
+  const handleClick = () => {
+    haptic.light();
+    onClick(pageName);
+  };
+
   return (
     <button
-      onClick={() => onClick(pageName)}
+      onClick={handleClick}
       className={`flex flex-col items-center justify-center gap-1 w-full pt-2 pb-1 min-h-[44px] transition-all duration-200 relative focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
         isActive
           ? 'text-[hsl(var(--accent))] bg-[hsl(var(--accent)_/_0.1)]'
           : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--surface)_/_0.5)]'
       }`}
       aria-current={isActive ? 'page' : undefined}
-      aria-label={`Navigate to ${label}`}
+      aria-label={`Navigate to ${label}${badge ? ` (${badge} notifications)` : ''}`}
     >
       {isActive && (
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-[hsl(var(--accent))] rounded-b-full shadow-glow-accent" />
       )}
-      {ICONS[pageName]}
+      <div className="relative">
+        {ICONS[pageName]}
+        {badge !== undefined && badge > 0 && (
+          <span
+            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[hsl(var(--accent))] text-[hsl(var(--on-accent))] text-[10px] font-bold rounded-full flex items-center justify-center"
+            aria-label={`${badge} notifications`}
+          >
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </div>
       <span className={`text-xs font-medium ${isActive ? 'font-semibold' : ''}`}>{label}</span>
     </button>
   );
 };
 
-export const BottomNav = ({ currentPage, setCurrentPage }: BottomNavProps) => {
+export interface BottomNavProps {
+  currentPage: Page;
+  setCurrentPage: (page: Page) => void;
+  badges?: Partial<Record<Page, number>>;
+}
+
+export const BottomNav = ({ currentPage, setCurrentPage, badges }: BottomNavProps) => {
   const { t: _t } = useTranslation();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = React.useState(false);
+  const haptic = useHapticFeedback();
 
   const navItems: {
     page: Page | 'More';
@@ -75,7 +99,10 @@ export const BottomNav = ({ currentPage, setCurrentPage }: BottomNavProps) => {
               return (
                 <button
                   key={item.page}
-                  onClick={() => setIsMoreMenuOpen(true)}
+                  onClick={() => {
+                    haptic.light();
+                    setIsMoreMenuOpen(true);
+                  }}
                   className={`flex flex-col items-center justify-center gap-1 w-full pt-2 pb-1 min-h-[44px] transition-all duration-200 relative focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
                     isMoreMenuOpen
                       ? 'text-[hsl(var(--accent))] bg-[hsl(var(--accent)_/_0.1)]'
@@ -100,6 +127,7 @@ export const BottomNav = ({ currentPage, setCurrentPage }: BottomNavProps) => {
                   label={item.shortLabel}
                   currentPage={currentPage}
                   onClick={setCurrentPage}
+                  badge={badges?.[item.page as Page]}
                 />
               </React.Fragment>
             );

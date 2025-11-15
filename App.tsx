@@ -20,6 +20,7 @@ import { FeedbackModal } from './components/Feedback/FeedbackModal';
 import { KeyboardShortcutsModal } from './components/common/KeyboardShortcutsModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ContextualHelp } from './components/common/ContextualHelp';
+import { SkipLinks } from './components/common/SkipLinks';
 import { useCommands } from './hooks/useCommands';
 import { Router } from './components/Router';
 import { useModals } from './hooks/useModals';
@@ -337,7 +338,8 @@ const App = () => {
   return (
     <ErrorBoundary>
       <SEO />
-      <div className="flex flex-col min-h-screen">
+      <SkipLinks />
+      <div className="flex flex-col min-h-screen" id="main-content">
         {/* Critical Toasts - Top Center */}
         <Toaster
           position="top-center"
@@ -347,7 +349,8 @@ const App = () => {
               background: 'hsl(var(--surface-tertiary))',
               color: 'hsl(var(--text-primary))',
               border: '1px solid hsl(var(--border))',
-              minWidth: '300px',
+              minWidth: '320px',
+              maxWidth: '600px',
             },
             className: 'toast-critical',
           }}
@@ -362,6 +365,8 @@ const App = () => {
               background: 'hsl(var(--surface-tertiary))',
               color: 'hsl(var(--text-primary))',
               border: '1px solid hsl(var(--border))',
+              minWidth: '320px',
+              maxWidth: '500px',
             },
             className: 'toast-info',
           }}

@@ -18,6 +18,10 @@ interface EmptyStateProps {
     text: string;
     onClick: () => void;
   };
+  learnMore?: {
+    text: string;
+    href: string;
+  };
   className?: string;
 }
 
@@ -33,9 +37,21 @@ interface EmptyStateProps {
  *     text: "Go to Strategy Forge",
  *     onClick: () => navigate('Strategy Forge')
  *   }}
+ *   learnMore={{
+ *     text: "Learn about Strategy Forge",
+ *     href: "/academy/strategy-forge"
+ *   }}
  * />
  */
-export const EmptyState = ({ icon, title, description, action, secondaryAction, className = '' }: EmptyStateProps) => {
+export const EmptyState = ({
+  icon,
+  title,
+  description,
+  action,
+  secondaryAction,
+  learnMore,
+  className = '',
+}: EmptyStateProps) => {
   return (
     <div
       className={`flex flex-col items-center justify-center text-center py-12 px-4 ${className}`}
@@ -49,7 +65,7 @@ export const EmptyState = ({ icon, title, description, action, secondaryAction, 
       <p className="text-text-secondary max-w-md mb-6">{description}</p>
 
       {(action || secondaryAction) && (
-        <div className="flex gap-3">
+        <div className="flex gap-3 mb-4">
           {action && (
             <Button variant={action.variant || 'primary'} onClick={action.onClick}>
               {action.text}
@@ -61,6 +77,17 @@ export const EmptyState = ({ icon, title, description, action, secondaryAction, 
             </Button>
           )}
         </div>
+      )}
+
+      {learnMore && (
+        <a
+          href={learnMore.href}
+          className="text-sm text-[hsl(var(--accent))] hover:text-[hsl(var(--accent))] hover:underline transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {learnMore.text} →
+        </a>
       )}
     </div>
   );

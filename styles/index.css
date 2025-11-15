@@ -105,3 +105,31 @@
     opacity 200ms ease-out,
     transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
 }
+
+/* Reduce Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .modal-enter,
+  .modal-enter-active,
+  .modal-exit,
+  .modal-exit-active,
+  .modal-content-enter,
+  .modal-content-enter-active,
+  .modal-content-exit,
+  .modal-content-exit-active,
+  .modal-content-bottom-enter,
+  .modal-content-bottom-enter-active,
+  .modal-content-bottom-exit,
+  .modal-content-bottom-exit-active {
+    transition: none !important;
+    transform: none !important;
+  }
+}

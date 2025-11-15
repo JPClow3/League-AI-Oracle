@@ -89,6 +89,7 @@ export const SidebarNav = ({ currentPage, setCurrentPage, isOpen, onClose }: Sid
 
   return (
     <nav
+      id="navigation"
       className="hidden md:flex fixed left-0 top-16 bottom-0 w-64 bg-[hsl(var(--bg-secondary))] border-r border-[hsl(var(--border))] z-30 overflow-y-auto"
       aria-label="Main navigation"
     >

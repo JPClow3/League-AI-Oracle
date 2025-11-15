@@ -67,6 +67,7 @@ export default [
         Event: 'readonly',
         StorageEvent: 'readonly',
         MessageEvent: 'readonly',
+        MediaQueryListEvent: 'readonly',
         DOMException: 'readonly',
         DOMRect: 'readonly',
         Node: 'readonly',
