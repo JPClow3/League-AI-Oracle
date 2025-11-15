@@ -1,11 +1,15 @@
-# robots.txt for League AI Oracle
-
+# Allow all search engines to crawl the production site
 User-agent: *
 Allow: /
 
-# Disallow admin/internal paths if any
-# Disallow: /admin/
+# Block Vercel preview deployments
+User-agent: *
+Disallow: /_vercel
+Disallow: /api/preview
 
 # Sitemap
-Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://league-ai-oracle.vercel.app/sitemap.xml
 
+# Clean up crawl budget
+Disallow: /*?*      # block tracking parameters
+Disallow: /*utm_*   # block analytics tags
