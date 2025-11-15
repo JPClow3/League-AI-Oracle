@@ -1,5 +1,6 @@
 import { Toaster, toast } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import type { Page, DraftState } from './types';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
@@ -367,6 +368,7 @@ const App = () => {
         <OfflineIndicator />
         {/* Vercel Web Analytics */}
         <Analytics />
+        <SpeedInsights />
         <div className="pb-16 md:pb-0" /> {/* Spacer for BottomNav */}
       </div>
     </ErrorBoundary>

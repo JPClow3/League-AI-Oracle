@@ -60,6 +60,7 @@
     "express": "^5.1.0",
     "focus-trap-react": "^11.0.4",
     "framer-motion": "^12.23.12",
+    "html2canvas": "^1.4.1",
     "launchdarkly-react-client-sdk": "^3.9.0",
     "lucide-react": "^0.552.0",
     "posthog-js": "^1.280.1",
