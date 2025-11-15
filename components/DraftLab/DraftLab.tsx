@@ -621,7 +621,8 @@ export const DraftLab = ({
               activeSlot={activeSlot}
               onDrop={handleDrop}
               onDragStart={(e, t, y, i) => {
-                const champ = t === 'blue' ? draftState.blue.picks[i]?.champion : draftState.red.picks[i]?.champion;
+                const teamState = t === 'blue' ? draftState.blue : draftState.red;
+                const champ = y === 'pick' ? teamState.picks[i]?.champion : teamState.bans[i]?.champion;
                 if (champ) {
                   handleDragStart(e, t, y, i, champ);
                 }

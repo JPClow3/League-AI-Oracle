@@ -45,7 +45,7 @@ export const MobileTeamView = memo(
           onDragStart={
             onDragStart
               ? (e, t, y, i) => {
-                  const champ = draftState.blue.picks[i]?.champion;
+                  const champ = y === 'pick' ? draftState.blue.picks[i]?.champion : draftState.blue.bans[i]?.champion;
                   if (champ && onDragStart) {
                     onDragStart(e, t, y, i);
                   }
@@ -70,7 +70,7 @@ export const MobileTeamView = memo(
           onDragStart={
             onDragStart
               ? (e, t, y, i) => {
-                  const champ = draftState.red.picks[i]?.champion;
+                  const champ = y === 'pick' ? draftState.red.picks[i]?.champion : draftState.red.bans[i]?.champion;
                   if (champ && onDragStart) {
                     onDragStart(e, t, y, i);
                   }
