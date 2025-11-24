@@ -72,7 +72,7 @@
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^1.8.11",
     "workbox-core": "^7.3.0",
-    "workbox-precaching": "^7.3.0",
+    "workbox-precaching": "^7.4.0",
     "workbox-routing": "^7.3.0",
     "workbox-strategies": "^7.3.0",
     "workbox-window": "^7.3.0",
