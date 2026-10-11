@@ -114,7 +114,7 @@
     "vite-plugin-pwa": "^1.1.0",
     "vitest": "^4.0.4",
     "workbox-cacheable-response": "^7.3.0",
-    "workbox-expiration": "^7.3.0"
+    "workbox-expiration": "^7.4.1"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
